@@ -1,0 +1,60 @@
+# AI Assistant Configuration Example
+# Copy this file to ./config/config.yaml for local development
+# or to ~/.config/ai-assistant/config.yaml for system-wide configuration
+
+# Server Configuration
+# Changes to this section require application restart
+server:
+  host: 0.0.0.0
+  port: 8000
+  reload: true  # Auto-reload on code changes (development only)
+  workers: 1    # Number of worker processes
+
+# CORS Configuration
+# Changes to this section do NOT require restart
+cors:
+  allow_origins:
+    - http://localhost:5173  # Vite dev server
+    - http://localhost:3000  # Alternative frontend port
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"
+
+# LLM Provider Configuration
+# Changes to this section do NOT require restart
+llm:
+  provider: ollama  # Options: ollama, anthropic, openai
+  model: llama2
+  temperature: 0.7
+  max_tokens: 2048
+  api_key: null  # Set for anthropic/openai providers
+  base_url: http://localhost:11434  # Ollama base URL
+
+# Example configurations for different LLM providers:
+
+# Ollama (local):
+# llm:
+#   provider: ollama
+#   model: llama2
+#   temperature: 0.7
+#   max_tokens: 2048
+#   base_url: http://localhost:11434
+
+# Anthropic Claude:
+# llm:
+#   provider: anthropic
+#   model: claude-3-sonnet-20240229
+#   temperature: 0.7
+#   max_tokens: 4096
+#   api_key: sk-ant-...
+
+# OpenAI:
+# llm:
+#   provider: openai
+#   model: gpt-4
+#   temperature: 0.7
+#   max_tokens: 4096
+#   api_key: sk-...
+

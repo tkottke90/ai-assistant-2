@@ -32,7 +32,8 @@ setup-backend:
 # Run backend development server
 dev:
 	@echo "Starting backend development server..."
-	cd backend && ./.venv/bin/python -m src.main
+	@echo "Config directory: ./config"
+	cd backend && AI_ASSISTANT_CONFIG_DIR=../config ./.venv/bin/python -m src.main
 
 # Build backend executable
 build:

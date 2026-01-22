@@ -106,10 +106,37 @@ npm run preview  # Preview production build
 
 ### Backend Development
 
+Start the backend development server:
+
 ```bash
-cd backend
-# Add your backend development commands here
+make dev
 ```
+
+This will:
+- Start the FastAPI server with auto-reload enabled
+- Use local configuration from `./config/config.yaml`
+- Run on `http://localhost:8000` by default
+
+#### Configuration
+
+The backend uses a YAML-based configuration system. In development mode (`make dev`), configuration is stored locally in `./config/config.yaml`.
+
+**First-time setup:**
+
+1. Copy the example configuration:
+   ```bash
+   mkdir -p config
+   cp config.example.yaml config/config.yaml
+   ```
+
+2. Edit `config/config.yaml` to customize settings
+
+**Configuration locations:**
+- **Development** (via `make dev`): `./config/config.yaml`
+- **Production**: `~/.config/ai-assistant/config.yaml`
+- **Custom**: Set `AI_ASSISTANT_CONFIG_DIR` environment variable
+
+See `backend/src/config/README.md` for detailed configuration documentation.
 
 ## Cleaning Up
 

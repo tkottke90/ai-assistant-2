@@ -1,0 +1,104 @@
+// Grafana Alloy configuration for receiving OTLP telemetry
+
+// ===== OTLP Receiver =====
+otelcol.receiver.otlp "default" {
+  // gRPC endpoint
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  
+  // HTTP endpoint  
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+  }
+}
+
+// ===== Batch Processor =====
+otelcol.processor.batch "default" {
+  // Batch configuration
+  timeout = "5s"
+  send_batch_size = 512
+  send_batch_max_size = 1024
+  
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+    logs    = [otelcol.exporter.loki.default.input]
+    traces  = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+// ===== Log Export to Loki =====
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+    
+    // Optional: Authentication for Grafana Cloud
+    // headers = {
+    //   "Authorization" = "Bearer YOUR_TOKEN",
+    // }
+  }
+  
+  // Label extraction from resource attributes
+  external_labels = {
+    cluster = "prod",
+  }
+}
+
+// ===== Trace Export to Tempo =====
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    
+    tls {
+      insecure = true
+    }
+    
+    // Optional: Authentication
+    // headers = {
+    //   "Authorization" = "Bearer YOUR_TOKEN",
+    // }
+  }
+}
+
+// ===== Metrics Export to Prometheus =====
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+    
+    // Optional: Authentication
+    // basic_auth {
+    //   username = "admin"
+    //   password = "secret"
+    // }
+  }
+}
+
+// ===== Resource Attribute Processing =====
+otelcol.processor.resource "default" {
+  // Add consistent attributes
+  attributes {
+    action = "insert"
+    key    = "cluster"
+    value  = "prod-cluster-01"
+  }
+  
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+  }
+}

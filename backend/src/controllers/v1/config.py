@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional
 
 from ...config import ConfigManager, get_config_manager, BaseConfig
+from ...logging import get_logger
+
+logger = get_logger("controllers.config")
 
 
 router = APIRouter(prefix="/config", tags=["configuration"])
@@ -123,15 +126,23 @@ def update_feature_config(
         request: Update request containing the updates dictionary
     """
     try:
+        logger.info("Updating configuration for feature: %s", feature, extra={"updates": request.updates})
         updated_config = config_manager.update_config(feature, request.updates)
+        requires_restart = config_manager.requires_restart(feature)
+
+        if requires_restart:
+            logger.warning("Configuration update for '%s' requires application restart", feature)
+
         return ConfigResponse(
             feature=feature,
             config=updated_config.model_dump(),
-            requires_restart=config_manager.requires_restart(feature),
+            requires_restart=requires_restart,
         )
     except ValueError as e:
+        logger.error("Feature not found: %s", feature)
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        logger.error("Failed to update config for %s: %s", feature, e, exc_info=True)
         raise HTTPException(
             status_code=400, detail=f"Failed to update config for {feature}: {str(e)}"
         )
@@ -147,14 +158,17 @@ def reset_all_configs(
     WARNING: This will reset all configuration settings to their default values.
     """
     try:
+        logger.warning("Resetting all configurations to defaults")
         default_configs = config_manager.reset_to_defaults()
         configs_dict = {
             feature: config.model_dump() for feature, config in default_configs.items()
         }
+        logger.info("All configurations reset to defaults successfully")
         return ResetResponse(
             message="All configurations reset to defaults", configs=configs_dict
         )
     except Exception as e:
+        logger.error("Failed to reset configs: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Failed to reset configs: {str(e)}"
         )
@@ -171,12 +185,15 @@ def refresh_all_configs(
     to reload all configurations without restarting the application.
     """
     try:
+        logger.info("Refreshing all configurations from disk")
         result = config_manager.reload_all_from_disk()
 
         # Determine which features require restart
         restart_required = {}
         for feature in result["refreshed_features"]:
             restart_required[feature] = config_manager.requires_restart(feature)
+            if result["changes_detected"].get(feature, False):
+                logger.info("Configuration changes detected for feature: %s", feature)
 
         return RefreshResponse(
             message="All configurations reloaded from disk",
@@ -185,6 +202,7 @@ def refresh_all_configs(
             restart_required=restart_required,
         )
     except Exception as e:
+        logger.error("Failed to refresh configs: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Failed to refresh configs: {str(e)}"
         )

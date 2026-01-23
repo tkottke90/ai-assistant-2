@@ -2,9 +2,9 @@
 
 # Base Infrastructure
 
-- [ ] Add Configuration System
+- [X] Add Configuration System
   - [ ] Support environment variables
-  - [ ] Use YAML config
+  - [X] Use YAML config
 - [ ] Add Logging System
   - [ ] Store in file storage
   - [ ] Auto Rotate

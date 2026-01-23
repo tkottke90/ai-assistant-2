@@ -58,3 +58,76 @@ llm:
 #   max_tokens: 4096
 #   api_key: sk-...
 
+# Logging Configuration
+# Changes to this section require application restart
+logging:
+  # Basic settings
+  level: INFO  # Options: DEBUG, HTTP, INFO, WARNING, ERROR, CRITICAL
+  format: json  # Options: json (for log aggregation), text (human-readable)
+
+  # File logging
+  enable_file_logging: true
+  log_file: ~/.config/ai-assistant/logs/app.log
+  max_bytes: 10485760  # 10 MB - maximum log file size before rotation
+  backup_count: 5  # Number of backup log files to keep
+
+  # Console logging
+  enable_console_logging: true
+  console_level: INFO  # Optional: separate level for console (defaults to global level)
+
+  # OpenTelemetry Configuration (optional - for production observability)
+  # Vendor-neutral standard supporting Grafana, Jaeger, Datadog, New Relic, etc.
+  enable_otel: false
+  
+  # OTLP Endpoint (required when enable_otel is true)
+  # Examples:
+  #   Grafana Alloy gRPC: http://alloy:4317
+  #   Grafana Alloy HTTP: http://alloy:4318
+  #   Jaeger: http://jaeger:4317
+  otel_endpoint: null
+  
+  # Protocol selection
+  otel_protocol: grpc  # Options: grpc (default), http
+  
+  # Service Identification (appears as labels in observability platforms)
+  otel_service_name: ai-assistant
+  otel_service_version: null  # e.g., 1.0.0
+  otel_service_namespace: null  # e.g., production, staging
+  otel_deployment_environment: development  # e.g., development, staging, production
+  
+  # Connection Settings
+  otel_insecure: true  # Set to false with TLS in production
+  
+  # Optional: Authentication headers for cloud platforms
+  # otel_headers:
+  #   Authorization: "Bearer YOUR_TOKEN_HERE"
+  
+  # Export Configuration
+  otel_export_logs: true
+  otel_export_traces: true
+  otel_export_metrics: false  # Future use
+  
+  # Performance Tuning
+  otel_batch_size: 512  # Logs/traces per batch (1-2048)
+  otel_schedule_delay_ms: 5000  # Delay between batches (100-30000ms)
+  otel_export_timeout_ms: 30000  # Export timeout (1000-60000ms)
+  otel_max_queue_size: 2048  # Max pending items (512-8192)
+  
+  # Custom Resource Attributes (appear as labels in Grafana/observability platforms)
+  # otel_resource_attributes:
+  #   region: us-east-1
+  #   cluster: prod-cluster-01
+  #   team: platform
+
+  # Module-specific log levels (optional)
+  module_levels:
+    # ai_assistant.llm: DEBUG  # Enable debug logs for LLM module
+    # ai_assistant.config: INFO
+
+  # HTTP Middleware settings
+  enable_http_logging: true
+  log_request_body: false  # WARNING: May log sensitive data (passwords, API keys)
+  log_response_body: false  # WARNING: Performance impact, large responses
+  exclude_paths:
+    - /health  # Don't log health check requests
+

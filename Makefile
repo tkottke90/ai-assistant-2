@@ -1,4 +1,10 @@
-.PHONY: help setup setup-frontend setup-backend dev build test test-frontend test-backend clean
+.PHONY: help setup setup-frontend setup-backend dev build test test-frontend test-backend compile clean
+
+# Virtualenv configuration
+VENV := ./.venv
+VENV_PY := $(VENV)/bin/python
+VENV_PIP := $(VENV)/bin/pip
+VENV_PYTEST := $(VENV)/bin/pytest
 
 # Default target
 help:
@@ -11,6 +17,7 @@ help:
 	@echo "  make test           - Run tests for both frontend and backend"
 	@echo "  make test-frontend  - Run frontend tests"
 	@echo "  make test-backend   - Run backend tests"
+	@echo "  make compile        - Check Python syntax (py_compile) using venv"
 	@echo "  make clean          - Clean build artifacts and caches"
 
 # Setup all dependencies
@@ -24,21 +31,30 @@ setup-frontend:
 	@echo "✓ Frontend dependencies installed"
 
 # Setup backend dependencies
-setup-backend:
+ensure-venv:
+	@echo "Ensuring virtualenv exists at $(VENV)"
+	@if [ ! -d "$(VENV)" ]; then \
+		python3 -m venv $(VENV); \
+		$(VENV_PIP) install --upgrade pip setuptools wheel; \
+	else \
+		echo "Virtualenv already exists at $(VENV)"; \
+	fi
+
+setup-backend: ensure-venv
 	@echo "Installing backend dependencies..."
-	cd backend && ./.venv/bin/pip install -e ".[dev]"
+	cd backend && $(VENV_PIP) install -e ".[dev]"
 	@echo "✓ Backend dependencies installed"
 
 # Run backend development server
-dev:
+dev: ensure-venv
 	@echo "Starting backend development server..."
 	@echo "Config directory: ./config"
-	cd backend && AI_ASSISTANT_CONFIG_DIR=../config ./.venv/bin/python -m src.main
+	cd backend && AI_ASSISTANT_CONFIG_DIR=../config $(VENV_PY) -m src.main
 
 # Build backend executable
-build:
+build: ensure-venv
 	@echo "Building backend executable with PyInstaller..."
-	cd backend && ./.venv/bin/pyinstaller ai-assistant-backend.spec
+	cd backend && $(VENV_PY) -m PyInstaller ai-assistant-backend.spec
 	@echo "✓ Build completed! Executable is in backend/dist/ai-assistant-backend"
 
 # Run all tests
@@ -51,9 +67,21 @@ test-frontend:
 	cd frontend && npm test run
 
 # Run backend tests
-test-backend:
+test-backend: ensure-venv
 	@echo "Running backend tests..."
-	cd backend && pytest -v
+	cd backend && $(VENV_PYTEST) -v
+
+# Pattern rule: allow running a single pytest node via make
+.PHONY: tests/%
+tests/%:
+	@echo "Running pytest for $@"
+	cd backend && $(VENV_PYTEST) -v $@
+
+# Check Python syntax using py_compile
+compile: ensure-venv
+	@echo "Checking Python syntax..."
+	cd backend && $(VENV_PY) -m py_compile $$(find src -name "*.py")
+	@echo "✓ Syntax check passed!"
 
 # Clean build artifacts and caches
 clean:
@@ -65,7 +93,7 @@ clean:
 	find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name ".coverage" -delete 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	cd frontend && rm -rf node_modules dist 2>/dev/null || true
+	cd frontend && rm -rf dist 2>/dev/null || true
 	cd backend && rm -rf build dist 2>/dev/null || true
 	@echo "✓ Cleanup completed"
 

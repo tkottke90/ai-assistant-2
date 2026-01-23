@@ -11,7 +11,7 @@ from src.config.models.base import BaseConfig
 class TestDeprecatedFieldWithReplacement:
     """Tests for deprecated fields that have a replacement field"""
 
-    def test_migrates_value_when_only_old_field_present(self, capsys):
+    def test_migrates_value_when_only_old_field_present(self, caplog):
         """When only deprecated field is present, value should migrate to new field"""
         
         class TestConfig(BaseConfig):
@@ -36,12 +36,11 @@ class TestDeprecatedFieldWithReplacement:
         assert config.old_field is None
         
         # Check migration warning was logged
-        captured = capsys.readouterr()
-        assert "Migrated deprecated field 'old_field' -> 'new_field'" in captured.out
-        assert "v1.0.0" in captured.out
-        assert "v2.0.0" in captured.out
+        assert "Migrated deprecated field 'old_field' -> 'new_field'" in caplog.text
+        assert "v1.0.0" in caplog.text
+        assert "v2.0.0" in caplog.text
 
-    def test_prefers_new_field_when_both_present(self, capsys):
+    def test_prefers_new_field_when_both_present(self, caplog):
         """When both deprecated and new fields present, new field value should be used"""
         
         class TestConfig(BaseConfig):
@@ -64,11 +63,10 @@ class TestDeprecatedFieldWithReplacement:
         assert config.old_field is None
         
         # Check warning was logged
-        captured = capsys.readouterr()
-        assert "Found both 'old_field' (deprecated) and 'new_field'" in captured.out
-        assert "Using 'new_field' value" in captured.out
+        assert "Found both 'old_field' (deprecated) and 'new_field'" in caplog.text
+        assert "Using 'new_field' value" in caplog.text
 
-    def test_logs_migration_warning(self, capsys):
+    def test_logs_migration_warning(self, caplog):
         """Migration should log appropriate warning messages"""
         
         class TestConfig(BaseConfig):
@@ -86,11 +84,10 @@ class TestDeprecatedFieldWithReplacement:
         data = {"old_field": 42}
         config = TestConfig(**data)
         
-        captured = capsys.readouterr()
-        assert "⚠️  Migrated deprecated field 'old_field' -> 'new_field'" in captured.out
-        assert "Deprecated since: v1.0.0" in captured.out
-        assert "will be removed in: v2.0.0" in captured.out
-        assert "Please update your config file to use 'new_field'" in captured.out
+        assert "Migrated deprecated field 'old_field' -> 'new_field'" in caplog.text
+        assert "Deprecated since: v1.0.0" in caplog.text
+        assert "will be removed in: v2.0.0" in caplog.text
+        assert "Please update your config file to use 'new_field'" in caplog.text
 
 
 class TestDeprecatedFieldWithoutReplacement:
@@ -116,7 +113,7 @@ class TestDeprecatedFieldWithoutReplacement:
         # Field value should be preserved
         assert config.deprecated_field == "still_works"
 
-    def test_logs_deprecation_warning(self, capsys):
+    def test_logs_deprecation_warning(self, caplog):
         """Should log warning for deprecated field without replacement"""
         
         class TestConfig(BaseConfig):
@@ -132,11 +129,10 @@ class TestDeprecatedFieldWithoutReplacement:
         data = {"deprecated_field": "value"}
         config = TestConfig(**data)
         
-        captured = capsys.readouterr()
-        assert "⚠️  Using deprecated field 'deprecated_field'" in captured.out
-        assert "Deprecated since: v1.0.0" in captured.out
-        assert "will be removed in: v2.0.0" in captured.out
-        assert "No replacement available" in captured.out
+        assert "Using deprecated field 'deprecated_field'" in caplog.text
+        assert "Deprecated since: v1.0.0" in caplog.text
+        assert "will be removed in: v2.0.0" in caplog.text
+        assert "No replacement available" in caplog.text
 
 
 class TestMultipleDeprecatedFields:
@@ -227,7 +223,7 @@ class TestEdgeCases:
         config = TestConfig(**{"field": 42})
         assert config.field == 42
 
-    def test_metadata_defaults_when_missing(self, capsys):
+    def test_metadata_defaults_when_missing(self, caplog):
         """When metadata fields are missing, should use defaults"""
 
         class TestConfig(BaseConfig):
@@ -242,12 +238,11 @@ class TestEdgeCases:
         data = {"old_field": 42}
         config = TestConfig(**data)
 
-        captured = capsys.readouterr()
         # Should use default values
-        assert "unknown" in captured.out  # deprecated_since default
-        assert "future version" in captured.out  # removed_in default
+        assert "unknown" in caplog.text  # deprecated_since default
+        assert "future version" in caplog.text  # removed_in default
 
-    def test_no_json_schema_extra(self, capsys):
+    def test_no_json_schema_extra(self, caplog):
         """Deprecated field with no json_schema_extra should handle gracefully"""
 
         class TestConfig(BaseConfig):
@@ -263,8 +258,7 @@ class TestEdgeCases:
         # Should still work
         assert config.deprecated_field == "value"
 
-        captured = capsys.readouterr()
-        assert "⚠️  Using deprecated field 'deprecated_field'" in captured.out
+        assert "Using deprecated field 'deprecated_field'" in caplog.text
 
 
 class TestComplexMigrationScenarios:

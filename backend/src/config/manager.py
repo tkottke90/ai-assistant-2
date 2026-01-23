@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Type
 from threading import RLock
 import os
+import logging
 
 from .loader import ConfigLoader
-from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig
+from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig, LoggingConfig
 
 
 class ConfigManager:
@@ -39,6 +40,7 @@ class ConfigManager:
             "server": ServerConfig,
             "cors": CorsConfig,
             "llm": LLMConfig,
+            "logging": LoggingConfig,
         }
 
         # Cache for loaded configurations
@@ -52,6 +54,20 @@ class ConfigManager:
 
         self._initialized = True
 
+    def _get_logger(self) -> logging.Logger:
+        """
+        Get logger for config manager
+
+        Returns basic logger if logging system not configured yet,
+        otherwise returns the configured logger
+        """
+        try:
+            from ..logging import get_logger
+            return get_logger("config.manager")
+        except (ImportError, AttributeError):
+            # Logging system not initialized yet, use basic logger
+            return logging.getLogger("ai_assistant.config.manager")
+
     def _get_config_directory(self) -> Path:
         """
         Determine the configuration directory
@@ -62,17 +78,39 @@ class ConfigManager:
 
         Returns:
             Path object for the config directory
+
+        Note: Uses print() instead of logger because this is called during
+        __init__ before logging system is configured
         """
         config_dir_env = os.getenv("AI_ASSISTANT_CONFIG_DIR")
 
         if config_dir_env:
-            print(f"AI_ASSISTANT_CONFIG_DIR is set to {config_dir_env}")
+            # Use fallback safe logging for early startup visibility
+            try:
+                from ..logging.fallback import safe_info
+
+                safe_info(
+                    f"AI_ASSISTANT_CONFIG_DIR is set to {config_dir_env}",
+                    extra={"path": config_dir_env},
+                    logger_name="ai_assistant.config.manager",
+                )
+            except Exception:
+                # Fallback to print if anything goes wrong importing fallback
+                print(f"AI_ASSISTANT_CONFIG_DIR is set to {config_dir_env}")
             config_dir = Path(config_dir_env)
             # If relative path, make it absolute from current working directory
             if not config_dir.is_absolute():
                 config_dir = Path.cwd() / config_dir
         else:
-            print("AI_ASSISTANT_CONFIG_DIR is not set, using default config directory")
+            try:
+                from ..logging.fallback import safe_info
+
+                safe_info(
+                    "AI_ASSISTANT_CONFIG_DIR is not set, using default config directory",
+                    logger_name="ai_assistant.config.manager",
+                )
+            except Exception:
+                print("AI_ASSISTANT_CONFIG_DIR is not set, using default config directory")
             # Default to XDG config directory
             config_dir = Path.home() / ".config" / "ai-assistant"
 
@@ -117,14 +155,15 @@ class ConfigManager:
 
         # Log findings
         if deprecated_fields_found:
-            print(f"\n⚠️  Deprecated fields detected in '{feature}' configuration:")
+            logger = self._get_logger()
+            logger.warning("Deprecated fields detected in '%s' configuration:", feature)
             for field in deprecated_fields_found:
                 if field['replacement']:
-                    print(f"   • '{field['name']}' → use '{field['replacement']}' instead")
+                    logger.warning("  • '%s' → use '%s' instead", field['name'], field['replacement'])
                 else:
-                    print(f"   • '{field['name']}' (no replacement, will be removed)")
-                print(f"     Deprecated since: {field['deprecated_since']}, Removed in: {field['removed_in']}")
-            print(f"   Config file: {self._config_path}\n")
+                    logger.warning("  • '%s' (no replacement, will be removed)", field['name'])
+                logger.warning("    Deprecated since: %s, Removed in: %s", field['deprecated_since'], field['removed_in'])
+            logger.warning("  Config file: %s", self._config_path)
 
     def _validate_all_configs_for_deprecations(self) -> None:
         """
@@ -146,16 +185,17 @@ class ConfigManager:
                             break
 
         if has_deprecations:
-            print("\n" + "="*70)
-            print("DEPRECATION WARNINGS")
-            print("="*70)
+            logger = self._get_logger()
+            logger.warning("=" * 70)
+            logger.warning("DEPRECATION WARNINGS")
+            logger.warning("=" * 70)
 
             for feature, model_class in self._config_models.items():
                 feature_data = all_configs.get(feature, {})
                 if feature_data:
                     self._detect_deprecated_fields(feature, feature_data, model_class)
 
-            print("="*70 + "\n")
+            logger.warning("=" * 70)
 
     def _ensure_config_file_exists(self) -> None:
         """
@@ -163,6 +203,9 @@ class ConfigManager:
 
         This method is called during initialization to generate a default
         config file if one doesn't exist yet.
+
+        Note: Uses print() instead of logger because this is called during
+        __init__ before logging system is configured
         """
         if not self._config_path.exists():
             # Generate default configs from all registered models
@@ -173,7 +216,16 @@ class ConfigManager:
 
             # Save to file
             self._loader.save(default_configs)
-            print(f"✓ Created default configuration file at {self._config_path}")
+            try:
+                from ..logging.fallback import safe_info
+
+                safe_info(
+                    f"✓ Created default configuration file at {self._config_path}",
+                    extra={"path": str(self._config_path)},
+                    logger_name="ai_assistant.config.manager",
+                )
+            except Exception:
+                print(f"✓ Created default configuration file at {self._config_path}")
 
     def get_config(self, feature: str, reload: bool = False) -> BaseConfig:
         """

@@ -5,11 +5,11 @@
 - [X] Add Configuration System
   - [ ] Support environment variables
   - [X] Use YAML config
-- [ ] Add Logging System
-  - [ ] Store in file storage
-  - [ ] Auto Rotate
-  - [ ] Available via DI
-- [ ] Add file storage (probably `~/.config/ai-assistant` or something)
+- [X] Add Logging System
+  - [X] Store in file storage
+  - [X] Auto Rotate
+  - [X] Available via DI
+- [X] Add file storage (probably `~/.config/ai-assistant` or something)
 - [ ] Add SQLite Database with FTS5
 - [ ] Install LangChain
   - [ ] Add Ollama integration

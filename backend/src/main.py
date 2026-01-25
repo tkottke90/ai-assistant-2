@@ -12,4 +12,5 @@ if __name__ == "__main__":
         port=server_config.port,
         reload=server_config.reload,
         workers=server_config.workers,
+        log_config=None
     )

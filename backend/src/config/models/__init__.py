@@ -1,9 +1,18 @@
 from .base import BaseConfig
-from .server import ServerConfig
 from .cors import CorsConfig
+from .database import DatabaseConfig
 from .llm import LLMConfig
 from .logging import LoggingConfig
 from .notifications import NotificationsConfig
+from .server import ServerConfig
 
-__all__ = ["BaseConfig", "ServerConfig", "CorsConfig", "LLMConfig", "LoggingConfig", "NotificationsConfig"]
+__all__ = [
+  "BaseConfig",
+  "CorsConfig",
+  "DatabaseConfig",
+  "LLMConfig",
+  "LoggingConfig",
+  "NotificationsConfig",
+  "ServerConfig",
+]
 

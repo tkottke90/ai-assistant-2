@@ -32,23 +32,26 @@ llm:
   api_key: null  # Set for anthropic/openai providers
   base_url: http://localhost:11434  # Ollama base URL
 
-# Data & Storage Configuration
-# Changes to this section do NOT require restart (except database.path)
-data:
-  # SQLite database for activities, schedules, automations
-  database:
-    path: "./data/ai_assistant.db"
-    create_on_missing: true
-    backup_on_startup: true  # Create backup before migrations
-    max_connections: 10
-  
-  # Vector database for knowledge base (procedures, embeddings)
-  knowledge_base:
-    storage_path: "./data/chroma"
-    collection_name: "procedures"
-    max_results: 5  # Default search results
-    enable_fts: true  # Enable SQLite FTS5 alongside semantic search
-    sync_interval_seconds: 300  # Sync Chroma ↔ SQLite every 5 minutes
+# Database Configuration
+# Changes to this section do NOT require restart
+# Defaults are shown below - uncomment and modify to customize
+# database:
+#   sqlite:
+#     path: "./data/ai_assistant.db"  # Path to SQLite database file, or ':memory:' for in-memory
+#     create_on_missing: true  # Automatically create database if it doesn't exist
+
+# Alternative SQLite configurations:
+# In-memory database (data lost on restart):
+# database:
+#   sqlite:
+#     file_path: ":memory:"
+#     create_on_missing: true
+#
+# Custom path with directory auto-creation:
+# database:
+#   sqlite:
+#     file_path: "~/.local/share/ai-assistant/app.db"
+#     create_on_missing: true
   
   # Embedding model configuration (for knowledge base semantic search)
   embeddings:

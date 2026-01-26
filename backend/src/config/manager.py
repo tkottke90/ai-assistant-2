@@ -3,9 +3,16 @@ from typing import Dict, Any, Optional, Type
 from threading import RLock
 import os
 import logging
-
 from .loader import ConfigLoader
-from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig, LoggingConfig, NotificationsConfig
+from .models import (
+    BaseConfig,
+    CorsConfig,
+    DatabaseConfig,
+    LLMConfig,
+    LoggingConfig,
+    NotificationsConfig,
+    ServerConfig
+)
 
 
 class ConfigManager:
@@ -37,11 +44,12 @@ class ConfigManager:
 
         # Configuration models registry
         self._config_models: Dict[str, Type[BaseConfig]] = {
-            "server": ServerConfig,
             "cors": CorsConfig,
+            "database": DatabaseConfig,
             "llm": LLMConfig,
             "logging": LoggingConfig,
             "notifications": NotificationsConfig,
+            "server": ServerConfig,
         }
 
         # Cache for loaded configurations

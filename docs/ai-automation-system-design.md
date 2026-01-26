@@ -431,8 +431,14 @@ graph TD
 #### New Configuration Sections
 
 **Database Config** (`backend/src/config/models/database.py`):
-- **path**: SQLite database file location (default: "./data/ai_assistant.db")
-- **create_on_missing**: Boolean to automatically create database if it doesn't exist (default: true)
+The `database` section organizes all database-related configurations. This structure allows for multiple database types to coexist (SQLite, vector databases, etc.) in a clear, organized manner.
+
+- **sqlite**: SQLite database configuration (nested)
+  - **file_path**: SQLite database file location (default: "./data/ai_assistant.db")
+  - **create_on_missing**: Boolean to automatically create database if it doesn't exist (default: true)
+  - Supports special value ":memory:" for in-memory databases
+
+Future database types (e.g., Chroma vector DB, PostgreSQL) will be added as additional nested configurations under the `database` section.
 
 **Tools Config** (`backend/src/config/models/tools.py`):
 Tools are configured as a list, where each tool includes:

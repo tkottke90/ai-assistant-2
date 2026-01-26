@@ -23,14 +23,54 @@ cors:
     - "*"
 
 # LLM Provider Configuration (for chat/generation)
-# Changes to this section do NOT require restart
+# Changes to this section require application restart
 llm:
-  provider: ollama  # Options: ollama, anthropic, openai
-  model: llama2
-  temperature: 0.7
-  max_tokens: 2048
-  api_key: null  # Set for anthropic/openai providers
-  base_url: http://localhost:11434  # Ollama base URL
+  # Default provider for new automations
+  default_provider: ollama
+  
+  # Available LLM providers (can configure multiple instances)
+  providers:
+    # Ollama (local inference) - Primary provider
+    ollama:
+      type: ollama
+      base_url: http://localhost:11434
+      default_model: mistral:7b
+      api_key: null  # Optional: if your Ollama instance requires auth
+      
+      # Context window settings (conservative for local models)
+      max_context_activities: 10
+      max_context_tokens: 3000
+      max_tool_definition_tokens: 500
+      context_overflow_strategy: summarize  # Options: summarize, truncate
+      temperature: 0.7
+    
+    # Anthropic Claude (API) - Uncomment to enable
+    # anthropic:
+    #   type: anthropic
+    #   api_key_env: ANTHROPIC_API_KEY  # Environment variable name
+    #   base_url: null  # Optional: custom API endpoint
+    #   default_model: claude-3-5-sonnet-20241022
+    #   
+    #   # Context window settings (large for API models)
+    #   max_context_activities: 50
+    #   max_context_tokens: 150000
+    #   max_tool_definition_tokens: 2000
+    #   context_overflow_strategy: truncate
+    #   temperature: 0.7
+    
+    # OpenAI (API) - Uncomment to enable
+    # openai:
+    #   type: openai
+    #   api_key_env: OPENAI_API_KEY  # Environment variable name
+    #   base_url: null  # Optional: custom API endpoint (e.g., Azure OpenAI)
+    #   default_model: gpt-4
+    #   
+    #   # Context window settings (large for API models)
+    #   max_context_activities: 50
+    #   max_context_tokens: 120000
+    #   max_tool_definition_tokens: 2000
+    #   context_overflow_strategy: truncate
+    #   temperature: 0.7
 
 # Database Configuration
 # Changes to this section do NOT require restart
@@ -72,31 +112,31 @@ llm:
         api_key_env: "ANTHROPIC_API_KEY"
         # Anthropic doesn't offer embeddings yet (placeholder)
 
-# Example configurations for different LLM providers:
-
-# Ollama (local):
+# Example: Multiple provider configuration
+# You can configure multiple instances of the same provider type with different settings:
+#
 # llm:
-#   provider: ollama
-#   model: llama2
-#   temperature: 0.7
-#   max_tokens: 2048
-#   base_url: http://localhost:11434
-
-# Anthropic Claude:
-# llm:
-#   provider: anthropic
-#   model: claude-3-sonnet-20240229
-#   temperature: 0.7
-#   max_tokens: 4096
-#   api_key: sk-ant-...
-
-# OpenAI:
-# llm:
-#   provider: openai
-#   model: gpt-4
-#   temperature: 0.7
-#   max_tokens: 4096
-#   api_key: sk-...
+#   default_provider: ollama-fast
+#   providers:
+#     ollama-fast:
+#       type: ollama
+#       base_url: http://localhost:11434
+#       default_model: mistral:7b
+#       temperature: 0.5
+#       max_context_tokens: 2000
+#     
+#     ollama-creative:
+#       type: ollama
+#       base_url: http://localhost:11434
+#       default_model: mixtral:8x7b
+#       temperature: 0.9
+#       max_context_tokens: 8000
+#     
+#     claude:
+#       type: anthropic
+#       api_key_env: ANTHROPIC_API_KEY
+#       default_model: claude-3-5-sonnet-20241022
+#       max_context_tokens: 150000
 
 # Logging Configuration
 # Changes to this section require application restart

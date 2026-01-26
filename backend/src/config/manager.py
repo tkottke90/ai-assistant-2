@@ -5,7 +5,7 @@ import os
 import logging
 
 from .loader import ConfigLoader
-from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig, LoggingConfig
+from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig, LoggingConfig, NotificationsConfig
 
 
 class ConfigManager:
@@ -41,6 +41,7 @@ class ConfigManager:
             "cors": CorsConfig,
             "llm": LLMConfig,
             "logging": LoggingConfig,
+            "notifications": NotificationsConfig,
         }
 
         # Cache for loaded configurations

@@ -498,13 +498,14 @@ Notification delivery is configured with the following settings:
 
 **External Webhook**:
 - **enabled**: Boolean to enable webhook notifications (default: false)
-- **provider**: Webhook provider - "pushover", "custom" (default: pushover)
-- **pushover_user_key_env**: Environment variable containing Pushover user key
-- **pushover_app_token_env**: Environment variable containing Pushover app token
-- **custom_webhook_url**: URL for custom webhook endpoint (used if provider="custom")
-- **custom_webhook_auth_header_env**: Optional environment variable for custom webhook auth header
-- **retry_attempts**: Number of retry attempts for failed webhook delivery (default: 3)
-- **retry_backoff_seconds**: Base exponential backoff for retries (default: 1.0)
+- **url**: Webhook endpoint URL (supports any HTTP-based notification service)
+- **method**: HTTP method for webhook requests - "POST", "GET", "PUT", "DELETE" (default: POST)
+- **headers**: Dictionary of additional HTTP headers to include in webhook requests (e.g., for authentication)
+- **payload_type**: Format of webhook payload - "json", "form", "text" (default: json)
+- **payload_template**: Dictionary defining the webhook payload structure with property definitions:
+  - Each property has: `default` (optional default value), `description`, `required` (boolean), `options` (optional list of allowed values)
+  - Allows dynamic payload construction based on notification data
+- **Note**: This flexible configuration supports any HTTP-based notification service (Pushover, Slack, Discord, PagerDuty, custom endpoints, etc.)
 
 **Credentials Config Structure** (`backend/src/config/models/credentials.py`):
 
@@ -1778,7 +1779,7 @@ Content chunks (`{"type": "content"}`) are assembled in memory and only the fina
   - channels_sent: List of successfully delivered channels (e.g., ["in_app", "push"])
   - channels_failed: List of failed delivery attempts (e.g., ["webhook"] with error in metadata)
   - Auto-archive logic: INFO notifications older than config.auto_dismiss_after_days are marked acknowledged=true
-  - metadata JSON stores channel-specific details (e.g., pushover message_id, push subscription endpoint)
+  - metadata JSON stores channel-specific details (e.g., webhook_message_id, push subscription endpoint, webhook_response)
 
 **6. automations**
 - Purpose: Versioned automation instructions with per-automation LLM selection
@@ -2645,7 +2646,7 @@ sequenceDiagram
                 end
             and External Webhook
                 alt 'webhook' in channels
-                    NotifSvc->>Webhook: POST to configured endpoint<br/>(Pushover, custom)
+                    NotifSvc->>Webhook: HTTP request to configured endpoint<br/>(method/payload per config)
                     Webhook-->>NotifSvc: delivery_status
                 end
             end
@@ -2691,7 +2692,7 @@ sequenceDiagram
 |---------|-------------------|----------------|-------------|
 | **In-App** | Direct database insert, WebSocket broadcast to active sessions | No retry (persistent storage) | Click notification → view related schedule |
 | **Device Push** | Web Push API with VAPID authentication | 3 retries, exponential backoff (1s, 2s, 4s) | Tap notification → open app to schedule details |
-| **External Webhook** | HTTP POST to Pushover API or custom endpoint | 3 retries from config (default 1s backoff) | Receive on mobile device, click deep link |
+| **External Webhook** | HTTP request to configured webhook endpoint (method/payload configurable) | Configurable retry strategy | Delivery depends on webhook service (mobile push, Slack message, etc.) |
 
 **Severity Level Behavior**:
 
@@ -2759,20 +2760,26 @@ INSERT INTO schedules (
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Webhook Integration (Pushover Example)**:
+**Webhook Integration Examples**:
 
 ```python
-# Pushover API payload format
+# Generic JSON webhook (Slack, Discord, custom)
 {
-  "token": "<app_token>",      # From config
-  "user": "<user_key>",         # From config
+  "text": "Schedule Missed: Daily Backup",
+  "description": "Automation 'Daily Backup' has missed 3 consecutive executions...",
+  "severity": "WARNING",
+  "timestamp": 1737710405,
+  "link": "aiassistant://schedules/sched_xyz789"
+}
+
+# Pushover-style payload (configure via payload_template)
+{
+  "token": "{{env.PUSHOVER_APP_TOKEN}}",
+  "user": "{{env.PUSHOVER_USER_KEY}}",
   "title": "Schedule Missed: Daily Backup",
   "message": "Automation 'Daily Backup' has missed 3 consecutive executions...",
-  "priority": 1,                # 1 = high priority with notification sound
-  "sound": "pushover",          # Notification sound
-  "url": "aiassistant://schedules/sched_xyz789",  # Deep link
-  "url_title": "View Schedule",
-  "timestamp": 1737710405
+  "priority": 1,
+  "url": "aiassistant://schedules/sched_xyz789"
 }
 ```
 

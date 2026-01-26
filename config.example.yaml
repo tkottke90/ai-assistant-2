@@ -168,3 +168,116 @@ logging:
   exclude_paths:
     - /health  # Don't log health check requests
 
+# Notification Configuration
+# Changes to this section do NOT require restart
+notifications:
+  # In-App Notifications (persistent UI notifications)
+  in_app:
+    enabled: true  # Enable persistent in-app notifications
+    max_unread: 50  # Maximum unread notifications before auto-archiving oldest
+    auto_dismiss_after_days: 7  # Days before INFO notifications auto-dismiss (WARNING/CRITICAL never auto-dismiss)
+  
+  # Device Push Notifications (Web Push API) - OPTIONAL
+  # Uncomment and configure to enable device push notifications:
+  # device_push:
+  #   enabled: true  # Enable web push notifications to browser/device
+  #   vapid_public_key: ""  # VAPID public key for Web Push (generate with web-push library)
+  #   vapid_private_key_env: "VAPID_PRIVATE_KEY"  # Environment variable containing VAPID private key
+  #   # To generate VAPID keys: npx web-push generate-vapid-keys
+  
+  # External Webhook Notifications (HTTP-based, supports any service) - OPTIONAL
+  # Uncomment and configure to enable webhook notifications:
+  # external_webhook:
+  #   enabled: true  # Enable webhook notifications
+  #   base_url: ""  # Webhook endpoint URL
+  #   method: "POST"  # HTTP method: POST, GET, PUT, DELETE
+  #   headers: {}  # Additional HTTP headers (e.g., for authentication)
+  #   payload_type: "json"  # Payload format: json, form, text
+  #   payload_template: {}  # Define payload structure (see examples below)
+
+# Example webhook configurations:
+
+# Slack webhook:
+# external_webhook:
+#   enabled: true
+#   url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+#   method: "POST"
+#   headers: {}
+#   payload_type: "json"
+#   payload_template:
+#     text:
+#       default: "{{title}}: {{message}}"
+#       description: "Main notification text"
+#       required: true
+
+# Discord webhook:
+# external_webhook:
+#   enabled: true
+#   url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+#   method: "POST"
+#   headers: {}
+#   payload_type: "json"
+#   payload_template:
+#     content:
+#       default: "**{{title}}**\n{{message}}"
+#       description: "Message content"
+#       required: true
+#     username:
+#       default: "AI Assistant"
+#       description: "Bot username"
+
+# Pushover:
+# external_webhook:
+#   enabled: true
+#   url: "https://api.pushover.net/1/messages.json"
+#   method: "POST"
+#   headers: {}
+#   payload_type: "json"
+#   payload_template:
+#     token:
+#       default: "{{env.PUSHOVER_APP_TOKEN}}"
+#       description: "Pushover app token"
+#       required: true
+#     user:
+#       default: "{{env.PUSHOVER_USER_KEY}}"
+#       description: "Pushover user key"
+#       required: true
+#     title:
+#       default: "{{title}}"
+#       description: "Notification title"
+#     message:
+#       default: "{{message}}"
+#       description: "Notification message"
+#       required: true
+#     priority:
+#       default: "0"
+#       description: "Priority level"
+#       options: ["-2", "-1", "0", "1", "2"]
+
+# Custom API with authentication:
+# external_webhook:
+#   enabled: true
+#   url: "https://api.example.com/notifications"
+#   method: "POST"
+#   headers:
+#     Authorization: "Bearer YOUR_API_TOKEN"
+#     X-Custom-Header: "custom-value"
+#   payload_type: "json"
+#   payload_template:
+#     event_type:
+#       default: "ai_assistant_notification"
+#       description: "Event type identifier"
+#     title:
+#       default: "{{title}}"
+#       description: "Notification title"
+#     body:
+#       default: "{{message}}"
+#       description: "Notification body"
+#     severity:
+#       default: "{{severity}}"
+#       description: "Severity level"
+#       options: ["INFO", "WARNING", "CRITICAL"]
+#     timestamp:
+#       default: "{{timestamp}}"
+#       description: "Event timestamp"
+

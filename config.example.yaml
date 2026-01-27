@@ -380,3 +380,47 @@ notifications:
 #       default: "{{timestamp}}"
 #       description: "Event timestamp"
 
+# Schedules Configuration
+# Changes to this section do NOT require restart
+schedules:
+  # Automatically load and activate schedules on system startup
+  auto_load_on_startup: true
+  
+  # Default timezone for scheduling tasks (IANA timezone format)
+  # Examples: America/New_York, Europe/London, Asia/Tokyo, UTC
+  default_timezone: UTC
+  
+  # How to handle tasks that overlap with the next scheduled execution
+  # Options:
+  #   skip - Do not start a new task if the previous one is still running
+  #   queue - Queue the new task to run after the previous one completes
+  #   cancel - Cancel the previous task and start the new one immediately
+  overlap_policy: skip
+  
+  # Alert Settings
+  # Number of consecutive missed executions before sending an alert
+  default_alert_threshold: 3  # Min: 1
+  
+  # Default severity level for schedule alerts
+  # Options: INFO, WARNING, CRITICAL
+  default_alert_severity: WARNING
+  
+  # Default notification channels for schedule alerts
+  # Must match enabled channels in notifications section
+  default_alert_channels:
+    - in_app
+    # - device_push  # Uncomment if device_push is enabled
+    # - external_webhook  # Uncomment if external_webhook is enabled
+
+# Example: Custom schedule alert configuration
+# schedules:
+#   auto_load_on_startup: true
+#   default_timezone: America/Los_Angeles
+#   overlap_policy: queue  # Queue tasks instead of skipping
+#   default_alert_threshold: 1  # Alert on first miss (more aggressive)
+#   default_alert_severity: CRITICAL  # Treat missed schedules as critical
+#   default_alert_channels:
+#     - in_app
+#     - device_push
+#     - external_webhook
+

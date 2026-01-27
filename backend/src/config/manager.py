@@ -11,6 +11,7 @@ from .models import (
     LLMConfig,
     LoggingConfig,
     NotificationsConfig,
+    ScheduleConfig,
     ServerConfig,
     ToolsConfig
 )
@@ -50,6 +51,7 @@ class ConfigManager:
             "llm": LLMConfig,
             "logging": LoggingConfig,
             "notifications": NotificationsConfig,
+            "schedule": ScheduleConfig,
             "server": ServerConfig,
             "tools": ToolsConfig,
         }

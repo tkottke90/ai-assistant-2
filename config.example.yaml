@@ -74,43 +74,99 @@ llm:
 
 # Database Configuration
 # Changes to this section do NOT require restart
-# Defaults are shown below - uncomment and modify to customize
-# database:
-#   sqlite:
-#     path: "./data/ai_assistant.db"  # Path to SQLite database file, or ':memory:' for in-memory
-#     create_on_missing: true  # Automatically create database if it doesn't exist
+database:
+  # SQLite database for activities, automations, schedules, and evaluations
+  sqlite:
+    file_path: "./data/ai_assistant.db"  # Path to SQLite database file
+    create_on_missing: true  # Automatically create database and directory if missing
+  
+  # Embedding model configuration (for knowledge base semantic search)
+  embeddings:
+    provider: ollama  # Options: ollama, openai, anthropic
+    model: nomic-embed-text  # Provider-specific model name
+    
+    # Provider configurations (only active provider's config is used)
+    providers:
+      ollama:
+        base_url: http://localhost:11434
+        timeout_seconds: 30
+      
+      # openai:
+      #   api_key_env: OPENAI_API_KEY  # Environment variable name
+      #   # Alternative models: text-embedding-3-large, text-embedding-ada-002
+      
+      # anthropic:
+      #   api_key_env: ANTHROPIC_API_KEY
+      #   # Anthropic doesn't offer embeddings yet (placeholder)
 
-# Alternative SQLite configurations:
+# Alternative SQLite configurations (comment out above and uncomment one below):
 # In-memory database (data lost on restart):
 # database:
 #   sqlite:
 #     file_path: ":memory:"
 #     create_on_missing: true
 #
-# Custom path with directory auto-creation:
+# Custom path:
 # database:
 #   sqlite:
-#     file_path: "~/.local/share/ai-assistant/app.db"
+#     file_path: ~/.local/share/ai-assistant/app.db
 #     create_on_missing: true
-  
-  # Embedding model configuration (for knowledge base semantic search)
-  embeddings:
-    provider: "ollama"  # Options: ollama, openai, anthropic
-    model: "nomic-embed-text"  # Provider-specific model name
-    
-    # Provider configurations (only active provider's config is used)
-    providers:
-      ollama:
-        base_url: "http://localhost:11434"
-        timeout_seconds: 30
-      
-      openai:
-        api_key_env: "OPENAI_API_KEY"  # Environment variable name
-        # Alternative models: text-embedding-3-large, text-embedding-ada-002
-      
-      anthropic:
-        api_key_env: "ANTHROPIC_API_KEY"
-        # Anthropic doesn't offer embeddings yet (placeholder)
+
+# Tools Configuration
+# Changes to this section do NOT require restart
+# Define available tools for AI agent to use during automation execution
+tools:
+  tools:
+    # Shell tool (enabled by default for basic automation)
+    - id: shell
+      type: shell
+      enabled: true
+      config:
+        timeout_seconds: 30  # Maximum command execution time (1-3600)
+        require_approval: true  # Require user approval before executing commands
+        use_shell: false  # Use subprocess with shell=False for safety
+        whitelisted_commands: []  # Commands that bypass approval (empty for safety)
+        show_full_command: true  # Display canonical command path in approval UI
+
+# Additional tool examples (uncomment and configure as needed):
+#
+# Gmail tool for email operations:
+#   tools:
+#     - id: gmail-personal
+#       type: gmail
+#       enabled: true
+#       config:
+#         imap_host: imap.gmail.com
+#         imap_port: 993
+#         credentials_env_prefix: GMAIL_  # Reads GMAIL_USER and GMAIL_PASSWORD from environment
+#         max_fetch_limit: 50  # Maximum emails to fetch per request (1-1000)
+#         operation_mode: recommend  # Options: recommend (AI suggests actions), execute (AI performs actions with approval)
+#         recommendation_types:  # Optional: types of recommendations to generate
+#           - summary
+#           - labels
+#           - duplicates
+#           - spam
+#         confidence_threshold: 60  # Minimum confidence (0-100) to include in recommendations
+#         batch_similar: true  # Group similar recommendations for efficient review
+#
+# Git tool for repository operations:
+#     - id: git
+#       type: git
+#       enabled: true
+#       config:
+#         default_repos:
+#           - ~/projects/main
+#           - ~/projects/tools
+#
+# Custom user tool example (flexible schema, no validation):
+#     - id: finance-api
+#       type: finance_tool  # Matches directory name in ~/.ai_assistant/tools/
+#       enabled: true
+#       config:
+#         api_key_env: FINANCE_API_KEY
+#         base_url: https://api.financequotes.com
+#         rate_limit: 100
+#         timeout_seconds: 30
 
 # Example: Multiple provider configuration
 # You can configure multiple instances of the same provider type with different settings:
@@ -143,11 +199,11 @@ llm:
 logging:
   # Basic settings
   level: INFO  # Options: DEBUG, HTTP, INFO, WARNING, ERROR, CRITICAL
-  format: json  # Options: json (for log aggregation), text (human-readable)
+  format: text  # Options: json (for log aggregation), text (human-readable, better for development)
 
   # File logging
   enable_file_logging: true
-  log_file: ~/.config/ai-assistant/logs/app.log
+  log_file: ./data/logs/app.log  # Log file path (directory created automatically)
   max_bytes: 10485760  # 10 MB - maximum log file size before rotation
   backup_count: 5  # Number of backup log files to keep
 

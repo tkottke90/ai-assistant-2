@@ -11,7 +11,8 @@ from .models import (
     LLMConfig,
     LoggingConfig,
     NotificationsConfig,
-    ServerConfig
+    ServerConfig,
+    ToolsConfig
 )
 
 
@@ -50,6 +51,7 @@ class ConfigManager:
             "logging": LoggingConfig,
             "notifications": NotificationsConfig,
             "server": ServerConfig,
+            "tools": ToolsConfig,
         }
 
         # Cache for loaded configurations

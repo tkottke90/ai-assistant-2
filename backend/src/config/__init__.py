@@ -1,5 +1,5 @@
 from .manager import ConfigManager, get_config_manager
-from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig
+from .models import BaseConfig, ServerConfig, CorsConfig, LLMConfig, ToolsConfig
 
 __all__ = [
     "ConfigManager",
@@ -8,5 +8,6 @@ __all__ = [
     "ServerConfig",
     "CorsConfig",
     "LLMConfig",
+    "ToolsConfig",
 ]
 

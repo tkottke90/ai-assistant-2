@@ -5,14 +5,16 @@ from .llm import LLMConfig
 from .logging import LoggingConfig
 from .notifications import NotificationsConfig
 from .server import ServerConfig
+from .tools import ToolsConfig
 
 __all__ = [
-  "BaseConfig",
-  "CorsConfig",
-  "DatabaseConfig",
-  "LLMConfig",
-  "LoggingConfig",
-  "NotificationsConfig",
-  "ServerConfig",
+    "BaseConfig",
+    "CorsConfig",
+    "DatabaseConfig",
+    "LLMConfig",
+    "LoggingConfig",
+    "NotificationsConfig",
+    "ServerConfig",
+    "ToolsConfig",
 ]
 

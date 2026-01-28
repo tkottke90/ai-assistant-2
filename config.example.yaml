@@ -194,6 +194,66 @@ tools:
 #       default_model: claude-3-5-sonnet-20241022
 #       max_context_tokens: 150000
 
+# Credential Validation Configuration
+# Changes to this section do NOT require restart
+# Controls how the system validates external service credentials (API keys, tokens, etc.)
+credentials:
+  # Validation Strategy
+  # Options:
+  #   lazy - Validate credentials when first used by a tool (default, fastest startup)
+  #   startup - Validate all credentials at application startup (catch issues early)
+  #   disabled - Skip validation entirely (trust configuration, fastest but risky)
+  strategy: lazy
+  
+  # Log warnings when required credentials are missing from environment variables
+  warn_on_missing: true
+  
+  # Retry Settings (exponential backoff for transient network failures)
+  retry_attempts: 3  # Number of retry attempts (0-10, 0 disables retries)
+  retry_backoff_base_seconds: 0.1  # Initial delay (seconds), doubles each retry: 0.1s, 0.2s, 0.4s...
+  retry_backoff_max_seconds: 5.0  # Maximum delay between retries (caps exponential growth)
+  retry_total_timeout_seconds: 10.0  # Total time limit for all retry attempts
+  
+  # Credential Cache (reduces validation overhead for frequently-used credentials)
+  cache_duration_seconds: 300  # Cache duration in seconds (0 = no caching, 300 = 5 minutes)
+  
+  # Circuit Breaker (prevents cascading failures when external services are down)
+  circuit_breaker_enabled: true  # Enable circuit breaker pattern
+  circuit_breaker_failure_threshold: 3  # Consecutive failures before opening circuit
+  circuit_breaker_recovery_seconds: 3600  # Time before attempting recovery (1 hour)
+  circuit_breaker_half_open_max_attempts: 1  # Test attempts when recovering
+  
+  # Future: macOS Keychain Integration (not yet implemented)
+  keychain_enabled: false
+  keychain_service_name: ai-assistant-2
+
+# Alternative credential configurations (uncomment and modify as needed):
+#
+# Aggressive validation (catch credential issues immediately at startup):
+# credentials:
+#   strategy: startup  # Validate all credentials when app starts
+#   warn_on_missing: true
+#   retry_attempts: 1  # Fail fast on startup
+#   retry_backoff_base_seconds: 0.5
+#   retry_total_timeout_seconds: 5.0
+#   circuit_breaker_enabled: false  # Not useful at startup
+#
+# High-reliability configuration (for unstable networks):
+# credentials:
+#   strategy: lazy
+#   retry_attempts: 5  # More retries for flaky connections
+#   retry_backoff_base_seconds: 0.5
+#   retry_backoff_max_seconds: 10.0
+#   retry_total_timeout_seconds: 30.0
+#   cache_duration_seconds: 600  # Longer cache (10 minutes)
+#   circuit_breaker_failure_threshold: 5  # More tolerant of failures
+#   circuit_breaker_recovery_seconds: 1800  # Faster recovery (30 minutes)
+#
+# Minimal validation (for local development without external services):
+# credentials:
+#   strategy: disabled  # Skip all validation
+#   warn_on_missing: false
+
 # Logging Configuration
 # Changes to this section require application restart
 logging:

@@ -1,5 +1,6 @@
 from .base import BaseConfig
 from .cors import CorsConfig
+from .credentials import CredentialsConfig
 from .database import DatabaseConfig
 from .llm import LLMConfig
 from .logging import LoggingConfig
@@ -11,6 +12,7 @@ from .tools import ToolsConfig
 __all__ = [
     "BaseConfig",
     "CorsConfig",
+    "CredentialsConfig",
     "DatabaseConfig",
     "LLMConfig",
     "LoggingConfig",

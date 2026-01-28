@@ -7,6 +7,7 @@ from .loader import ConfigLoader
 from .models import (
     BaseConfig,
     CorsConfig,
+    CredentialsConfig,
     DatabaseConfig,
     LLMConfig,
     LoggingConfig,
@@ -47,6 +48,7 @@ class ConfigManager:
         # Configuration models registry
         self._config_models: Dict[str, Type[BaseConfig]] = {
             "cors": CorsConfig,
+            "credentials": CredentialsConfig,
             "database": DatabaseConfig,
             "llm": LLMConfig,
             "logging": LoggingConfig,

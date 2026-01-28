@@ -10,6 +10,7 @@ argument-hint: Story or task name (e.g., "Story - Create Credentials Config Mode
 2. Extract relevant information from the document
 3. If a relevant design document exists, review references in from the story in the design document
 4. Summarize the story or task, including key acceptance criteria, implementation notes, and any dependencies
+5. Using the obsidian mcp tool, make sure that the status of the story is set to `3 - in-progress`
 
 ## Summary Format
 

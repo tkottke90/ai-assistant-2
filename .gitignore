@@ -209,3 +209,4 @@ __marimo__/
 # AI Assistant Configuration
 # Local development config directory (used when AI_ASSISTANT_CONFIG_DIR=./config)
 /config/
+.ai/

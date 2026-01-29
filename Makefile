@@ -21,14 +21,8 @@ help:
 	@echo "  make clean          - Clean build artifacts and caches"
 
 # Setup all dependencies
-setup: setup-frontend setup-backend
+setup: setup-backend
 	@echo "✓ All dependencies installed successfully!"
-
-# Setup frontend dependencies
-setup-frontend:
-	@echo "Installing frontend dependencies..."
-	cd frontend && npm install
-	@echo "✓ Frontend dependencies installed"
 
 # Setup backend dependencies
 ensure-venv:
@@ -42,40 +36,35 @@ ensure-venv:
 
 setup-backend: ensure-venv
 	@echo "Installing backend dependencies..."
-	cd backend && $(VENV_PIP) install -e ".[dev]"
+	$(VENV_PIP) install -e ".[dev]"
 	@echo "✓ Backend dependencies installed"
 
 # Run backend development server
 dev: ensure-venv
 	@echo "Starting backend development server..."
 	@echo "Config directory: ./config"
-	cd backend && AI_ASSISTANT_CONFIG_DIR=../config $(VENV_PY) -m src.main
+	cd backend && AI_ASSISTANT_CONFIG_DIR=../config ../$(VENV_PY) -m src.main
 
 # Build backend executable
 build: ensure-venv
 	@echo "Building backend executable with PyInstaller..."
-	cd backend && $(VENV_PY) -m PyInstaller ai-assistant-backend.spec
+	$(VENV_PY) -m PyInstaller ai-assistant-backend.spec
 	@echo "✓ Build completed! Executable is in backend/dist/ai-assistant-backend"
 
 # Run all tests
 test: test-backend test-frontend
 	@echo "✓ All tests completed!"
 
-# Run frontend tests
-test-frontend:
-	@echo "Running frontend tests..."
-	cd frontend && npm test run
-
 # Run backend tests
 test-backend: ensure-venv
 	@echo "Running backend tests..."
-	cd backend && $(VENV_PYTEST) -v
+	$(VENV_PYTEST) -v
 
 # Pattern rule: allow running a single pytest node via make
 .PHONY: tests/%
 tests/%:
 	@echo "Running pytest for $@"
-	cd backend && $(VENV_PYTEST) -v $@
+	$(VENV_PYTEST) -v $@
 
 # Check Python syntax using py_compile
 compile: ensure-venv

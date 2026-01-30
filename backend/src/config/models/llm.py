@@ -24,14 +24,29 @@ class LLMConfigBase(BaseConfig):
 
     max_context_tokens: int = Field(
         default=3000, 
-        ge=100, 
-        description="Maximum number of tokens for the context window"
+        ge=-1, 
+        description="Maximum number of tokens for the context window.  -1 for unlimited"
     )
 
     max_tool_definition_tokens: int = Field(
         default=500, 
         ge=50, 
         description="Maximum number of tokens for tool definitions in context"
+    )
+
+    top_k: int = Field(
+        default=5, 
+        ge=1, 
+        description="Limits next token selection to the K most likely tokens"
+        # See: https://medium.com/@8926581/understanding-top-k-and-top-p-in-prompt-engineering-00a3b93dcd40
+    )
+
+    top_p: float = Field(
+        default=0.9, 
+        ge=0.0, 
+        le=1.0,
+        description="Cumulative probability threshold for nucleus sampling"
+        # See: https://medium.com/@8926581/understanding-top-k-and-top-p-in-prompt-engineering-00a3b93dcd40
     )
 
     context_overflow_strategy: ContextOverflowStrategy = Field(

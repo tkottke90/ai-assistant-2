@@ -138,10 +138,10 @@ class TestAnthropicConfigInheritance:
             AnthropicConfig(max_context_activities=0)
         assert "greater than or equal to 1" in str(exc_info.value)
 
-        # max_context_tokens must be >= 100
+        # max_context_tokens must be >= -1 (allows -1 for unlimited)
         with pytest.raises(ValidationError) as exc_info:
-            AnthropicConfig(max_context_tokens=50)
-        assert "greater than or equal to 100" in str(exc_info.value)
+            AnthropicConfig(max_context_tokens=-2)
+        assert "greater than or equal to -1" in str(exc_info.value)
 
         # max_tool_definition_tokens must be >= 50
         with pytest.raises(ValidationError) as exc_info:

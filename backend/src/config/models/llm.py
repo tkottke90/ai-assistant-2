@@ -8,6 +8,31 @@ class ContextOverflowStrategy(str, Enum):
     SUMMARIZE = "summarize"
     TRUNCATE = "truncate"
 
+class PricingScales(str, Enum):
+    FREE = "free"
+    PER_K_TOKENS = "per_k_tokens"
+    PER_M_TOKENS = "per_m_tokens"
+
+class PricingStructure(BaseConfig):
+    """
+    Pricing structure for LLM usage
+    """
+    pricing_scale: PricingScales = Field(
+        default=PricingScales.FREE,
+        description="Pricing scale for LLM usage.  This contextualizes the cost fields.  For example, 'per_k_tokens' means costs are per 1000 tokens."
+    )
+
+    prompt_cost_per_1k_tokens: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Cost to send messages to the LLM (input tokens)"
+    )
+
+    completion_cost_per_1k_tokens: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Cost for LLM-generated tokens (output tokens)"
+    )
 
 class LLMConfigBase(BaseConfig):
     """
@@ -59,6 +84,11 @@ class LLMConfigBase(BaseConfig):
         ge=0.0, 
         le=2.0,
         description="Sampling temperature (0=deterministic, 2=creative)"
+    )
+
+    pricing: PricingStructure = Field(
+        default_factory=PricingStructure,
+        description="Pricing structure for LLM usage"
     )
 
 

@@ -47,29 +47,23 @@ class CustomStateMiddleware(AgentMiddleware):
 # Setup the middleware as a class so we can pass in the
 # max token limit
 class MessageLimitMiddleware(AgentMiddleware):
-    def __init__(self, max_tokens: int = 10_000):
+    def __init__(self, max_tokens: int = 10_000, counter: UsageMetadataCallbackHandler = counter):
         super().__init__()
         self.max_tokens = max_tokens
 
     def before_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
         invocation = state.get("invocationId", "unknown-invocation")
-        print(f'=== Invocation ID: {invocation} ===')
-        
-        print('\n === Before Model === \n')
-        print(f'Token Count: {counter.usage_metadata.get("total_tokens", 0)}')
-        
+        print(f'[{invocation}] Before Model Middleware Triggered')
+        print(f'[{invocation}] Token Count: {counter.usage_metadata.get("total_tokens", 0)}')
+
         return None
 
     def after_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        print('\n === After Model === \n')
+        invocation = state.get("invocationId", "unknown-invocation")
+        print(f'[{invocation}] After Model Middleware Triggered')
         
-        print(f"Model returned: {state['messages'][-1].content[:50]}...")
-
-        print('\n ======================== \n')
-
-        print(
-            json.dumps(counter.usage_metadata, indent=2)
-        )
+        print(f'[{invocation}] Model returned: {state['messages'][-1].content[:50]}...')
+        print(f'[{invocation}] {json.dumps(counter.usage_metadata)}')
 
         return None
 
@@ -163,3 +157,35 @@ Model returned:  Today, the weather is sunny with a high of 75°F (...
   }
 }
 """
+
+
+"""
+Finally we verify here that the callback is instance specific by
+running two invocations in parallel.
+"""
+import asyncio
+
+async def main():
+    input3: CustomState = CustomState(
+        invocationId="test-invocation-003",
+        messages=[
+            HumanMessage(content="What's the weather like in New York this weekend?")
+        ]
+    )
+
+    input4: CustomState = CustomState(
+        invocationId="test-invocation-004",
+        messages=[
+            HumanMessage(content="Will it rain in San Francisco next week?")
+        ]
+    )
+
+    await asyncio.gather(
+        agent.ainvoke(input3, config={"callbacks": [counter]}),
+        agent.ainvoke(input4, config={"callbacks": [counter]})
+    )
+
+    print(f"Tasks Complete")
+
+
+asyncio.run(main())

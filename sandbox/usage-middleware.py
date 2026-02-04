@@ -32,7 +32,6 @@ llm = ChatOllama(model="mistral:7b")
 # See: ./usage-callback.py
 counter = UsageMetadataCallbackHandler()
 
-# Option 1: Explicit TypedDict (Recommended)
 class CustomState(AgentState):
     invocationId: str
 
@@ -90,6 +89,8 @@ response = agent.invoke(
   input1,
   config={ "callbacks": [counter] }
 )
+
+print(response.get('usage_metadata', {}))
 
 """
 Example Output:
@@ -160,7 +161,7 @@ Model returned:  Today, the weather is sunny with a high of 75°F (...
 
 
 """
-Finally we verify here that the callback is instance specific by
+Next we verify here that the callback is instance specific by
 running two invocations in parallel.
 """
 import asyncio
@@ -189,3 +190,28 @@ async def main():
 
 
 asyncio.run(main())
+
+"""
+Our next challenge is that the callback will not be global.  When we build the
+agents into an application, they will be instantiated and we will 
+"""
+
+class Agent():
+  __usage_counter: UsageMetadataCallbackHandler
+
+  def __init__(self, llm):
+    self.setupCallbacks()
+
+    self.agent = create_agent(
+      model=llm,
+      system_prompt="You're a helpful assistant that provides concise weather information.",
+      middleware=[
+        MessageLimitMiddleware(max_tokens=5000, counter=self.__usage_counter)
+      ]
+    )
+
+  def setupCallbacks(self):
+    self.__usage_counter = UsageMetadataCallbackHandler()
+
+  def invoke(self):
+     pass

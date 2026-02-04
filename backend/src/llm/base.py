@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from langchain_core.callbacks import UsageMetadataCallbackHandler
 
 # Base Language Model Class
 # https://reference.langchain.com/python/langchain_core/language_models/#langchain_core.language_models

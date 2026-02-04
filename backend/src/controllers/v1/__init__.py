@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from . import root, config
+from . import root, config, agent
 
 __all__ = ["router"]
 
@@ -7,5 +7,6 @@ __all__ = ["router"]
 router = APIRouter()
 
 # Include sub-routers
+router.include_router(agent.router, prefix="")
 router.include_router(root.router, prefix="")
 router.include_router(config.router, prefix="")

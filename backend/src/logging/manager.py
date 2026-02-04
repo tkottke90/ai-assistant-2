@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Dict
 from threading import RLock
 
+from ..config.models.logging import LoggingConfig
 from .formatters import JSONFormatter, TextFormatter
 from .handlers import OTELManager
 from .otel_utils import is_otel_available, get_installation_instructions
@@ -66,7 +67,7 @@ class LoggerManager:
 
         self._initialized = True
 
-    def configure(self, config) -> None:
+    def configure(self, configDir: Path, config: LoggingConfig) -> None:
         """
         Configure the logging system
 
@@ -107,7 +108,7 @@ class LoggerManager:
 
             # Add file handler with rotation
             if config.enable_file_logging:
-                log_path = Path(config.log_file)
+                log_path = configDir / config.log_file
                 log_path.parent.mkdir(parents=True, exist_ok=True)
 
                 file_handler = RotatingFileHandler(

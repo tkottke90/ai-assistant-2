@@ -8,7 +8,6 @@ from .config.manager import ConfigManager
 from .logging import LoggerManager, get_logger, is_otel_instrumentation_available
 from .logging.middleware import HTTPLoggingMiddleware
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -25,7 +24,11 @@ async def lifespan(app: FastAPI):
     # Initialize logging
     logger_manager = LoggerManager()
     logging_config = config_manager.get_config("logging")
-    logger_manager.configure(logging_config)
+
+    logger_manager.configure(
+        config_manager._get_config_directory(),
+        logging_config
+    )
     
     # Auto-instrument FastAPI with OTEL if enabled
     if logging_config.enable_otel and logging_config.otel_export_traces:
@@ -98,7 +101,8 @@ app.include_router(v1_router, prefix="/api/v1")
 # This allows serving HTML, CSS, JS, and other static assets
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir)), name="static")
+    logger.info("Mounting static files from: %s", static_dir)
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 else:
     logger.warning("Static directory not found: %s", static_dir)
 

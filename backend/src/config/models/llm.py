@@ -17,6 +17,7 @@ class PricingStructure(BaseConfig):
     """
     Pricing structure for LLM usage
     """
+
     pricing_scale: PricingScales = Field(
         default=PricingScales.FREE,
         description="Pricing scale for LLM usage.  This contextualizes the cost fields.  For example, 'per_k_tokens' means costs are per 1000 tokens."
@@ -75,7 +76,7 @@ class LLMConfigBase(BaseConfig):
     )
 
     context_overflow_strategy: ContextOverflowStrategy = Field(
-        default=ContextOverflowStrategy.SUMMARIZE,
+        default=ContextOverflowStrategy.TRUNCATE,
         description="Strategy when context exceeds limits (summarize or truncate)"
     )
 
@@ -86,9 +87,9 @@ class LLMConfigBase(BaseConfig):
         description="Sampling temperature (0=deterministic, 2=creative)"
     )
 
-    pricing: PricingStructure = Field(
-        default_factory=PricingStructure,
-        description="Pricing structure for LLM usage"
+    pricing: Dict[str, PricingStructure] = Field(
+        default_factory=dict,
+        description="Pricing structure for LLM usage optionally by model name"
     )
 
 
@@ -232,4 +233,8 @@ class LLMConfig(BaseConfig):
                 f"default_provider '{v}' must exist in providers. Available: {list(info.data['providers'].keys())}"
             )
         return v
+    
+    def get_default_provider(self) -> LLMProviderConfig:
+        """Get the default LLM provider configuration"""
+        return self.providers[self.default_provider]
 

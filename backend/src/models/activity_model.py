@@ -14,7 +14,7 @@ class ActivityStatus(str, Enum):
   CANCELLED = "CANCELLED"
   MISSED = "MISSED"
 
-class ActivityTable(BaseTable):
+class Activity(BaseTable):
   id: int = Field(..., description="Primary key for the activity in the database")
 
   # Tracks unstructured metadata about the activity

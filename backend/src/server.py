@@ -7,6 +7,7 @@ from .controllers.v1 import router as v1_router
 from .config.manager import ConfigManager
 from .logging import LoggerManager, get_logger, is_otel_instrumentation_available
 from .logging.middleware import HTTPLoggingMiddleware
+from .database import initialize_database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,6 +30,9 @@ async def lifespan(app: FastAPI):
         config_manager._get_config_directory(),
         logging_config
     )
+    
+    # Initialize database
+    initialize_database(config_manager)
     
     # Auto-instrument FastAPI with OTEL if enabled
     if logging_config.enable_otel and logging_config.otel_export_traces:

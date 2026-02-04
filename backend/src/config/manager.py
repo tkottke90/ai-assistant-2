@@ -460,6 +460,15 @@ class ConfigManager:
         for feature, model_class in self._config_models.items():
             schemas[feature] = model_class.model_json_schema()
         return schemas
+    
+    def normalize_path(self, path: str) -> Path:
+        """
+        Normalize a filesystem path by expanding user and resolving to absolute
+
+        Args:
+        """
+        return (self._get_config_directory() / path).resolve()
+
 
 
 def get_config_manager() -> ConfigManager:

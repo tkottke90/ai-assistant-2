@@ -23,9 +23,13 @@
       button[data-theme="primary"] {
         @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800/80;
       }
+
+      nav a {
+        @apply block px-4 py-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-center;
+      }
     }
   </style>
-  <script src="lib/chat.js"></script>
+  <script src="js/chat.js"></script>
 </head>
 <body class="bg-zinc-400/75 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 h-screen w-screen overflow-hidden">
   <div class="h-full w-full grid grid-cols-[300px_1fr]">
@@ -33,7 +37,9 @@
       <h2 class="text-center py-2">AI Assistant</h2>
       <nav class="flex-grow flex flex-col w-full pb-2">
         <section class="flex-grow"></section>
-        <section></section>
+        <section>
+          <a href="/api/v1/">API Version</a>
+        </section>
       </nav>
     </aside>
 
@@ -43,13 +49,12 @@
   </div>
 
   <script>
-
-
-
+    const chat = new ChatInterface();
 
     document.addEventListener("DOMContentLoaded", function() {
+
       const chatContainer = document.getElementById("chat-container");
-      chatContainer.appendChild(createChatInterface());
+      chatContainer.appendChild(chat.createChatInterface());
     });
   </script>
 </body>

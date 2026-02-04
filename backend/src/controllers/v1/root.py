@@ -12,4 +12,12 @@ def health_check():
 @router.get("/")
 def get_root():
     """Root endpoint"""
-    return {"message": "Welcome to AI Assistant API!"}
+    return {
+        "message": "Welcome to AI Assistant API!",
+        "version": "1.0.0",
+        "links": {
+            "documentation": "/docs",
+            "openapi_spec": "/openapi.json",
+            "health_check": "/health"
+        }
+    }

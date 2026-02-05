@@ -2,6 +2,7 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from .controllers.v1 import router as v1_router
 from .config.manager import ConfigManager
@@ -104,6 +105,16 @@ app.include_router(v1_router, prefix="/api/v1")
 # Mount static files
 # This allows serving HTML, CSS, JS, and other static assets
 static_dir = Path(__file__).parent / "static"
+
+@app.exception_handler(404)
+async def custom_404_handler(request, exc):
+    """Serve 404.html for unmatched routes"""
+    notfound_path = static_dir / "404.html"
+    if notfound_path.exists():
+        return FileResponse(notfound_path, status_code=404)
+    # Fallback to default JSON response if 404.html doesn't exist
+    return {"detail": "Not Found"}
+
 if static_dir.exists():
     logger.info("Mounting static files from: %s", static_dir)
     app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")

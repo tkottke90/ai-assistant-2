@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="index.css">
+  <style type="text/tailwindcss">
+    @layer base {
+      h1 {
+        @apply text-4xl font-bold mb-6;
+      }
+      
+      h2 {
+        @apply text-2xl font-bold mb-4;
+      }
+
+      button {
+        @apply cursor-pointer px-4 py-2 bg-zinc-200 hover:bg-zinc-300 active:bg-zinc-400/80 dark:text-zinc-900 rounded;
+      }
+
+      button[data-theme="primary"] {
+        @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800/80;
+      }
+
+      nav a {
+        @apply block px-4 py-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-center;
+      }
+    }
+  </style>
+  <script src="js/chat.js"></script>
+</head>
+<body class="bg-zinc-400/75 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 h-screen w-screen overflow-hidden">
+  <div class="h-full w-full grid grid-cols-[300px_1fr]">
+    <aside class="flex flex-col">
+      <h2 class="text-center py-2">AI Assistant</h2>
+      <nav class="flex-grow flex flex-col w-full pb-2">
+        <section class="flex-grow">
+          <a href="/">Chat</a>
+        </section>
+        <section>
+          <a href="/settings.html" class="bg-blue-600" >Settings</a>
+          <a href="/api/v1/">API Version</a>
+        </section>
+      </nav>
+    </aside>
+
+    <main id="chat-container" class="bg-zinc-200 dark:bg-zinc-800 p-6">
+      <h1>Settings</h1>
+
+
+    </main>
+  </div>
+
+  <script>
+
+  </script>
+</body>
+</html>

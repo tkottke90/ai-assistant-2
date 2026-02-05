@@ -4,12 +4,16 @@ from ...database import get_checkpointer
 from ...llm.context_window_manager import ContextWindowManager
 from ...llm.factory import LlmFactory, get_llm_factory
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from langchain_core.runnables import RunnableConfig
+from langchain.messages import AIMessage, HumanMessage
 from langchain.agents import create_agent
 from pydantic import BaseModel
 
-from ...dao import threads as ThreadDao
+from ...dao import (
+   activities as ActivityDao,
+   threads as ThreadDao
+)
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -27,9 +31,19 @@ def get_thread(thread_id: str):
   """
   Get chat thread by ID
   """
+  activities = ActivityDao.getThreadHistory(thread_id)
+
+  chatHistory = []
+  for activity in [a for a in activities if a.user_input is not None]:
+    chatHistory.extend([
+       HumanMessage(content=activity.user_input),
+       AIMessage(content=activity.ai_response, additional_kwargs={ "metadata": activity.metadata.get("llm", {}) })
+    ])
+
   return {
     "thread_id": thread_id,
-    "messages": ThreadDao.get_thread_messages(thread_id)
+    "activities": activities,
+    "chat_history": chatHistory
   }
 
 @router.post("/new-thread")
@@ -76,7 +90,24 @@ def chat(
     }
   )
   
-  return { "message": response['messages'][-1].content }
+  # Get the most recent messages from the thread
+  messages = response['messages'][-2:];
+
+  # Async save new messages as an Activity
+  ActivityDao.createChatActivity(
+    thread_id=request.thread_id,
+    messages=messages,
+    metadata={
+      "llm": {
+         "engine": llm_cfg.get_default_provider().type,
+         "model": llm_cfg.get_default_provider().default_model,
+      },
+      "usage": context_manager.counter.usage_metadata,
+      "cost": context_manager.estimate_cost(context_manager.counter.usage_metadata)
+    }
+  )
+
+  return { "message": response['messages'] }
 
 
 def __construct_thread_config(threadId: str) -> RunnableConfig:

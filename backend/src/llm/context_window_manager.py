@@ -1,10 +1,11 @@
-from ..config.models.llm import ContextOverflowStrategy, LLMConfigBase
+from ..config.models.llm import ContextOverflowStrategy, LLMConfigBase, PricingScales
 from langchain.agents.middleware import AgentMiddleware, AgentState
-from langchain.messages import AIMessage, AnyMessage
+from langchain.messages import UsageMetadata
 from langgraph.runtime import Runtime
 from langchain_core.callbacks import UsageMetadataCallbackHandler
-from typing import Any, Annotated
+from typing import Any, Annotated, Dict
 import operator
+from ..logging import get_logger
 
 class NoPricingDefinedError(Exception):
     """
@@ -42,6 +43,7 @@ class ContextWindowManager(AgentMiddleware):
 
     __llm_config: LLMConfigBase
     __counter: UsageMetadataCallbackHandler
+    __logger = get_logger("ContextWindowManager")
 
     def __init__(self, *, config: LLMConfigBase):
         self.__llm_config = config
@@ -78,6 +80,8 @@ class ContextWindowManager(AgentMiddleware):
         if "total_tokens" in value:
             totalTokens += value.get("total_tokens", 0)
 
+      self.__logger.debug(f"LLM Usage - Input Tokens: {inputTokens}, Output Tokens: {outputTokens}, Total Tokens: {totalTokens}")
+
       return { 
         "inputTokens": inputTokens,
         "outputTokens": outputTokens,
@@ -85,39 +89,43 @@ class ContextWindowManager(AgentMiddleware):
       }
 
 
-    def estimate_cost(self, response: dict) -> list[AnyMessage]:
+    def estimate_cost(self, usage_metadata: UsageMetadata) -> float:
       """
       Estimates the cost of the LLM invocation based on usage metadata collected during call or
       agent execution.
       """
 
+      self.__logger.info("Estimating LLM invocation cost based on usage metadata", extra={ "models_used": list(usage_metadata.keys()) })
       cost = 0.0
 
       if not self.__llm_config.pricing:
+        self.__logger.info("No pricing structure defined in LLM configuration")
         return cost
 
-      for model, usage_data in response.get('usage_metadata', dict()).items():
+      for model, usage_data in usage_metadata.items():
         # Check for pricing model matching the model
         pricing = self.__llm_config.pricing.get(model)
         
         # If not found, then find default pricing (identified by applies_to_model='*')
         if not pricing:
+          self.__logger.info("No specific pricing found for model, checking for default pricing structure")
           pricing = self.__llm_config.pricing.get("*")
 
         if not pricing:
-          raise NoPricingDefinedError(
-              "No pricing structure defined for LLM usage.  Cannot estimate cost."
-          )
+          self.__logger.warning(f"No pricing structure defined for model {model}, skipping cost estimation for this model")
+          return cost
         
-        prompt_tokens = usage_data.get('prompt_tokens', 0)
-        completion_tokens = usage_data.get('completion_tokens', 0)
+        prompt_tokens = usage_data.get('input_tokens', 0)
+        completion_tokens = usage_data.get('output_tokens', 0)
 
-        if pricing.pricing_scale == ContextOverflowStrategy.PER_K_TOKENS:
+        if pricing.pricing_scale == PricingScales.PER_K_TOKENS:
           multiplier = 1_000.0
-        elif pricing.pricing_scale == ContextOverflowStrategy.PER_M_TOKENS:
+        elif pricing.pricing_scale == PricingScales.PER_M_TOKENS:
           multiplier = 1_000_000.0
         else:
-          multiplier = 1.0
+          multiplier = 0.0
+
+        self.__logger.debug(f"Calculating cost for model {model}", extra={ "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens, "multiplier": multiplier })
 
         cost += (
           # Input Prompt cost
@@ -126,4 +134,6 @@ class ContextWindowManager(AgentMiddleware):
           (completion_tokens / multiplier) * pricing.completion_cost_per_1k_tokens
         )
 
-      return cost
+        self.__logger.debug(f"Estimated cost for model {model}: {cost}")
+
+      return round(cost, 4)

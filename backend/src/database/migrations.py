@@ -1,10 +1,11 @@
 from logging import Logger
 import sqlite3
-from ..models import ThreadSummaryMigrations
+from ..models import ThreadSummaryMigrations, ActivityMigrations
 
 
 migrations = [
-  *ThreadSummaryMigrations
+  *ThreadSummaryMigrations,
+  *ActivityMigrations
 ]
 
 def run_migrations(sqlite: sqlite3.Connection, logger: Logger):

@@ -1,4 +1,5 @@
-from ..database import get_database
+import json
+from ..database import get_database, get_checkpointer
 
 def get_threads():
     """
@@ -23,21 +24,32 @@ def get_thread_messages(thread_id: str):
     """
     Get list of chat threads
     """
-    db = get_database()
-    
+    checkpointer = get_checkpointer()
 
-    cursor = db.cursor()
-    cursor.execute("""
-    SELECT thread_id, checkpoint_id, checkpoint, metadata FROM checkpoints
-    WHERE thread_id = ?
-    """,
-    (thread_id,)
-    )
+    checkpoints = checkpointer.list({
+        "configurable": {
+            "thread_id": thread_id
+        }
+    })
 
-    # Fetch all results and extract thread_id from tuples
-    rows = cursor.fetchall()
-    cursor.close()
+    if not checkpoints:
+        print("No checkpoints found for thread %s", thread_id)
+        return []
     
-    # Return list of thread_ids (rows are tuples like [('thread1',), ('thread2',)])
-    return rows
+    try:
+        messageList = []
+
+        print('loading checkpoints for thread %s', thread_id)
+        for message in checkpoints:
+            checkpoint_messages = message.checkpoint.get("channel_values", {}).get("messages", [])
+            
+            print ("Checkpoint messages for thread %s: %s", thread_id, checkpoint_messages)
+
+            messageList.clear()
+            messageList.extend(checkpoint_messages)
+
+        return messageList
+    except Exception as e:
+        print("Error retrieving messages for thread %s: %s", thread_id, e)
+        return []
 

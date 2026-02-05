@@ -5,6 +5,8 @@ from ..config.models.database import DatabaseConfig
 from ..logging import get_logger
 from . import migrations
 import os
+from functools import wraps
+from typing import Callable, ParamSpec, TypeVar
 
 __sqlite_db__: sqlite3.Connection | None = None
 
@@ -33,6 +35,7 @@ def initialize_database(configs: ConfigManager) -> None:
 
     # Connect to the SQLite database
     __sqlite_db__ = sqlite3.connect(sqlite_cfg, check_same_thread=False)
+    __sqlite_db__.row_factory = sqlite3.Row
 
     # Setup SqliteSaver tables
     logger.debug("Setting up checkpoint tables")
@@ -69,3 +72,51 @@ def get_checkpointer() -> SqliteSaver:
     
     return SqliteSaver(__sqlite_db__)
 
+def get_cursor() -> sqlite3.Cursor:
+    """
+    Get a new cursor for the database connection.
+    """
+    db = get_database()
+
+    return db.cursor()
+
+# Type variables for preserving function signatures
+P = ParamSpec('P')
+T = TypeVar('T')
+
+def transaction(func: Callable[P, T]) -> Callable[P, T]:
+    """
+    Decorator that wraps a function in a database transaction.
+    Automatically commits on success or rolls back on exception.
+    
+    Usage:
+        @transaction
+        def create_user(name: str) -> int:
+            db = get_database()
+            db.execute("INSERT INTO users (name) VALUES (?)", (name,))
+            return cursor.lastrowid
+    """
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        db = get_database()
+        
+        # Check if already in a transaction (nested transaction support)
+        in_transaction = db.in_transaction
+        
+        try:
+            if not in_transaction:
+                db.execute("BEGIN")
+            
+            result = func(*args, **kwargs)
+            
+            if not in_transaction:
+                db.commit()
+            
+            return result
+            
+        except Exception as e:
+            if not in_transaction:
+                db.rollback()
+            raise  # Re-raise the exception after rollback
+    
+    return wrapper

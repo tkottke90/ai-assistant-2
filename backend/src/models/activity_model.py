@@ -1,9 +1,10 @@
-import json
-from typing import ClassVar, Optional
-from datetime import datetime
-from pydantic import Field, field_validator
-from enum import Enum
 from .base_model import BaseTable
+from datetime import datetime
+from enum import Enum
+from langchain_core.messages import HumanMessage, AIMessage
+from pydantic import Field, field_validator
+from typing import ClassVar, Optional
+import json
 
 migrations = [
   """
@@ -156,6 +157,33 @@ class Activity(BaseTable):
       except json.JSONDecodeError:
         return {}
     return v if v is not None else {}
+  
+  def to_chat_messages(self):
+    """Convert activity to a list of chat messages."""
+    messages = []
+
+    if self.user_input:
+      messages.append(HumanMessage(
+        content=self.user_input,
+        id=f"activity-{self.id}-human",
+        additional_kwargs={ "timestamp": self.created_at.isoformat() }
+      ))
+    
+    if self.ai_response:
+      messages.append(AIMessage(
+          content=self.ai_response,
+          id=f"activity-{self.id}-ai",
+          additional_kwargs={ 
+             "metadata": self.metadata.get("llm", {}), 
+             "timestamp": self.created_at.isoformat()
+          }))
+      
+    # Future - Can show other types of messages based on activity type
+    #  - Tool Calls
+    #  - Approval Requests
+    #  - Approval Decisions
+  
+    return messages
 
   Status: ClassVar = ActivityStatus
 

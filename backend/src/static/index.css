@@ -11,30 +11,8 @@ html, body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.container-blur {
-  position: relative;
 
-  --blur-height: 50px;
-}
-
-.container-blur::after,
-.container-blur::before {
-  content: '';
-  height: var(--blur-height);
-  width: 100%;
-  position: absolute;
-  backdrop-filter: blur(8px);
-  z-index: -1;
-}
-
-.container-blur::before {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.container-blur::before {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+.hljs {
+  background-color: #2d2d2d;
+  color: #efefef;
 }

@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Assistant</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="styles/tokyo-night-light.min.css">
+  <link rel="stylesheet" href="styles/tokyo-night-dark.min.css">
+  <script src="js/highlight.min.js"></script>
   <link rel="stylesheet" href="index.css" >
   <style type="text/tailwindcss">
     @layer base {
@@ -17,7 +20,7 @@
       }
 
       button {
-        @apply cursor-pointer px-4 py-2 bg-zinc-200 hover:bg-zinc-300 active:bg-zinc-400/80 dark:text-zinc-900 rounded;
+        @apply cursor-pointer px-4 py-2 bg-zinc-300 hover:bg-zinc-300 active:bg-zinc-400/80 dark:text-zinc-900 rounded;
       }
 
       button[data-theme="primary"] {
@@ -28,16 +31,23 @@
         @apply block px-4 py-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-center;
       }
     }
+
+    @layer utils {
+      .hljs,
+      pre code {
+        @apply bg-[#2d2d2d] text-zinc-100 rounded;
+      }
+    }
   </style>
   <script src="js/chat.js"></script>
 </head>
-<body class="bg-zinc-400/75 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 overflow-hidden">
-  <div class="h-full w-full grid grid-cols-[300px_1fr]">
+<body class="bg-zinc-400/75 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+  <div class="h-screen w-screen grid grid-cols-[300px_1fr]">
     <aside class="flex flex-col">
       <h2 class="text-center py-2">AI Assistant</h2>
       <nav class="flex-grow flex flex-col w-full pb-2">
         <section class="flex-grow">
-          <a href="/" class="bg-blue-600">Chat</a>
+          <a href="/" class="bg-blue-600/50 dark: bg-blue-500">Chat</a>
         </section>
         <section>
           <a href="/settings.html">Settings</a>
@@ -46,11 +56,14 @@
       </nav>
     </aside>
 
-    <main id="chat-container" class="bg-zinc-200 dark:bg-zinc-800"></main>
+    <main id="chat-container" class="bg-zinc-200 dark:bg-zinc-800 h-full overflow-hidden"></main>
   </div>
 
   <script>
     const chat = new ChatInterface();
+    chat.addEventListener("messages-updated", (event) => {
+      hljs.highlightAll();
+    });
 
     document.addEventListener("DOMContentLoaded", async function() {
 

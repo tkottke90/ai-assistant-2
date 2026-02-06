@@ -1,10 +1,11 @@
 from .base_model import BaseTable
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from langchain_core.messages import HumanMessage, AIMessage
 from pydantic import Field, field_validator
 from typing import ClassVar, Optional
 import json
+from ..utils import formatting
 
 migrations = [
   """
@@ -162,11 +163,14 @@ class Activity(BaseTable):
     """Convert activity to a list of chat messages."""
     messages = []
 
+    # Ensure datetime is UTC-aware and format with 'Z' suffix
+    utc_timestamp = self.created_at.replace(tzinfo=timezone.utc).isoformat()
+
     if self.user_input:
       messages.append(HumanMessage(
         content=self.user_input,
         id=f"activity-{self.id}-human",
-        additional_kwargs={ "timestamp": self.created_at.isoformat() }
+        additional_kwargs={ "timestamp": utc_timestamp, "html": formatting.format_chat_message(self.user_input) }
       ))
     
     if self.ai_response:
@@ -174,8 +178,9 @@ class Activity(BaseTable):
           content=self.ai_response,
           id=f"activity-{self.id}-ai",
           additional_kwargs={ 
-             "metadata": self.metadata.get("llm", {}), 
-             "timestamp": self.created_at.isoformat()
+            "metadata": self.metadata.get("llm", {}), 
+            "timestamp": utc_timestamp,
+            "html": formatting.format_chat_message(self.ai_response)
           }))
       
     # Future - Can show other types of messages based on activity type

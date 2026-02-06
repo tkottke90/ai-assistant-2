@@ -6,9 +6,9 @@ from ...llm.factory import LlmFactory, get_llm_factory
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from langchain_core.runnables import RunnableConfig
-from langchain.messages import AIMessage, HumanMessage
 from langchain.agents import create_agent
 from pydantic import BaseModel
+from ...logging import get_logger
 
 from ...dao import (
    activities as ActivityDao,
@@ -35,10 +35,7 @@ def get_thread(thread_id: str):
 
   chatHistory = []
   for activity in [a for a in activities if a.user_input is not None]:
-    chatHistory.extend([
-       HumanMessage(content=activity.user_input),
-       AIMessage(content=activity.ai_response, additional_kwargs={ "metadata": activity.metadata.get("llm", {}) })
-    ])
+    chatHistory.extend(activity.to_chat_messages())
 
   return {
     "thread_id": thread_id,
@@ -94,7 +91,7 @@ def chat(
   messages = response['messages'][-2:];
 
   # Async save new messages as an Activity
-  ActivityDao.createChatActivity(
+  activity = ActivityDao.createChatActivity(
     thread_id=request.thread_id,
     messages=messages,
     metadata={
@@ -107,7 +104,11 @@ def chat(
     }
   )
 
-  return { "message": response['messages'] }
+  return { 
+     "thread_id": request.thread_id,
+     "activities": [ activity ],
+     "message": activity.to_chat_messages(),
+  }
 
 
 def __construct_thread_config(threadId: str) -> RunnableConfig:

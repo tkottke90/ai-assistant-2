@@ -31,7 +31,8 @@ dependencies = [
     "langchain>=1.2.7",
     "langchain-ollama>=1.0.1",
     "langgraph-checkpoint-sqlite",
-    "aiosqlite"
+    "aiosqlite",
+    "markdown>=3.10.1"
 ]
 
 [project.optional-dependencies]

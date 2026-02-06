@@ -12,6 +12,7 @@ def createChatActivity(thread_id: str, messages: list[BaseMessage], metadata: di
   cursor.execute("""
     INSERT INTO activities (thread_id, user_input, ai_response, metadata, status)
     VALUES (?, ?, ?, ?, ?)
+    RETURNING *
   """, (
     thread_id,
     messages[0].content if len(messages) > 0 else "",
@@ -20,7 +21,9 @@ def createChatActivity(thread_id: str, messages: list[BaseMessage], metadata: di
     Activity.Status.COMPLETED # Completed because they are just chat messages
   ))
 
-  return cursor.fetchone()
+  record = cursor.fetchone()
+
+  return Activity(**dict(record))
 
 def createAutomationActivity(automation_id: str, automation_version: int, user_input: str, ai_response: str):
 

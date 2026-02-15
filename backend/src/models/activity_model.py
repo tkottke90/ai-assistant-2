@@ -35,6 +35,7 @@ migrations = [
   """
   CREATE VIRTUAL TABLE IF NOT EXISTS chat_fts USING fts5(
       node_id UNINDEXED,
+      thread_id,
       user_input,
       ai_response
   );
@@ -46,10 +47,11 @@ migrations = [
   WHEN NEW.type = 'activity'
   AND json_extract(NEW.properties, '$.user_input') IS NOT NULL
   BEGIN
-      INSERT INTO chat_fts(rowid, node_id, user_input, ai_response)
+      INSERT INTO chat_fts(rowid, node_id, thread_id, user_input, ai_response)
       VALUES (
           NEW.node_id,
           NEW.node_id,
+          json_extract(NEW.properties, '$.thread_id'),
           json_extract(NEW.properties, '$.user_input'),
           json_extract(NEW.properties, '$.ai_response')
       );

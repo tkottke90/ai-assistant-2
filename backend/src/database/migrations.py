@@ -2,12 +2,14 @@ from logging import Logger
 import sqlite3
 from ..models import (
   ActivityMigrations,
+  AgentMigrations,
   GraphMigrations,
 )
 
 migrations = [
   *GraphMigrations,
-  *ActivityMigrations
+  *ActivityMigrations,
+  *AgentMigrations,
 ]
 
 def run_migrations(sqlite: sqlite3.Connection, logger: Logger):

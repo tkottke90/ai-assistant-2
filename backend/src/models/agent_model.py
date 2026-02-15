@@ -2,9 +2,21 @@ from pydantic import BaseModel, Field
 from .prompt_base import PromptNodeProperties
 from .graph import Node
 
-class AgentSystemPromptSection(BaseModel):
-  name: str = Field(..., description="Name of the system prompt section, e.g. 'Behavior Instructions'")
-  content: str = Field(..., description="Content of the system prompt section, e.g. 'You are a helpful assistant that provides concise answers to user questions.'")
+migrations = [
+  """
+  CREATE VIEW IF NOT EXISTS agent_view AS
+  SELECT
+    node_id,
+    type,
+    json_extract(properties, '$.name') AS name,
+    json_extract(properties, '$.description') AS description,
+    properties,
+    created_at,
+    updated_at
+  FROM node
+  WHERE type = 'agent'
+  """
+]
 
 class AgentNodeProperties(PromptNodeProperties):
   name: str = Field(..., description="Name of the agent, e.g. 'WeatherBot'")

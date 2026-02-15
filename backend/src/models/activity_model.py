@@ -19,11 +19,11 @@ migrations = [
   ON node(json_extract(properties, '$.automation_id'))
   WHERE type = 'activity' AND json_extract(properties, '$.automation_id') IS NOT NULL;
   """,
-  ## Allows us to search for activities pending approval
+  # Allows us to search for activities pending approval
   """
-  CREATE INDEX IF NOT EXISTS idx_activity_automation_id 
-  ON node(json_extract(properties, '$.automation_action'))
-  WHERE type = 'activity' AND json_extract(properties, '$.automation_action') IS NULL;
+  CREATE INDEX IF NOT EXISTS idx_activity_pending_approval
+  ON node(json_extract(properties, '$.approval_action'))
+  WHERE type = 'activity' AND json_extract(properties, '$.approval_action') IS NOT NULL;
   """,
   # Add index for canceled activities to speed up search/cleanup of cancelled activities
   """
@@ -31,48 +31,51 @@ migrations = [
   ON node(json_extract(properties, '$.cancelled_at'))
   WHERE type = 'activity' AND json_extract(properties, '$.cancelled_at') IS NOT NULL;
   """,
-  # Add FTS table for chat activities
+  # Add FTS table for chat activities (external content mode - no auto-sync)
   """
   CREATE VIRTUAL TABLE IF NOT EXISTS chat_fts USING fts5(
       node_id UNINDEXED,
       user_input,
-      ai_response,
-      content='node',
-      content_rowid='node_id'
+      ai_response
   );
   """,
   # Trigger to populate FTS on insert
   """
   CREATE TRIGGER IF NOT EXISTS chat_fts_insert
-  AFTER INSERT ON activities
-  WHERE NEW.type = 'activity'
+  AFTER INSERT ON node
+  WHEN NEW.type = 'activity'
   AND json_extract(NEW.properties, '$.user_input') IS NOT NULL
   BEGIN
-      INSERT INTO chat_fts(rowid, id, user_input, ai_response)
-      VALUES (NEW.id, NEW.id, NEW.user_input, NEW.ai_response);
+      INSERT INTO chat_fts(rowid, node_id, user_input, ai_response)
+      VALUES (
+          NEW.node_id,
+          NEW.node_id,
+          json_extract(NEW.properties, '$.user_input'),
+          json_extract(NEW.properties, '$.ai_response')
+      );
   END;
   """,
   # Trigger to update FTS on update
   """
   CREATE TRIGGER IF NOT EXISTS chat_fts_update
-  AFTER UPDATE ON activities
-  WHERE NEW.type = 'activity'
+  AFTER UPDATE ON node
+  WHEN NEW.type = 'activity'
   AND json_extract(NEW.properties, '$.user_input') IS NOT NULL
   BEGIN
       UPDATE chat_fts
-      SET user_input = NEW.user_input,
-          ai_response = NEW.ai_response
-      WHERE rowid = NEW.id;
+      SET user_input = json_extract(NEW.properties, '$.user_input'),
+          ai_response = json_extract(NEW.properties, '$.ai_response')
+      WHERE rowid = NEW.node_id;
   END;
   """,
   # Trigger to delete FTS entry on delete
   """
   CREATE TRIGGER IF NOT EXISTS chat_fts_delete
   AFTER DELETE ON node
-  WHERE OLD.type = 'activity'
+  WHEN OLD.type = 'activity'
   AND json_extract(OLD.properties, '$.user_input') IS NOT NULL
   BEGIN
-      DELETE FROM chat_fts WHERE rowid = OLD.id;
+      DELETE FROM chat_fts WHERE rowid = OLD.node_id;
   END;
   """
 ]

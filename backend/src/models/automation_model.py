@@ -10,6 +10,7 @@ class Automation(BaseTable):
     description: str = Field(..., description="Detailed description of the automation")
     instruction: str = Field(..., description="Instructions for the automation's behavior")
     version: int = Field(..., description="Version number of the automation")
+    
     llm_provider: str = Field(..., description="LLM provider used for this automation")
     llm_model: str = Field(..., description="LLM model used for this automation")
     

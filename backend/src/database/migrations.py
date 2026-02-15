@@ -1,10 +1,12 @@
 from logging import Logger
 import sqlite3
-from ..models import ThreadSummaryMigrations, ActivityMigrations
-
+from ..models import (
+  ActivityMigrations,
+  GraphMigrations,
+)
 
 migrations = [
-  *ThreadSummaryMigrations,
+  *GraphMigrations,
   *ActivityMigrations
 ]
 

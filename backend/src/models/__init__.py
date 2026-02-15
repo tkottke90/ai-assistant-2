@@ -1,9 +1,9 @@
-from .activity_model import Activity, migrations as ActivityMigrations
-from .thread_summaries import ThreadSummary, migrations as ThreadSummaryMigrations
+from .activity_model import ChatActivity, AutomationActivity, migrations as ActivityMigrations
+from .graph import migrations as GraphMigrations
 
 __all__ = [
-  "Activity",
   "ActivityMigrations",
-  "ThreadSummary",
-  "ThreadSummaryMigrations"
+  "AutomationActivity",
+  "ChatActivity",
+  "GraphMigrations",
 ]

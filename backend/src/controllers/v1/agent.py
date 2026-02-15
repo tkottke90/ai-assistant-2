@@ -34,7 +34,7 @@ def get_thread(thread_id: str):
   activities = ActivityDao.getThreadHistory(thread_id)
 
   chatHistory = []
-  for activity in [a for a in activities if a.user_input is not None]:
+  for activity in [a for a in activities]:
     chatHistory.extend(activity.to_chat_messages())
 
   return {
@@ -69,8 +69,10 @@ def chat(
   Chat endpoint
   """
 
+  # Gets the LLM Config
   llm_cfg: LLMConfig = config_manager.get_config("llm")
 
+  # Sets up thge LLM
   llm = llm_factory.create_llm_with_config(llm_cfg.get_default_provider())
   context_manager = ContextWindowManager(config=llm_cfg.get_default_provider())
 
@@ -79,6 +81,7 @@ def chat(
     checkpointer=get_checkpointer()
   );
 
+  # Triggers the agent with the user message
   response = agent.invoke(
     { "messages": request.message },
     {

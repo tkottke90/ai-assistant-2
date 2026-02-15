@@ -55,8 +55,8 @@
       <h2 class="text-center py-2">AI Assistant</h2>
       <nav class="flex-grow flex flex-col w-full pb-2">
         <section class="flex-grow">
-          <a href="/" class="bg-blue-600/50 dark: bg-blue-500">Chat</a>
-          <a href="/team.html">Team</a>
+          <a href="/">Chat</a>
+          <a href="/team.html" class="bg-blue-600/50 dark: bg-blue-500">Team</a>
         </section>
         <section>
           <a href="/settings.html">Settings</a>
@@ -65,22 +65,11 @@
       </nav>
     </aside>
 
-    <main id="chat-container" class="bg-zinc-200 dark:bg-zinc-800 h-full overflow-hidden"></main>
+    <main class="bg-zinc-200 dark:bg-zinc-800 h-full overflow-hidden"></main>
   </div>
 
   <script>
-    const chat = new ChatInterface();
-    chat.addEventListener("messages-updated", (event) => {
-      hljs.highlightAll();
-    });
 
-    document.addEventListener("DOMContentLoaded", async function() {
-
-      const chatContainer = document.getElementById("chat-container");
-      chatContainer.appendChild(
-        chat.createChatInterface()
-      );
-    });
   </script>
 </body>
 </html>

@@ -15,7 +15,7 @@ from ...dao import (
    threads as ThreadDao
 )
 
-router = APIRouter(prefix="/agent", tags=["agent"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.get("/get-threads")
 def get_threads():

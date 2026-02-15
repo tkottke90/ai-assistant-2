@@ -104,7 +104,7 @@ templateStr = `
   }
 
   createNewThread(threadIdElem) {
-    fetch('/api/v1/agent/new-thread', {
+    fetch('/api/v1/chat/new-thread', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -197,7 +197,7 @@ templateStr = `
       // Add optimistic messages to history and render immediately
       this.updateChats(this.chatHistory.concat([userMessage, thinkingMessage]));
 
-      fetch('/api/v1/agent/chat', {
+      fetch('/api/v1/chat/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -265,7 +265,7 @@ templateStr = `
       window.localStorage.setItem('chat-thread-id', threadIdElem.value);
     } else {
       threadIdElem.value = existingThreadid;
-      await fetch(`/api/v1/agent/get-threads/${existingThreadid}`)
+      await fetch(`/api/v1/chat/get-threads/${existingThreadid}`)
         .then(response => {
           if (!response.ok) {
             throw new Error('Thread not found');

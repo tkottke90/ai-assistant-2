@@ -1,2 +1,0 @@
-# Config models tests package
-

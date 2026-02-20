@@ -2,21 +2,25 @@
   "name": "ai-assistant-backend",
   "description": "",
   "main": "index.js",
+  "version": "1.0.0-alpha",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/index.ts"
+    "dev": "CONFIG_DIR='../config' tsx watch src/index.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "lodash": "^4.17.23",
     "winston": "^3.19.0",
+    "yaml": "^2.8.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/lodash": "^4.17.23",
     "@types/node": "^25.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

@@ -1,10 +1,15 @@
-import { Router } from 'express';
-
+import { Router, Request, Response } from 'express';
+import registerV1Router from './v1/index.js';
 
 export const router = Router();
 
-router.get('/', (req, res) => {
-  res.json({ version: '1.0.0-alpha', name: 'AI Assistant 2' });
+registerV1Router(router);
+
+router.get('/', (req: Request, res: Response) => {
+  res.json({
+    version: req.app.config.get('appVersion'),
+    name: req.app.config.get('appName')
+  });
 });
 
 router.get('/health', (req, res) => {

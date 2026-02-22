@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'preact/hooks';
 
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 1024; // See https://tailwindcss.com/docs/responsive-design#overview
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined)

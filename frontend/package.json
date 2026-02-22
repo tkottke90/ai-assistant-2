@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@preact/signals": "^2.8.1",
     "@tkottke90/ai-assistant-client": "file:../backend/src/lib/client",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -41,6 +41,7 @@ export default function initializeConfig(app: Application) {
   // Setup some internal config values
   configData.appVersion = pkg.version;
   configData.appName = 'AI Assistant 2';
+  configData.assetDir = path.resolve(configDir, 'assets');
 
   // Set up a simple config getter on the app instance
   app.config = {

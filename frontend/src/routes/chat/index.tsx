@@ -59,7 +59,7 @@ function ChatMessage({ message }: { message: ChatMessage}) {
   // Display system messages differently, since they are not part of the conversation, but rather a call to action for the user
   if (message.role === "system") {
     return (
-      <div className={`p-4 rounded-md border md:min-w-1/2 md:mx-auto ${severityStyles[message.severity ?? 0]}`}>
+      <div className={`p-4 rounded-md border min-w-10/12 xl:min-w-1/2 mx-auto ${severityStyles[message.severity ?? 0]}`}>
         <p className="text-sm  mb-2">{message.content}</p>
         <div className="flex gap-2 justify-end">
           {message.actions?.map((action, index) => (
@@ -92,7 +92,25 @@ function ChatMessage({ message }: { message: ChatMessage}) {
         { message.assets && (
           <div className="flex gap-2 mb-2 overflow-hidden rounded">
             {message.assets.map(asset => (
-              <img data-nsfw={asset.nsfw} key={asset.id} src={asset.url} alt={`Asset ${asset.id}`} className="rounded-md border h-32 w-32 object-cover data-nsfw:blur-sm overflow-clip focus:border-blue-400" />
+              <img
+                data-nsfw={asset.nsfw}
+                key={asset.id} src={asset.url}
+                alt={`Asset ${asset.id}`}
+                className="rounded-md border h-32 w-32 object-cover data-[nsfw=true]:blur-sm overflow-clip focus:border-blue-400"
+                onClick={(e) => {
+                  const target = e.target as HTMLImageElement;
+
+                  // If the image is not NSFW, do nothing.  These should always be visible
+                  if (!asset.nsfw) return;
+
+                  // If the image is NSFW, toggle the blur
+                  if (target.dataset.nsfw === "true") {
+                    target.dataset.nsfw = "false";
+                  } else {
+                    target.dataset.nsfw = "true";
+                  }
+                }}
+              />
             ))}
           </div>
         )}
@@ -127,8 +145,16 @@ function ChatList({ messages }: {messages: ChatMessage[]}) {
 function ChatForm() {
   return (
     <form className="w-full flex flex-row gap-2">
-      <textarea className="w-full h-24 p-2 rounded-md border border-neutral-400/50 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" placeholder="Type your message here..."></textarea>
-      <Button variant="default" type="button" size="icon">
+      
+      <div className="w-full border border-neutral-500/50 rounded-md">
+        <div id="file-container" className="flex gap-2"></div>
+
+        <textarea className="w-full h-24 p-2 rounded-md focus:ring-0 focus:outline-none resize-none" placeholder="Type your message here..."></textarea>
+      </div>
+      
+      
+      
+      <Button variant="default" type="button">
         <span class="hidden lg:inline">Send</span>
         <SendHorizonal size={20} class="inline lg:hidden" />
       </Button>

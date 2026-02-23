@@ -11,8 +11,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@langchain/core": "^1.1.27",
+    "@langchain/ollama": "^1.2.4",
+    "@langchain/openai": "^1.2.9",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "langchain": "^1.2.25",
     "lodash": "^4.17.23",
     "winston": "^3.19.0",
     "yaml": "^2.8.2",

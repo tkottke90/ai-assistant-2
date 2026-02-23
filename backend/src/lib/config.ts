@@ -6,6 +6,7 @@ import fs from "node:fs";
 import yaml from "yaml";
 import _ from 'lodash';
 import pkg from '../../package.json' assert { type: 'json' };
+import z from "zod";
 
 // Initialize the environment variables from the .env file
 dotenv.config();
@@ -124,6 +125,24 @@ export default function initializeConfig(app: Application) {
     },
     has: function(key: string): boolean {
       return this.get(key) !== '';
+    },
+    loadConfig: function<T>(key: string, schema: T): T extends z.ZodTypeAny ? z.infer<T> : any {
+      const configValue = _.get(this._configData, key);
+      
+      if (configValue === undefined) {
+        throw new Error(`Config key "${key}" not found`);
+      }
+
+      if (schema instanceof z.ZodType) {
+        const parsed = schema.safeParse(configValue);
+        if (!parsed.success) {
+          console.error(`Config key "${key}" failed validation:`, parsed.error.format());
+          throw new Error(`Config key "${key}" failed validation`);
+        }
+        return parsed.data as any;
+      }
+
+      return configValue;
     }
   };
 }

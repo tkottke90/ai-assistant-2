@@ -1,5 +1,8 @@
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { BaseLLM } from '@langchain/core/language_models/llms';
 import express from 'express';
 import type { Logger } from 'winston';
+import z from 'zod';
 
 // Augment the Express namespace
 declare global {
@@ -38,8 +41,18 @@ declare global {
          * @returns True if the key exists in either environment variables or the config file, false otherwise
          */
         has(key: string): boolean;
+
+        /**
+         * Loads a config section and validates it against a provided Zod schema. If the config value is missing or fails validation, an error is thrown.
+         * @param key The config key to load
+         * @param schema A Zod schema to validate the config value against
+         * @returns The parsed config value if validation is successful
+         * @throws An error if the config key is not found or if validation fails
+         */
+        loadConfig<T>(key: string, schema: T): T extends z.ZodTypeAny ? z.infer<T> : any;
       };
       logger: Logger;
+      llm: Record<string, BaseChatModel>;
     }
   }
 }

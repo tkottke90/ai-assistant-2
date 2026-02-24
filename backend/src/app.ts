@@ -3,6 +3,7 @@ import setupControllers from './controllers';
 import setupStaticController from './controllers/static';
 import setupConfig from './lib/config';
 import setupLogger from './lib/logger';
+import HttpEventMiddleware from './middleware/http.middleware.js';
 
 // Setup Application
 export const app = express();
@@ -11,6 +12,8 @@ setupLogger(app);
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(HttpEventMiddleware);
 
 // Controllers
 setupControllers(app);

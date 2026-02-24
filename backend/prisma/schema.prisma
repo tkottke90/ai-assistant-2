@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/lib/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Node {
+  node_id Int @id @default(autoincrement())
+
+  type String
+  
+  properties Json
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt @default(now())
+
+  outgoing_edges Edge[] @relation("source")
+  incoming_edges Edge[] @relation("target")
+  assets Asset[]
+
+  @@index([type])
+  @@index([created_at])
+  @@index([updated_at])
+}
+
+model Edge {
+  node_id Int @id @default(autoincrement())
+  source_id Int
+  target_id Int
+
+  type String
+  properties Json
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt @default(now())
+
+  source Node @relation("source", fields: [source_id], references: [node_id], onDelete: Cascade)
+  target Node @relation("target", fields: [target_id], references: [node_id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([source_id])
+  @@index([target_id])
+  @@index([created_at])
+  @@index([updated_at])
+
+  @@unique([source_id, target_id, type])
+}
+
+model Asset {
+  asset_id Int @id @default(autoincrement())
+  node_id Int
+  
+  url String
+  mime_type String?
+  name String?
+  description String?
+  nsfw Boolean?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt @default(now())
+
+  node Node @relation(fields: [node_id], references: [node_id], onDelete: Cascade)
+
+  @@index([node_id])
+  @@index([created_at])
+  @@index([updated_at])
+}
+
+model Agent {
+  agent_id Int @id @default(autoincrement())
+
+  name String
+  description String?
+  version Int @default(1)
+
+  system_prompt String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt @default(now())
+
+  @@unique([name, version])
+  @@index([created_at])
+  @@index([updated_at])
+}

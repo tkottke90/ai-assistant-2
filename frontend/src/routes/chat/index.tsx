@@ -1,4 +1,5 @@
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
+import { MarkdownDisplay } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { formatChatTimestamp } from "@/lib/date-utils";
 import { SendHorizonal } from "lucide-preact";
@@ -7,6 +8,9 @@ import { useRef, useEffect } from "preact/hooks";
 interface ChatAsset {
   id: number;
   url: string;
+  mime_type?: string;
+  name?: string;
+  description?: string;
   nsfw?: boolean;
 }
 
@@ -15,11 +19,7 @@ interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   created_at: Date;
-  usage?: {
-    prompt_tokens: number;
-    response_tokens: number;
-    total_tokens: number;
-  }
+  usage?: number;
   assets?: ChatAsset[];
   actions?: {
     label: string;
@@ -114,7 +114,7 @@ function ChatMessage({ message }: { message: ChatMessage}) {
             ))}
           </div>
         )}
-        <p>{message.content}</p>
+        <MarkdownDisplay>{message.content}</MarkdownDisplay>
       </main>
       <footer className={`col-span-2 row-start-3 flex group-data-[role=user]:flex-row-reverse`}></footer>
     </div>
@@ -142,19 +142,51 @@ function ChatList({ messages }: {messages: ChatMessage[]}) {
   )
 }
 
+async function submit() {
+  const response = await fetch('/api/v1/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message: 'Hello', threadId: '123' }),
+  });
+
+  if (!response.body) throw Error('No response body');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n\n');
+    
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+
+        if (!data.chunk[0]?.kwargs?.content) continue; // Skip content chunks, we only want updates and messages for this example
+
+        console.log(data.chunk[0].kwargs?.content);
+      }
+    }
+  }
+}
+
 function ChatForm() {
   return (
     <form className="w-full flex flex-row gap-2">
-      
+      <input type="text" hidden name="threadId" />
+
       <div className="w-full border border-neutral-500/50 rounded-md">
         <div id="file-container" className="flex gap-2"></div>
 
         <textarea className="w-full h-24 p-2 rounded-md focus:ring-0 focus:outline-none resize-none" placeholder="Type your message here..."></textarea>
       </div>
       
-      
-      
-      <Button variant="default" type="button">
+      <Button variant="default" type="button" onClick={() => void submit()}>
         <span class="hidden lg:inline">Send</span>
         <SendHorizonal size={20} class="inline lg:hidden" />
       </Button>

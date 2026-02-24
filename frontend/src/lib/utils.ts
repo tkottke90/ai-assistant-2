@@ -3,6 +3,10 @@ import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 import { twMerge } from "tailwind-merge"
 
+export type ComponentProps<T> = T & Record<string, unknown> & {
+  className?: string
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }

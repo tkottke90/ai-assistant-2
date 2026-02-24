@@ -12,12 +12,17 @@
   "license": "ISC",
   "dependencies": {
     "@langchain/core": "^1.1.27",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.0.1",
     "@langchain/ollama": "^1.2.4",
     "@langchain/openai": "^1.2.9",
+    "@prisma/adapter-better-sqlite3": "^7.4.1",
+    "@prisma/client": "^7.4.1",
+    "@tkottke90/js-errors": "^1.0.2",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "langchain": "^1.2.25",
     "lodash": "^4.17.23",
+    "prisma": "^7.4.1",
     "winston": "^3.19.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6"

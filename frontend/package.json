@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@preact/signals": "^2.8.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@tkottke90/ai-assistant-client": "file:../backend/src/lib/client",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -19,6 +20,8 @@
     "preact": "^10.27.2",
     "preact-iso": "^2.11.1",
     "radix-ui": "^1.4.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0"
   },

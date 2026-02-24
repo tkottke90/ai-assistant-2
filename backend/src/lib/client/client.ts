@@ -53,13 +53,33 @@ export function createClientMethod<
   outputProcessor?: OutputProcessor
 ): (input: InputType, init?: RequestInit) => Promise<ReturnType> {
   return (input: InputType, init: RequestInit = {}) => {
-    return fetch(path, {
+    let requestPath = path;
+    let requestBody: string | undefined;
+
+    // For GET requests, append input as query parameters
+    if (options.method.toLowerCase() === 'get' && input && typeof input === 'object') {
+      const params = new URLSearchParams();
+      Object.entries(input).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+      const queryString = params.toString();
+      if (queryString) {
+        requestPath = `${path}?${queryString}`;
+      }
+    } else {
+      // For non-GET requests, use body
+      requestBody = options.inputSchema ? JSON.stringify(options.inputSchema.parse(input)) : undefined;
+    }
+
+    return fetch(requestPath, {
       method: options.method.toUpperCase(),
       headers: {
         'Content-Type': 'application/json',
         ...init.headers,
       },
-      body: options.inputSchema ? JSON.stringify(options.inputSchema.parse(input)) : undefined,
+      body: requestBody,
       ...init,
     }).then(response => {
       if (!response.ok) {

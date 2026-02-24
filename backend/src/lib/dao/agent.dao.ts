@@ -1,5 +1,7 @@
 import { CreateAgentDTO } from '../models/agent.js';
 import { prisma } from '../database.js';
+import { AgentFindManyArgs } from '../prisma/models.js';
+import { PaginationQuery, PaginatedResponse } from '../types/pagination.js';
 
 function createAgent(agentData: CreateAgentDTO) {
   return prisma.agent.create({
@@ -7,11 +9,38 @@ function createAgent(agentData: CreateAgentDTO) {
   });
 }
 
-function listAgents() {
-  return prisma.agent.findMany({
+function countAgents() {
+  return prisma.agent.count();
+}
+
+async function listAgents(paginationQuery: PaginationQuery): Promise<PaginatedResponse<any>> {
+  const { page, take, skip } = paginationQuery;
+  
+  // Get total count of unique agents
+  const totalCount = await prisma.agent.groupBy({
+    by: ['agent_id'],
+    _count: true
+  }).then(results => results.length);
+
+  // Get paginated agents (latest version only)
+  const agents = await prisma.agent.findMany({
+    skip,
+    take,
     orderBy: [{ agent_id: 'asc' }, { version: 'desc' }],
     distinct: ['agent_id']
   });
+
+  const totalPages = Math.ceil(totalCount / take);
+
+  return {
+    pagination: {
+      page,
+      totalPages,
+      totalCount,
+      take
+    },
+    data: agents
+  };
 }
 
 function getAgent(agentId: number) {
@@ -47,6 +76,7 @@ function deleteAgent(agentId: number) {
 // Export as a single object for cleaner imports
 export default {
   createAgent,
+  countAgents,
   listAgents,
   getAgent,
   updateAgent,

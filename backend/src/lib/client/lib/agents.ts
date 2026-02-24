@@ -1,5 +1,6 @@
 import { createClientMethod} from '../client';
 import { AgentSchema, AgentProperties } from '../../models/agent.js';
+import { withPagination } from '../../types/pagination.js';
 import { z } from 'zod';
 
 export const createAgent = createClientMethod('/api/v1/agents', { method: 'post' }, async (response) => {
@@ -15,7 +16,8 @@ export const listAgents = createClientMethod('/api/v1/agents', { method: 'get' }
     throw new Error(`Failed to list agents: ${response.statusText}`);
   }
   
-  return z.array(AgentSchema).parse(await response.json());
+  const PaginatedAgentsSchema = withPagination(AgentSchema);
+  return PaginatedAgentsSchema.parse(await response.json());
 });
 
 export const getAgent = createClientMethod('/api/v1/agents/:id', { method: 'get' }, async (response) => {

@@ -26,9 +26,9 @@ export function ZodBodyValidator<T extends ZodRawShape>(schema: ZodObject<T>) {
 }
 
 export function ZodQueryValidator<T extends ZodRawShape>(schema: ZodObject<T>) {
-  return (req: Request, _res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.query = schema.parse(req.query) as any;
+      res.locals.query = schema.parse(req.query) as any;
       next();
     } catch (err) {
       let message = 'Query Format Error';

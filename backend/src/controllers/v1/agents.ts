@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import AgentDao from '../../lib/dao/agent.dao.js';
 import { AgentProperties, CreateAgentDTO } from '../../lib/models/agent.js';
-import { ZodBodyValidator, ZodIdValidator } from '../../middleware/zod.middleware.js';
+import { ZodBodyValidator, ZodIdValidator, ZodQueryValidator } from '../../middleware/zod.middleware.js';
+import { PaginationQuerySchemaBase, PaginationQuery } from '../../lib/types/pagination.js';
 
 export const router = Router();
 
@@ -19,11 +20,19 @@ router.post('/',
   }
 });
 
-// List all agents (latest version only)
-router.get('/', async (req, res) => {
+// List all agents (latest version only) with pagination
+router.get('/',
+  ZodQueryValidator(PaginationQuerySchemaBase),
+  async (req, res) => {
   try {
-    const agents = await AgentDao.listAgents();
-    res.json(agents);
+    const { page, take } = res.locals.query as any;
+    const paginationQuery: PaginationQuery = {
+      page,
+      take,
+      skip: (page - 1) * take
+    };
+    const paginatedAgents = await AgentDao.listAgents(paginationQuery);
+    res.json(paginatedAgents);
   } catch (error) {
     console.error('Error listing agents:', error);
     res.status(500).json({ error: 'Failed to list agents' });

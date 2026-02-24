@@ -16,3 +16,5 @@ export const getServerInfo = createClientMethod('/api', { method: 'get' }, async
 
 // Export utilities for building custom clients
 export { HttpError } from './error';
+export * from './lib/agents';
+

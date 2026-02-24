@@ -1,12 +1,12 @@
 import {z} from 'zod';
 
-const AgentProperties = z.object({
+export const AgentProperties = z.object({
   name: z.string(),
   description: z.string().optional(),
   system_prompt: z.string()
 });
 
-const AgentSchema = AgentProperties.extend({
+export const AgentSchema = AgentProperties.extend({
   agent_id: z.number(),
   
   version: z.number().min(1).default(1),

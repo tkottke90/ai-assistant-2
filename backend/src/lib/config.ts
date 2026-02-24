@@ -11,7 +11,6 @@ import z from "zod";
 // Initialize the environment variables from the .env file
 dotenv.config();
 
-
 function saveConfig(configPath: string, configData: Record<string, any>) {
   fs.writeFileSync(
     configPath,

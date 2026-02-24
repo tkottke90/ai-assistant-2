@@ -56,6 +56,21 @@ export function createClientMethod<
     let requestPath = path;
     let requestBody: string | undefined;
 
+    const params = { ...input };
+
+    // Find all placeholders in the path (e.g., :id) and replace them with corresponding values from input
+    const pathParamMatches = path.match(/:\w+/g) || [];
+    pathParamMatches.forEach((match) => {
+      const paramName = match.substring(1); // Remove the leading ':'
+      const paramValue = (params as any)[paramName];
+      if (paramValue === undefined) {
+        throw new Error(`Missing value for path parameter: ${paramName}`);
+      }
+
+      requestPath = requestPath.replace(match, encodeURIComponent(String(paramValue)));
+      delete (params as any)[paramName]; // Remove the path parameter from params
+    });
+
     // For GET requests, append input as query parameters
     if (options.method.toLowerCase() === 'get' && input && typeof input === 'object') {
       const params = new URLSearchParams();

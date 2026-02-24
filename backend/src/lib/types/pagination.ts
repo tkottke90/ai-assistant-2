@@ -35,3 +35,13 @@ export type PaginatedResponse<T> = {
   pagination: PaginationMeta;
   data: T[];
 };
+
+export function createPagination(page: number, totalCount: number, take: number): PaginationMeta {
+  const totalPages = Math.max(Math.ceil(totalCount / take), 1);
+  return {
+    page,
+    totalPages,
+    totalCount,
+    take
+  };
+}

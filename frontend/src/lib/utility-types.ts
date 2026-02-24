@@ -1,6 +1,6 @@
 import { type RenderableProps } from 'preact';
 
-type ComponentProps = Record<string, unknown> & {
+export type ComponentProps = Record<string, unknown> & {
   className?: string
 }
 

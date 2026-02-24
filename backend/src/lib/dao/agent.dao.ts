@@ -1,7 +1,6 @@
 import { CreateAgentDTO } from '../models/agent.js';
 import { prisma } from '../database.js';
-import { AgentFindManyArgs } from '../prisma/models.js';
-import { PaginationQuery, PaginatedResponse } from '../types/pagination.js';
+import { PaginationQuery, PaginatedResponse, createPagination } from '../types/pagination.js';
 
 function createAgent(agentData: CreateAgentDTO) {
   return prisma.agent.create({
@@ -30,15 +29,8 @@ async function listAgents(paginationQuery: PaginationQuery): Promise<PaginatedRe
     distinct: ['agent_id']
   });
 
-  const totalPages = Math.ceil(totalCount / take);
-
   return {
-    pagination: {
-      page,
-      totalPages,
-      totalCount,
-      take
-    },
+    pagination: createPagination(page, totalCount, take),
     data: agents
   };
 }

@@ -3,7 +3,7 @@ import { AgentSchema, AgentProperties } from '../../models/agent.js';
 import { withPagination } from '../../types/pagination.js';
 import { z } from 'zod';
 
-export const createAgent = createClientMethod('/api/v1/agents', { method: 'post' }, async (response) => {
+export const createAgent = createClientMethod('/api/v1/agents', { method: 'post', inputSchema: AgentProperties }, async (response) => {
   if (!response.ok) {
     throw new Error(`Failed to create agent: ${response.statusText}`);
   }
@@ -36,7 +36,7 @@ export const updateAgent = createClientMethod('/api/v1/agents/:id', { method: 'p
   return AgentSchema.parse(await response.json());
 });
 
-export const deleteAgent = createClientMethod('/api/v1/agents/:id', { method: 'delete' }, async (response) => {
+export const deleteAgent = createClientMethod('/api/v1/agents/:id', { method: 'delete', inputSchema: z.object({ id: z.number() }) }, async (response) => {
   if (!response.ok) {
     throw new Error(`Failed to delete agent: ${response.statusText}`);
   }

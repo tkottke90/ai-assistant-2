@@ -784,6 +784,7 @@ export const AgentScalarFieldEnum = {
   description: 'description',
   version: 'version',
   system_prompt: 'system_prompt',
+  auto_start: 'auto_start',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const

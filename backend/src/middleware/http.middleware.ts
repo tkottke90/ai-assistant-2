@@ -10,9 +10,13 @@ export default function HttpEventMiddleware(
 ) {
   const logger = req.app.logger; // Assuming you have a logger instance attached to your app
 
+  
   const requestId = crypto.randomUUID();
+
+  req.logger = logger.child({ location: 'http', requestId });
+  
   res.setHeader('req', requestId);
-  logger.log('info', `${req.method} ${req.originalUrl}`, { requestId });
+  req.logger.log('info', `${req.method} ${req.originalUrl}`, { requestId });
 
   const start = process.hrtime();
 
@@ -20,7 +24,7 @@ export default function HttpEventMiddleware(
     const diff = process.hrtime(start);
     const duration = (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS;
 
-    logger.log(
+    req.logger.log(
       'info',
       `${req.method} ${req.originalUrl} [${duration} ms]`,
       {

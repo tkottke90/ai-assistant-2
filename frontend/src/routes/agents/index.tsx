@@ -4,7 +4,7 @@ import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { batch, useSignal } from "@preact/signals";
-import { createAgent, deleteAgent, listAgents, type Agent } from '@tkottke90/ai-assistant-client';
+import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type AgentListResponse } from '@tkottke90/ai-assistant-client';
 import { Bot, BotOff, Pencil, Trash2, TriangleAlert } from "lucide-preact";
 import { useCallback, useEffect } from "preact/hooks";
 
@@ -134,7 +134,7 @@ export function AgentsPage() {
   )
 }
 
-function AgentList({ agents, onChange }: { agents: Agent[], onChange: () => void }) {
+function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange: () => void }) {
 
   // When there are no agents, we can show a friendly message encouraging the user to create their first agent
   if (agents.length === 0) {
@@ -156,9 +156,25 @@ function AgentList({ agents, onChange }: { agents: Agent[], onChange: () => void
               <span className="ml-2 px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-800/50 dark:text-gray-300/50">Version: {agent.version}</span>
             </h3>
             <div className="flex gap-4 lg:gap-2">
-              <Button variant="iconDefault" size="icon-xs">
-                <BotOff className="size-full" />
-                { false && <Bot className="size-full" /> }
+              <Button variant="iconDefault" size="icon-xs"
+                onClick={() => {
+                  if (agent.is_active) {
+                    // Stop the agent
+                    stopAgent({ id: agent.agent_id })
+                      .then(() => {
+                        onChange();
+                      });
+                  } else {
+                    // Start the agent
+                    startAgent({ id: agent.agent_id })
+                      .then(() => {
+                        onChange();
+                      });
+                  }
+                }}
+              >
+                { !agent.is_active &&  <BotOff className="size-full" /> }
+                { agent.is_active && <Bot className="size-full" /> }
               </Button>
               <Button variant="iconInfo" size="icon-xs">
                 <Pencil className="size-full" />
@@ -182,7 +198,7 @@ function AgentList({ agents, onChange }: { agents: Agent[], onChange: () => void
 
 }
 
-function AgentDisplay({ agent }: { agent: Agent }) {}
+function AgentDisplay({ agent }: { agent: AgentListResponse }) {}
 
 function CreateAgentForm() {
   const dialog = useDialog();
@@ -203,7 +219,8 @@ function CreateAgentForm() {
         createAgent({
           name,
           description,
-          system_prompt: 'You are the member of an AI Team. Collaborate with the user and other agents to complete tasks and achieve goals.'
+          system_prompt: 'You are the member of an AI Team. Collaborate with the user and other agents to complete tasks and achieve goals.',
+          auto_start: false
         }).then(() => {
             dialog.close();
           })

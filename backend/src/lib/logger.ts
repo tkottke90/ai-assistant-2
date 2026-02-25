@@ -24,7 +24,7 @@ const CONSOLE_FORMAT = winston.format.combine(
 );
 
 export default function initializeLogger(app: Application) {
-  const logLevel = app.config.get('LOG_LEVEL', 'info');
+  const logLevel = app.config.get('logging.level', 'info');
 
   const transports: winston.LoggerOptions['transports'] = [];
 
@@ -47,7 +47,7 @@ export default function initializeLogger(app: Application) {
   }
 
   const logger = winston.createLogger({
-    level: 'info',
+    level: logLevel,
     transports
   });
 

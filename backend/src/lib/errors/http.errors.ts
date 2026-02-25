@@ -1,6 +1,15 @@
 import { BaseError } from '@tkottke90/js-errors';
 
-export class BadRequestError extends BaseError {
+export class HttpError extends BaseError {
+  statusCode: number = 500;
+  
+  constructor(message: string) {
+    super(message);
+    this.name = 'HttpError';
+  }
+}
+
+export class BadRequestError extends HttpError {
   statusCode = 400;
   details?: any;
 
@@ -10,7 +19,7 @@ export class BadRequestError extends BaseError {
   }
 }
 
-export class NotFoundError extends BaseError {
+export class NotFoundError extends HttpError {
   statusCode = 404;
 
   constructor(message: string) {
@@ -19,7 +28,7 @@ export class NotFoundError extends BaseError {
   }
 }
 
-export class InternalServerError extends BaseError {
+export class InternalServerError extends HttpError {
   statusCode = 500;
 
   constructor(message: string) {

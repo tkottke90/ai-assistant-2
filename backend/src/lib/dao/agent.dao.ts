@@ -1,4 +1,4 @@
-import { CreateAgentDTO } from '../models/agent.js';
+import { AgentSchema, CreateAgentDTO } from '../models/agent.js';
 import { prisma } from '../database.js';
 import { PaginationQuery, PaginatedResponse, createPagination } from '../types/pagination.js';
 
@@ -12,8 +12,8 @@ function countAgents() {
   return prisma.agent.count();
 }
 
-async function listAgents(paginationQuery: PaginationQuery): Promise<PaginatedResponse<any>> {
-  const { page, take, skip } = paginationQuery;
+async function listAgents(paginationQuery?: Partial<PaginationQuery>) {
+  const { page, take, skip } = paginationQuery ?? {};
   
   // Get total count of unique agents
   const totalCount = await prisma.agent.groupBy({
@@ -30,15 +30,32 @@ async function listAgents(paginationQuery: PaginationQuery): Promise<PaginatedRe
   });
 
   return {
-    pagination: createPagination(page, totalCount, take),
+    pagination: createPagination(page ?? 1, totalCount, take ?? totalCount),
     data: agents
   };
+}
+
+async function getAllAgents() {
+  const agents = await prisma.agent.findMany({
+    orderBy: [{ agent_id: 'asc' }, { version: 'desc' }],
+    distinct: ['agent_id']
+  });
+
+  return agents.map(agent => AgentSchema.parse(agent));
 }
 
 function getAgent(agentId: number) {
   return prisma.agent.findFirst({
     where: { agent_id: agentId },
     orderBy: { version: 'desc' }
+  });
+}
+
+function getAutoStartAgents() {
+  return prisma.agent.findMany({
+    where: { auto_start: true },
+    orderBy: [{ agent_id: 'asc' }, { version: 'desc' }],
+    distinct: ['agent_id']
   });
 }
 
@@ -70,7 +87,9 @@ export default {
   createAgent,
   countAgents,
   listAgents,
+  getAllAgents,
   getAgent,
+  getAutoStartAgents,
   updateAgent,
   deleteAgent
 };

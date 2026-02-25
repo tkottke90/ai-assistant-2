@@ -1,13 +1,16 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { BaseLLM } from '@langchain/core/language_models/llms';
+import { type AgentManager } from '../agents/agent-manager';
 import express from 'express';
 import type { Logger } from 'winston';
 import z from 'zod';
+import { LLMManager } from '../llm';
 
 // Augment the Express namespace
 declare global {
   namespace Express {
     interface Application {
+      agents: AgentManager;
+
       config: {
         _configData: Record<string, any>;
 
@@ -52,7 +55,12 @@ declare global {
         loadConfig<T>(key: string, schema: T): T extends z.ZodTypeAny ? z.infer<T> : any;
       };
       logger: Logger;
-      llm: Record<string, BaseChatModel>;
+      llm: LLMManager;
+    }
+
+    interface Request {
+      // You can add custom properties to the Request object here if needed
+      logger: Logger;
     }
   }
 }

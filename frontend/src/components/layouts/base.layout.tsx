@@ -34,11 +34,18 @@ const {
 function SidebarContents() {
 
   return (
-    <Fragment>
+    <div className="size-full flex flex-col">
       <header>
         <h1 className="text-2xl font-bold mb-4 text-center">Assistant</h1>
       </header>
-    </Fragment>
+      <main className="grow flex flex-col justify-start">
+        <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/agents">Agents</a>
+        <a className="w-full text-center py-4 px-6 hover:bg-neutral-500" href="/">Chat</a>
+      </main>
+      <footer>
+
+      </footer>
+    </div>
   )
 }
 

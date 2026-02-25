@@ -7,6 +7,7 @@ import { batch, useSignal } from "@preact/signals";
 import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type AgentListResponse } from '@tkottke90/ai-assistant-client';
 import { Bot, BotOff, Pencil, Trash2, TriangleAlert } from "lucide-preact";
 import { useCallback, useEffect } from "preact/hooks";
+import { toast } from "sonner";
 
 // Pure utility functions for pagination navigation
 function canGoToNextPage(currentPage: number, totalPages: number): boolean {
@@ -163,12 +164,14 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                     stopAgent({ id: agent.agent_id })
                       .then(() => {
                         onChange();
+                        toast.success('Agent stopped successfully', {  });
                       });
                   } else {
                     // Start the agent
                     startAgent({ id: agent.agent_id })
                       .then(() => {
                         onChange();
+                        toast.success('Agent started successfully');
                       });
                   }
                 }}
@@ -182,6 +185,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
               <ConfirmButton onConfirm={() => {
                 deleteAgent({ id: agent.agent_id }).then(() => {
                   onChange();
+                  toast.success('Agent deleted successfully');
                 }) 
               }} size="icon-xs">
                 <Trash2 className="size-full group-data-[confirm=true]:hidden" />

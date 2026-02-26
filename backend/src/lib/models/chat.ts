@@ -1,72 +1,56 @@
-import { Message } from '@langchain/core/messages';
-import { BaseNodeSchema, Node } from './node';
-import {z} from 'zod';
+import { z } from 'zod';
 
-const ChatFieldsSchema = z.object({
-  id: z.number(),
-  thread_id: z.string(),
-  content: z.string(),
-  role: z.enum(['user', 'assistant'])
-});
-
-const ChatMessageSchema = z.object({
-  id: z.number(),
-  thread_id: z.string(),
-  content: z.string(),
-  role: z.enum(['user', 'assistant']),
-  author: z.string().default('assistant')
-});
-
-type ChatMessageSchema = z.infer<typeof ChatMessageSchema>;
-
-class ChatMessage {
-  id: number;
-  thread_id: string;
-  content: string;
-  role: 'user' | 'assistant';
-
-  readonly type = 'chat_message';
-
-  constructor(data: unknown) {
-    const parsed = ChatMessageSchema.parse(data);
-
-    this.id = parsed.id;
-    this.thread_id = parsed.thread_id;
-    this.content = parsed.content;
-    this.role = parsed.role;
-  }
-
-  fromLangChainMessage(message: Message): ChatMessage {
-    return new ChatMessage({
-      id: 0, // This will be set by the database
-      thread_id: '', // This should be set when creating a new message in a thread
-      content: message.content,
-      role: message.type === 'human' ? 'user' : 'assistant',
-    });
-  }
-
-  fromNode(node: Node): ChatMessage {
-
-
-    return new ChatMessage({
-      id: 0, // This will be set by the database
-      thread_id: node.properties.threadId,
-      content: node.properties.message,
-      role: node.properties.role,
-    });
-  }
-
-  toNode(): Node {
-    return BaseNodeSchema.parse({
-      node_id: this.id,
-      type: this.type,
-      properties: {
-        message: this.content,
-        role: this.role,
-        threadId: this.thread_id,
-      }
-    });
-  }
+enum ActionSeverity {
+  INFO = 0,
+  WARNING = 1,
+  ERROR = 2,
+  CRITICAL = 3,
 }
 
-export { ChatMessage, ChatMessageSchema };
+const MessageBase = z.object({
+  id: z.string(),
+  content: z.string(),
+  created_at: z.iso.datetime(),
+  metadata: z.record(z.string(), z.any()).default({}),
+});
+
+const ChatMessageAssetSchema = z.object({
+  id: z.number(),
+  url: z.string(),
+  mime_type: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  nsfw: z.boolean().optional(),
+
+});
+
+export const InteractionSchema = MessageBase.extend({
+  type: z.literal('chat_message'),
+  role: z.string(),
+  name: z.string().optional(),
+  usage: z.number().optional(),
+  assets: z.array(ChatMessageAssetSchema).optional().default([]),
+});
+
+const ServerActionSchema = MessageBase.extend({
+  type: z.literal('server_action'),
+  role: z.string(),
+  actions: z.array(z.object({
+    label: z.string(),
+    url: z.string().optional(),
+    destructive: z.boolean().optional(),
+  })).optional(),
+  severity: z.enum(ActionSeverity).optional(), // For system messages, indicates the severity of the message (0 = info, 1 = warning, 2 = error, 3 = critical)
+});
+
+export const ChatMessageSchema = z.discriminatedUnion('type', [InteractionSchema, ServerActionSchema]);
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+export type ServerAction = z.infer<typeof ServerActionSchema>;
+export type InteractionMessage = z.infer<typeof InteractionSchema>;
+export type ChatAsset = z.infer<typeof ChatMessageAssetSchema>;
+
+
+export const threadHistoryResponseSchema = z.object({
+  threadId: z.string(),
+  history: z.array(InteractionSchema),
+});

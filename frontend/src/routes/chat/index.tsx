@@ -1,127 +1,30 @@
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
-import { MarkdownDisplay } from "@/components/markdown";
-import { Button } from "@/components/ui/button";
-import { formatChatTimestamp } from "@/lib/date-utils";
-import { SendHorizonal } from "lucide-preact";
 import { useRef, useEffect } from "preact/hooks";
-
-interface ChatAsset {
-  id: number;
-  url: string;
-  mime_type?: string;
-  name?: string;
-  description?: string;
-  nsfw?: boolean;
-}
-
-interface ChatMessage {
-  id: number;
-  role: "user" | "assistant" | "system";
-  content: string;
-  created_at: Date;
-  usage?: number;
-  assets?: ChatAsset[];
-  actions?: {
-    label: string;
-    url?: string;
-    destructive?: boolean; // If true, the action is styled as a destructive action (e.g., red button)
-  }[]
-  severity?: 0 | 1 | 2 | 3; // For system messages, indicates the severity of the message (0 = info, 1 = warning, 2 = error, 3 = critical)
-}
-
-const severityStyles = {
-  0: "bg-blue-300/35 border-blue-500",
-  1: "bg-orange-300/35 border-orange-500",
-  2: "bg-red-300/35 border-red-500",
-  3: "bg-red-300/35 border-red-500 font-bold"
-}
+import { ChatForm } from "./chat-form";
+import type { ChatMessage } from '@tkottke90/ai-assistant-client';
+import { Signal, useSignal } from "@preact/signals";
+import { ChatMessageDisplay } from "./messages";
+import chatHistory from "./chat-history";
 
 const tempChats: ChatMessage[] = [
-  { id: 0, role: 'user', content: 'Hello, how are you?', created_at: new Date() },
-  { id: 7, role: 'user', content: 'Hello, how are you?', created_at: new Date(), assets: [
+  { id: '0', type: 'chat_message', role: 'user', content: 'Hello, how are you?', created_at: new Date(), metadata: {}, assets: [] },
+  { id: '7', type: 'chat_message', role: 'user', content: 'Hello, how are you?', created_at: new Date(), metadata: {}, assets: [
     { id: 0, url: '/api/v1/assets/1/view', nsfw: false },
     { id: 2, url: '/api/v1/assets/1/view', nsfw: true },
     { id: 3, url: '/api/v1/assets/1/view', nsfw: true },
   ] },
-  { id: 1, role: 'assistant', content: 'I am fine, thank you! How can I assist you today?', created_at: new Date() },
-  { id: 2, role: 'user', content: 'Can you tell me a joke?', created_at: new Date() },
-  { id: 3, role: 'assistant', content: 'Sure! Why don\'t scientists trust atoms? Because they make up everything!', created_at: new Date() },
-  { id: 5, role: 'system', content: 'Action Taken', actions: [], created_at: new Date(), severity: 1 },
-  { id: 6, role: 'system', content: 'There was an error', actions: [], created_at: new Date(), severity: 2 },
-  { id: 4, role: 'system', content: 'Approve this action', actions: [
+  { id: '1', type: 'chat_message', role: 'assistant', content: 'I am fine, thank you! How can I assist you today?', created_at: new Date(), metadata: {}, assets: [] },
+  { id: '2', type: 'chat_message', role: 'user', content: 'Can you tell me a joke?', created_at: new Date(), metadata: {}, assets: [] },
+  { id: '3', type: 'chat_message', role: 'assistant', content: 'Sure! Why don\'t scientists trust atoms? Because they make up everything!', created_at: new Date(), metadata: {}, assets: [] },
+  { id: '5', type: 'server_action', role: 'system', content: 'Action Taken', actions: [], created_at: new Date(), metadata: {}, severity: 1 },
+  { id: '6', type: 'server_action', role: 'system', content: 'There was an error', actions: [], created_at: new Date(), metadata: {}, severity: 2 },
+  { id: '4', type: 'server_action', role: 'system', content: 'Approve this action', actions: [
     { label: 'Reject', url: '/api/v1/activity/1/reject', destructive: true },
     { label: 'Approve', url: '/api/v1/activity/1/approve' },
-  ], created_at: new Date() },
+  ], created_at: new Date(), metadata: {} },
 ]
 
-function ChatMessage({ message }: { message: ChatMessage}) {
-  
-  // Display system messages differently, since they are not part of the conversation, but rather a call to action for the user
-  if (message.role === "system") {
-    return (
-      <div className={`p-4 rounded-md border min-w-10/12 xl:min-w-1/2 mx-auto ${severityStyles[message.severity ?? 0]}`}>
-        <p className="text-sm  mb-2">{message.content}</p>
-        <div className="flex gap-2 justify-end">
-          {message.actions?.map((action, index) => (
-            <Button 
-              key={index}
-              variant={action.destructive ? "destructive" : "constructive"} 
-            >{action.label}</Button>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-
-  return (
-    <div 
-      className="group grid grid-rows-[auto_1fr_auto] grid-cols-[auto_1fr] data-[role=user]:grid-cols-[1fr_auto] gap-2 text-sm md:text-base"
-      data-role={message.role}
-    >
-      <header className="col-span-2 row-start-1 group-data-[role=user]:text-right text-sm text-neutral-200/50">
-        { formatChatTimestamp(message.created_at) }
-      </header>
-      <aside className={`row-start-2 col-start-1 group-data-[role=user]:text-right group-data-[role=user]:col-start-2 w-8`}>
-        <div className="w-8 h-8 flex justify-center items-center rounded-full bg-avatar-assistant group-data-[role=user]:bg-avatar-user">{message.role.charAt(0).toUpperCase()}</div>
-      </aside>
-      <main className={`row-start-2 col-start-2 bg-neutral-300 dark:bg-neutral-500 p-4 dark:text-white max-w-8/12
-        group-data-[role=assistant]:rounded-r-md group-data-[role=assistant]:rounded-bl-md group-data-[role=assistant]:mr-auto
-        group-data-[role=user]:rounded-l-md group-data-[role=user]:rounded-br-md  group-data-[role=user]:text-right group-data-[role=user]:col-start-1 group-data-[role=user]:ml-auto`}
-      >
-        { message.assets && (
-          <div className="flex gap-2 mb-2 overflow-hidden rounded">
-            {message.assets.map(asset => (
-              <img
-                data-nsfw={asset.nsfw}
-                key={asset.id} src={asset.url}
-                alt={`Asset ${asset.id}`}
-                className="rounded-md border h-32 w-32 object-cover data-[nsfw=true]:blur-sm overflow-clip focus:border-blue-400"
-                onClick={(e) => {
-                  const target = e.target as HTMLImageElement;
-
-                  // If the image is not NSFW, do nothing.  These should always be visible
-                  if (!asset.nsfw) return;
-
-                  // If the image is NSFW, toggle the blur
-                  if (target.dataset.nsfw === "true") {
-                    target.dataset.nsfw = "false";
-                  } else {
-                    target.dataset.nsfw = "true";
-                  }
-                }}
-              />
-            ))}
-          </div>
-        )}
-        <MarkdownDisplay>{message.content}</MarkdownDisplay>
-      </main>
-      <footer className={`col-span-2 row-start-3 flex group-data-[role=user]:flex-row-reverse`}></footer>
-    </div>
-  )
-}
-
-function ChatList({ messages }: {messages: ChatMessage[]}) {
+function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
   const scrollableContainer = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -131,71 +34,32 @@ function ChatList({ messages }: {messages: ChatMessage[]}) {
       behavior: "smooth",
       top: scrollableContainer.current?.scrollHeight,
     });
-  }, [messages]);
+  }, [messages.value]);
   
   return (
     <div className="flex flex-col gap-2 pb-8" ref={scrollableContainer} >
-      {messages.map(message => (
-        <ChatMessage key={message.id} message={message} />
+      {messages.value.map(message => (
+        <ChatMessageDisplay key={message.id} message={message} />
       ))}
     </div>
   )
 }
 
-async function submit() {
-  const response = await fetch('/api/v1/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ message: 'Hello', threadId: '123' }),
-  });
-
-  if (!response.body) throw Error('No response body');
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    const chunk = decoder.decode(value);
-    const lines = chunk.split('\n\n');
-    
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6));
-
-        if (!data.chunk[0]?.kwargs?.content) continue; // Skip content chunks, we only want updates and messages for this example
-
-        console.log(data.chunk[0].kwargs?.content);
-      }
-    }
-  }
-}
-
-function ChatForm() {
-  return (
-    <form className="w-full flex flex-row gap-2">
-      <input type="text" hidden name="threadId" />
-
-      <div className="w-full border border-neutral-500/50 rounded-md">
-        <div id="file-container" className="flex gap-2"></div>
-
-        <textarea className="w-full h-24 p-2 rounded-md focus:ring-0 focus:outline-none resize-none" placeholder="Type your message here..."></textarea>
-      </div>
-      
-      <Button variant="default" type="button" onClick={() => void submit()}>
-        <span class="hidden lg:inline">Send</span>
-        <SendHorizonal size={20} class="inline lg:hidden" />
-      </Button>
-      
-    </form>
-  )
-}
-
 export function ChatPage() {
+  const threadId = useSignal('');
+  const chatMessages = useSignal<ChatMessage[]>(tempChats);
+
+  useEffect(() => {
+    chatHistory.loadCurrentThread().then(id => {
+      threadId.value = id;
+
+      chatHistory.getChatHistory(id).then(response => {
+        console.log('Loaded chat history:', response);
+        chatMessages.value = response.history;
+      });
+    });
+  }, []);
+
   return (
     <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
       <header className="flex gap-2 items-center w-full">
@@ -208,10 +72,10 @@ export function ChatPage() {
         </span>
       </header>
       <main className="w-full grow overflow-y-auto">
-        <ChatList messages={tempChats} />
+        <ChatList messages={chatMessages} />
       </main>
       <footer className="w-full">
-        <ChatForm />
+        <ChatForm threadId={threadId} />
       </footer>
     </BaseLayout>
   )

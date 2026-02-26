@@ -108,6 +108,7 @@
 
 html, body, #app {
   @apply h-full w-full overflow-hidden;
+  font-size: 14px;
 }
 
 @layer base {
@@ -117,6 +118,10 @@ html, body, #app {
 
   body {
     @apply bg-neutral-300 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200;
+  }
+
+  h1,h2,h3,h4,h5,h6 {
+    @apply scroll-m-20 my-2;
   }
 
   h1 {
@@ -133,5 +138,19 @@ html, body, #app {
 
   h4 {
     @apply text-lg font-bold;
+  }
+
+  pre {
+    @apply bg-neutral-100 dark:bg-neutral-800 p-4 rounded-md overflow-x-auto;
+  }
+
+  code {
+    white-space: pre-wrap;
+  }
+}
+
+@layer components {
+  .prose hr {
+    @apply my-4 border-neutral-400/50;
   }
 }

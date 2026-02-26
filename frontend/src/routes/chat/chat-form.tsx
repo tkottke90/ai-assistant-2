@@ -1,56 +1,91 @@
 import { Button } from "@/components/ui/button";
 import type { Signal } from "@preact/signals";
 import { SendHorizonal } from "lucide-preact";
+import { toast } from "sonner";
+import type { ChatMessage } from "@tkottke90/ai-assistant-client";
+import {
+  buildUserMessage,
+  buildAssistantMessage,
+  parseMessagesChunk,
+  isDoneEvent,
+  appendToMessage,
+} from "./chat-utils";
 
-async function submit(e: SubmitEvent) {
-  e.preventDefault();
+export function createSubmitHandler(
+  chatMessages: Signal<ChatMessage[]>,
+  isStreaming: Signal<boolean>,
+) {
+  return async function handleSubmit(e: SubmitEvent) {
+    e.preventDefault();
 
-  // Extract message and threadId from the form
-  const form = e.currentTarget as HTMLFormElement;
-  const formData = new FormData(form);
-  const message = formData.get('message') as string;
-  const threadId = formData.get('threadId') as string;
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const message = formData.get('message') as string;
+    const threadId = formData.get('threadId') as string;
 
-  form.reset();
+    if (!message.trim()) return;
 
-  form.querySelector('#threadId')?.setAttribute('value', threadId); // Reset the threadId input since form.reset() will clear it
+    form.reset();
+    form.querySelector('#threadId')?.setAttribute('value', threadId);
 
-  const response = await fetch('/api/v1/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ message, threadId }),
-  });
+    const userMessage = buildUserMessage(message);
+    const assistantMessage = buildAssistantMessage();
+    const assistantId = assistantMessage.id;
 
-  if (!response.body) throw Error('No response body');
+    chatMessages.value = [...chatMessages.value, userMessage, assistantMessage];
+    isStreaming.value = true;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+    try {
+      const response = await fetch('/api/v1/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, threadId }),
+      });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    const chunk = decoder.decode(value);
-    const lines = chunk.split('\n\n');
-    
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6));
+      if (!response.body) throw new Error('No response body');
 
-        if (!data.chunk[0]?.kwargs?.content) continue; // Skip content chunks, we only want updates and messages for this example
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-        console.log(data.chunk[0].kwargs?.content);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const raw = decoder.decode(value);
+        const lines = raw.split('\n\n');
+
+        for (const line of lines) {
+          if (isDoneEvent(line)) break;
+
+          const content = parseMessagesChunk(line);
+          if (content) {
+            chatMessages.value = appendToMessage(chatMessages.value, assistantId, content);
+          }
+        }
       }
+    } catch (err) {
+      console.error('Chat stream error:', err);
+      toast.error('Failed to get a response. Please try again.');
+      // Remove the empty assistant placeholder on failure
+      chatMessages.value = chatMessages.value.filter(msg => msg.id !== assistantId);
+    } finally {
+      isStreaming.value = false;
     }
-  }
+  };
 }
 
-export function ChatForm({ threadId }: { threadId: Signal<string> }) {
+interface ChatFormProps {
+  threadId: Signal<string>;
+  chatMessages: Signal<ChatMessage[]>;
+  isStreaming: Signal<boolean>;
+}
+
+export function ChatForm({ threadId, chatMessages, isStreaming }: ChatFormProps) {
+  const handleSubmit = createSubmitHandler(chatMessages, isStreaming);
+
   return (
     <form className="w-full flex flex-row gap-2"
-      onSubmit={submit}
+      onSubmit={handleSubmit}
     >
       <input type="text" hidden id="threadId" name="threadId" value={threadId.value} />
 
@@ -58,17 +93,18 @@ export function ChatForm({ threadId }: { threadId: Signal<string> }) {
         <div id="file-container" className="flex gap-2"></div>
 
         <textarea
-          className="w-full h-24 p-2 rounded-md focus:ring-0 focus:outline-none resize-none"
+          className="w-full h-24 p-2 rounded-md focus:ring-0 focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
           placeholder="Type your message here..."
-          name="message"  
+          name="message"
+          disabled={isStreaming.value}
         />
       </div>
-      
-      <Button variant="default" type="submit">
+
+      <Button variant="default" type="submit" disabled={isStreaming.value}>
         <span class="hidden lg:inline">Send</span>
         <SendHorizonal size={20} class="inline lg:hidden" />
       </Button>
-      
+
     </form>
-  )
+  );
 }

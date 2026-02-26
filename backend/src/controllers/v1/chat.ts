@@ -74,29 +74,36 @@ router.get(
 
     // The History is a generator function.  We should convert
     // it to an array before sending it to the client.
-    const historyIds = new Set();
-    const history: BaseMessage[] = [];
+    // Checkpoints are newest-first; by overwriting `ts` on every occurrence
+    // we end up with the oldest (creation-time) checkpoint timestamp for each message.
+    const historyMap = new Map<string, { msg: BaseMessage; ts: string }>();
+
     for await (const item of historyGen) {
-      const values = item.checkpoint.channel_values
+      const values = item.checkpoint.channel_values;
+      const ts = item.checkpoint.ts;
 
       if (values['messages']) {
         for (const msg of values['messages'] as BaseMessage[]) {
-          if (!historyIds.has(msg.id)) {
-            historyIds.add(msg.id);
-            history.push(msg);
+          if (!historyMap.has(msg.id!)) {
+            historyMap.set(msg.id!, { msg, ts });
+          } else {
+            // Overwrite with the older timestamp as we walk backwards in time
+            historyMap.get(msg.id!)!.ts = ts;
           }
         }
       }
     }
 
+    const history = Array.from(historyMap.values());
+
     res.json(threadHistoryResponseSchema.parse({
       threadId,
-      history: history.map(msg => InteractionSchema.parse({
+      history: history.map(({ msg, ts }) => InteractionSchema.parse({
         type: 'chat_message',
         id: msg.id,
         content: msg.content,
         name: msg.name,
-        created_at: new Date().toISOString(),
+        created_at: ts,
         metadata: msg.additional_kwargs,
         role: msg.type,
       }))

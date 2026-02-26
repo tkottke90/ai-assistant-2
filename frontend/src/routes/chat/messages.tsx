@@ -36,7 +36,7 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
       <header className="col-span-2 row-start-1 group-data-[role=human]:text-right text-sm text-neutral-200/50">
         { formatChatTimestamp(new Date(message.created_at)) }
       </header>
-      <aside className={`row-start-2 col-start-1 group-data-[role=human]:text-right group-data-[role=human]:col-start-2 w-8`}>
+      <aside className={`row-start-2 col-start-1 group-data-[role=human]:col-start-2 w-8`}>
         <div className="w-8 h-8 flex justify-center items-center rounded-full bg-avatar-assistant group-data-[role=human]:bg-avatar-user">{message.role.charAt(0).toUpperCase()}</div>
       </aside>
       <main className={`row-start-2 col-start-2 bg-neutral-300 dark:bg-neutral-500 p-4 dark:text-white max-w-8/12
@@ -68,7 +68,12 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
             ))}
           </div>
         )}
-        <MarkdownDisplay>{message.content}</MarkdownDisplay>
+        <MarkdownDisplay className="peer">{message.content}</MarkdownDisplay>
+        <div className="hidden peer-empty:flex group-data-[role=human]:peer-empty:hidden items-center gap-1 py-1">
+          <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.32s]" />
+          <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.16s]" />
+          <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce" />
+        </div>
       </main>
       <footer className={`col-span-2 row-start-3 flex group-data-[role=human]:flex-row-reverse`}></footer>
     </div>

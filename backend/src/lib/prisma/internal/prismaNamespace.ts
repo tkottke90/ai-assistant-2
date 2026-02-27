@@ -387,7 +387,9 @@ export const ModelName = {
   Node: 'Node',
   Edge: 'Edge',
   Asset: 'Asset',
-  Agent: 'Agent'
+  Agent: 'Agent',
+  checkpoints: 'checkpoints',
+  writes: 'writes'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -403,7 +405,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "node" | "edge" | "asset" | "agent"
+    modelProps: "node" | "edge" | "asset" | "agent" | "checkpoints" | "writes"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -703,6 +705,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    checkpoints: {
+      payload: Prisma.$checkpointsPayload<ExtArgs>
+      fields: Prisma.checkpointsFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.checkpointsFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.checkpointsFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>
+        }
+        findFirst: {
+          args: Prisma.checkpointsFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.checkpointsFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>
+        }
+        findMany: {
+          args: Prisma.checkpointsFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>[]
+        }
+        create: {
+          args: Prisma.checkpointsCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>
+        }
+        createMany: {
+          args: Prisma.checkpointsCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.checkpointsCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>[]
+        }
+        delete: {
+          args: Prisma.checkpointsDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>
+        }
+        update: {
+          args: Prisma.checkpointsUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>
+        }
+        deleteMany: {
+          args: Prisma.checkpointsDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.checkpointsUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.checkpointsUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>[]
+        }
+        upsert: {
+          args: Prisma.checkpointsUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$checkpointsPayload>
+        }
+        aggregate: {
+          args: Prisma.CheckpointsAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCheckpoints>
+        }
+        groupBy: {
+          args: Prisma.checkpointsGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CheckpointsGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.checkpointsCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CheckpointsCountAggregateOutputType> | number
+        }
+      }
+    }
+    writes: {
+      payload: Prisma.$writesPayload<ExtArgs>
+      fields: Prisma.writesFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.writesFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.writesFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>
+        }
+        findFirst: {
+          args: Prisma.writesFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.writesFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>
+        }
+        findMany: {
+          args: Prisma.writesFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>[]
+        }
+        create: {
+          args: Prisma.writesCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>
+        }
+        createMany: {
+          args: Prisma.writesCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.writesCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>[]
+        }
+        delete: {
+          args: Prisma.writesDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>
+        }
+        update: {
+          args: Prisma.writesUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>
+        }
+        deleteMany: {
+          args: Prisma.writesDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.writesUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.writesUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>[]
+        }
+        upsert: {
+          args: Prisma.writesUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$writesPayload>
+        }
+        aggregate: {
+          args: Prisma.WritesAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWrites>
+        }
+        groupBy: {
+          args: Prisma.writesGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WritesGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.writesCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WritesCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -785,11 +935,40 @@ export const AgentScalarFieldEnum = {
   version: 'version',
   system_prompt: 'system_prompt',
   auto_start: 'auto_start',
+  engine: 'engine',
+  model: 'model',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const
 
 export type AgentScalarFieldEnum = (typeof AgentScalarFieldEnum)[keyof typeof AgentScalarFieldEnum]
+
+
+export const CheckpointsScalarFieldEnum = {
+  thread_id: 'thread_id',
+  checkpoint_ns: 'checkpoint_ns',
+  checkpoint_id: 'checkpoint_id',
+  parent_checkpoint_id: 'parent_checkpoint_id',
+  type: 'type',
+  checkpoint: 'checkpoint',
+  metadata: 'metadata'
+} as const
+
+export type CheckpointsScalarFieldEnum = (typeof CheckpointsScalarFieldEnum)[keyof typeof CheckpointsScalarFieldEnum]
+
+
+export const WritesScalarFieldEnum = {
+  thread_id: 'thread_id',
+  checkpoint_ns: 'checkpoint_ns',
+  checkpoint_id: 'checkpoint_id',
+  task_id: 'task_id',
+  idx: 'idx',
+  channel: 'channel',
+  type: 'type',
+  value: 'value'
+} as const
+
+export type WritesScalarFieldEnum = (typeof WritesScalarFieldEnum)[keyof typeof WritesScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -877,6 +1056,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'Bytes'
+ */
+export type BytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes'>
     
 
 
@@ -985,6 +1171,8 @@ export type GlobalOmitConfig = {
   edge?: Prisma.EdgeOmit
   asset?: Prisma.AssetOmit
   agent?: Prisma.AgentOmit
+  checkpoints?: Prisma.checkpointsOmit
+  writes?: Prisma.writesOmit
 }
 
 /* Types for Logging */

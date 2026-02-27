@@ -59,3 +59,13 @@ export type Asset = Prisma.AssetModel
  * 
  */
 export type Agent = Prisma.AgentModel
+/**
+ * Model checkpoints
+ * 
+ */
+export type checkpoints = Prisma.checkpointsModel
+/**
+ * Model writes
+ * 
+ */
+export type writes = Prisma.writesModel

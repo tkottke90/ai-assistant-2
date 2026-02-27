@@ -1,6 +1,6 @@
 import { AgentSchema, CreateAgentDTO } from '../models/agent.js';
 import { prisma } from '../database.js';
-import { PaginationQuery, PaginatedResponse, createPagination } from '../types/pagination.js';
+import { PaginationQuery, createPagination } from '../types/pagination.js';
 
 function createAgent(agentData: CreateAgentDTO) {
   return prisma.agent.create({

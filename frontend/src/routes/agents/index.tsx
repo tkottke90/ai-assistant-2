@@ -1,7 +1,9 @@
 import { Dialog, useDialog } from "@/components/dialog";
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
+import { LlmSelector } from "@/components/llm-selector";
 import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { cn } from "@/lib/utils";
 import { batch, useSignal } from "@preact/signals";
 import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type AgentListResponse } from '@tkottke90/ai-assistant-client';
@@ -208,6 +210,7 @@ function CreateAgentForm() {
   const dialog = useDialog();
   const loading = useSignal(false);
   const error = useSignal<string | null>(null);
+  const llmSelection = useLlmSelection();
 
   return (
      <form className="flex flex-col gap-4"
@@ -224,7 +227,9 @@ function CreateAgentForm() {
           name,
           description,
           system_prompt: 'You are the member of an AI Team. Collaborate with the user and other agents to complete tasks and achieve goals.',
-          auto_start: false
+          auto_start: false,
+          engine: llmSelection.selectedAlias.value || undefined,
+          model: llmSelection.selectedModel.value || undefined,
         }).then(() => {
             dialog.close();
           })
@@ -256,6 +261,7 @@ function CreateAgentForm() {
           placeholder="Enter agent description (optional)"
         />
       </div>
+      <LlmSelector llmSelection={llmSelection} disabled={loading.value} />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" type="button" onClick={() => {
           dialog.close();

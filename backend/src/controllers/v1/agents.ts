@@ -4,6 +4,7 @@ import { AgentProperties, CreateAgentDTO } from '../../lib/models/agent.js';
 import { ZodBodyValidator, ZodIdValidator, ZodQueryValidator } from '../../middleware/zod.middleware.js';
 import { PaginationQuerySchemaBase, PaginationQuery } from '../../lib/types/pagination.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors/http.errors.js';
+import { AgentRuntime } from '../../lib/agents/agent-runtime.js';
 
 export const router = Router();
 
@@ -22,7 +23,11 @@ router.post('/',
 
     req.logger.debug('Agent created successfully', { ...agent });
     req.logger.info('Registering agent with Agent Manager');
-    // agentManager.registerAgent(agent);
+    
+    const llmEngine = req.app.llm.getClient(agentData.engine);
+    agentManager.registerAgent(
+      AgentRuntime.fromDatabase(agent, llmEngine)
+    );
     
     req.logger.info('Agent registered successfully');
 

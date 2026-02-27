@@ -236,8 +236,8 @@ export type EdgeWhereInput = {
   properties?: Prisma.JsonFilter<"Edge">
   created_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
-  source?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
   target?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
+  source?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
 }
 
 export type EdgeOrderByWithRelationInput = {
@@ -248,8 +248,8 @@ export type EdgeOrderByWithRelationInput = {
   properties?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
-  source?: Prisma.NodeOrderByWithRelationInput
   target?: Prisma.NodeOrderByWithRelationInput
+  source?: Prisma.NodeOrderByWithRelationInput
 }
 
 export type EdgeWhereUniqueInput = Prisma.AtLeast<{
@@ -264,8 +264,8 @@ export type EdgeWhereUniqueInput = Prisma.AtLeast<{
   properties?: Prisma.JsonFilter<"Edge">
   created_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
-  source?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
   target?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
+  source?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
 }, "node_id" | "source_id_target_id_type">
 
 export type EdgeOrderByWithAggregationInput = {
@@ -301,8 +301,8 @@ export type EdgeCreateInput = {
   properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
   updated_at?: Date | string
-  source: Prisma.NodeCreateNestedOneWithoutOutgoing_edgesInput
   target: Prisma.NodeCreateNestedOneWithoutIncoming_edgesInput
+  source: Prisma.NodeCreateNestedOneWithoutOutgoing_edgesInput
 }
 
 export type EdgeUncheckedCreateInput = {
@@ -320,8 +320,8 @@ export type EdgeUpdateInput = {
   properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  source?: Prisma.NodeUpdateOneRequiredWithoutOutgoing_edgesNestedInput
   target?: Prisma.NodeUpdateOneRequiredWithoutIncoming_edgesNestedInput
+  source?: Prisma.NodeUpdateOneRequiredWithoutOutgoing_edgesNestedInput
 }
 
 export type EdgeUncheckedUpdateInput = {
@@ -417,13 +417,6 @@ export type EdgeSumOrderByAggregateInput = {
   target_id?: Prisma.SortOrder
 }
 
-export type EdgeCreateNestedManyWithoutSourceInput = {
-  create?: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput> | Prisma.EdgeCreateWithoutSourceInput[] | Prisma.EdgeUncheckedCreateWithoutSourceInput[]
-  connectOrCreate?: Prisma.EdgeCreateOrConnectWithoutSourceInput | Prisma.EdgeCreateOrConnectWithoutSourceInput[]
-  createMany?: Prisma.EdgeCreateManySourceInputEnvelope
-  connect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
-}
-
 export type EdgeCreateNestedManyWithoutTargetInput = {
   create?: Prisma.XOR<Prisma.EdgeCreateWithoutTargetInput, Prisma.EdgeUncheckedCreateWithoutTargetInput> | Prisma.EdgeCreateWithoutTargetInput[] | Prisma.EdgeUncheckedCreateWithoutTargetInput[]
   connectOrCreate?: Prisma.EdgeCreateOrConnectWithoutTargetInput | Prisma.EdgeCreateOrConnectWithoutTargetInput[]
@@ -431,7 +424,7 @@ export type EdgeCreateNestedManyWithoutTargetInput = {
   connect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
 }
 
-export type EdgeUncheckedCreateNestedManyWithoutSourceInput = {
+export type EdgeCreateNestedManyWithoutSourceInput = {
   create?: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput> | Prisma.EdgeCreateWithoutSourceInput[] | Prisma.EdgeUncheckedCreateWithoutSourceInput[]
   connectOrCreate?: Prisma.EdgeCreateOrConnectWithoutSourceInput | Prisma.EdgeCreateOrConnectWithoutSourceInput[]
   createMany?: Prisma.EdgeCreateManySourceInputEnvelope
@@ -445,18 +438,11 @@ export type EdgeUncheckedCreateNestedManyWithoutTargetInput = {
   connect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
 }
 
-export type EdgeUpdateManyWithoutSourceNestedInput = {
+export type EdgeUncheckedCreateNestedManyWithoutSourceInput = {
   create?: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput> | Prisma.EdgeCreateWithoutSourceInput[] | Prisma.EdgeUncheckedCreateWithoutSourceInput[]
   connectOrCreate?: Prisma.EdgeCreateOrConnectWithoutSourceInput | Prisma.EdgeCreateOrConnectWithoutSourceInput[]
-  upsert?: Prisma.EdgeUpsertWithWhereUniqueWithoutSourceInput | Prisma.EdgeUpsertWithWhereUniqueWithoutSourceInput[]
   createMany?: Prisma.EdgeCreateManySourceInputEnvelope
-  set?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
-  disconnect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
-  delete?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
   connect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
-  update?: Prisma.EdgeUpdateWithWhereUniqueWithoutSourceInput | Prisma.EdgeUpdateWithWhereUniqueWithoutSourceInput[]
-  updateMany?: Prisma.EdgeUpdateManyWithWhereWithoutSourceInput | Prisma.EdgeUpdateManyWithWhereWithoutSourceInput[]
-  deleteMany?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
 }
 
 export type EdgeUpdateManyWithoutTargetNestedInput = {
@@ -473,7 +459,7 @@ export type EdgeUpdateManyWithoutTargetNestedInput = {
   deleteMany?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
 }
 
-export type EdgeUncheckedUpdateManyWithoutSourceNestedInput = {
+export type EdgeUpdateManyWithoutSourceNestedInput = {
   create?: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput> | Prisma.EdgeCreateWithoutSourceInput[] | Prisma.EdgeUncheckedCreateWithoutSourceInput[]
   connectOrCreate?: Prisma.EdgeCreateOrConnectWithoutSourceInput | Prisma.EdgeCreateOrConnectWithoutSourceInput[]
   upsert?: Prisma.EdgeUpsertWithWhereUniqueWithoutSourceInput | Prisma.EdgeUpsertWithWhereUniqueWithoutSourceInput[]
@@ -501,30 +487,18 @@ export type EdgeUncheckedUpdateManyWithoutTargetNestedInput = {
   deleteMany?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
 }
 
-export type EdgeCreateWithoutSourceInput = {
-  type: string
-  properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  created_at?: Date | string
-  updated_at?: Date | string
-  target: Prisma.NodeCreateNestedOneWithoutIncoming_edgesInput
-}
-
-export type EdgeUncheckedCreateWithoutSourceInput = {
-  node_id?: number
-  target_id: number
-  type: string
-  properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  created_at?: Date | string
-  updated_at?: Date | string
-}
-
-export type EdgeCreateOrConnectWithoutSourceInput = {
-  where: Prisma.EdgeWhereUniqueInput
-  create: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput>
-}
-
-export type EdgeCreateManySourceInputEnvelope = {
-  data: Prisma.EdgeCreateManySourceInput | Prisma.EdgeCreateManySourceInput[]
+export type EdgeUncheckedUpdateManyWithoutSourceNestedInput = {
+  create?: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput> | Prisma.EdgeCreateWithoutSourceInput[] | Prisma.EdgeUncheckedCreateWithoutSourceInput[]
+  connectOrCreate?: Prisma.EdgeCreateOrConnectWithoutSourceInput | Prisma.EdgeCreateOrConnectWithoutSourceInput[]
+  upsert?: Prisma.EdgeUpsertWithWhereUniqueWithoutSourceInput | Prisma.EdgeUpsertWithWhereUniqueWithoutSourceInput[]
+  createMany?: Prisma.EdgeCreateManySourceInputEnvelope
+  set?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
+  disconnect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
+  delete?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
+  connect?: Prisma.EdgeWhereUniqueInput | Prisma.EdgeWhereUniqueInput[]
+  update?: Prisma.EdgeUpdateWithWhereUniqueWithoutSourceInput | Prisma.EdgeUpdateWithWhereUniqueWithoutSourceInput[]
+  updateMany?: Prisma.EdgeUpdateManyWithWhereWithoutSourceInput | Prisma.EdgeUpdateManyWithWhereWithoutSourceInput[]
+  deleteMany?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
 }
 
 export type EdgeCreateWithoutTargetInput = {
@@ -553,33 +527,30 @@ export type EdgeCreateManyTargetInputEnvelope = {
   data: Prisma.EdgeCreateManyTargetInput | Prisma.EdgeCreateManyTargetInput[]
 }
 
-export type EdgeUpsertWithWhereUniqueWithoutSourceInput = {
+export type EdgeCreateWithoutSourceInput = {
+  type: string
+  properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+  target: Prisma.NodeCreateNestedOneWithoutIncoming_edgesInput
+}
+
+export type EdgeUncheckedCreateWithoutSourceInput = {
+  node_id?: number
+  target_id: number
+  type: string
+  properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type EdgeCreateOrConnectWithoutSourceInput = {
   where: Prisma.EdgeWhereUniqueInput
-  update: Prisma.XOR<Prisma.EdgeUpdateWithoutSourceInput, Prisma.EdgeUncheckedUpdateWithoutSourceInput>
   create: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput>
 }
 
-export type EdgeUpdateWithWhereUniqueWithoutSourceInput = {
-  where: Prisma.EdgeWhereUniqueInput
-  data: Prisma.XOR<Prisma.EdgeUpdateWithoutSourceInput, Prisma.EdgeUncheckedUpdateWithoutSourceInput>
-}
-
-export type EdgeUpdateManyWithWhereWithoutSourceInput = {
-  where: Prisma.EdgeScalarWhereInput
-  data: Prisma.XOR<Prisma.EdgeUpdateManyMutationInput, Prisma.EdgeUncheckedUpdateManyWithoutSourceInput>
-}
-
-export type EdgeScalarWhereInput = {
-  AND?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
-  OR?: Prisma.EdgeScalarWhereInput[]
-  NOT?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
-  node_id?: Prisma.IntFilter<"Edge"> | number
-  source_id?: Prisma.IntFilter<"Edge"> | number
-  target_id?: Prisma.IntFilter<"Edge"> | number
-  type?: Prisma.StringFilter<"Edge"> | string
-  properties?: Prisma.JsonFilter<"Edge">
-  created_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
-  updated_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
+export type EdgeCreateManySourceInputEnvelope = {
+  data: Prisma.EdgeCreateManySourceInput | Prisma.EdgeCreateManySourceInput[]
 }
 
 export type EdgeUpsertWithWhereUniqueWithoutTargetInput = {
@@ -598,13 +569,33 @@ export type EdgeUpdateManyWithWhereWithoutTargetInput = {
   data: Prisma.XOR<Prisma.EdgeUpdateManyMutationInput, Prisma.EdgeUncheckedUpdateManyWithoutTargetInput>
 }
 
-export type EdgeCreateManySourceInput = {
-  node_id?: number
-  target_id: number
-  type: string
-  properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  created_at?: Date | string
-  updated_at?: Date | string
+export type EdgeScalarWhereInput = {
+  AND?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
+  OR?: Prisma.EdgeScalarWhereInput[]
+  NOT?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
+  node_id?: Prisma.IntFilter<"Edge"> | number
+  source_id?: Prisma.IntFilter<"Edge"> | number
+  target_id?: Prisma.IntFilter<"Edge"> | number
+  type?: Prisma.StringFilter<"Edge"> | string
+  properties?: Prisma.JsonFilter<"Edge">
+  created_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
+  updated_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
+}
+
+export type EdgeUpsertWithWhereUniqueWithoutSourceInput = {
+  where: Prisma.EdgeWhereUniqueInput
+  update: Prisma.XOR<Prisma.EdgeUpdateWithoutSourceInput, Prisma.EdgeUncheckedUpdateWithoutSourceInput>
+  create: Prisma.XOR<Prisma.EdgeCreateWithoutSourceInput, Prisma.EdgeUncheckedCreateWithoutSourceInput>
+}
+
+export type EdgeUpdateWithWhereUniqueWithoutSourceInput = {
+  where: Prisma.EdgeWhereUniqueInput
+  data: Prisma.XOR<Prisma.EdgeUpdateWithoutSourceInput, Prisma.EdgeUncheckedUpdateWithoutSourceInput>
+}
+
+export type EdgeUpdateManyWithWhereWithoutSourceInput = {
+  where: Prisma.EdgeScalarWhereInput
+  data: Prisma.XOR<Prisma.EdgeUpdateManyMutationInput, Prisma.EdgeUncheckedUpdateManyWithoutSourceInput>
 }
 
 export type EdgeCreateManyTargetInput = {
@@ -616,30 +607,13 @@ export type EdgeCreateManyTargetInput = {
   updated_at?: Date | string
 }
 
-export type EdgeUpdateWithoutSourceInput = {
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  target?: Prisma.NodeUpdateOneRequiredWithoutIncoming_edgesNestedInput
-}
-
-export type EdgeUncheckedUpdateWithoutSourceInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
-  target_id?: Prisma.IntFieldUpdateOperationsInput | number
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type EdgeUncheckedUpdateManyWithoutSourceInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
-  target_id?: Prisma.IntFieldUpdateOperationsInput | number
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+export type EdgeCreateManySourceInput = {
+  node_id?: number
+  target_id: number
+  type: string
+  properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
 }
 
 export type EdgeUpdateWithoutTargetInput = {
@@ -668,6 +642,32 @@ export type EdgeUncheckedUpdateManyWithoutTargetInput = {
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type EdgeUpdateWithoutSourceInput = {
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  target?: Prisma.NodeUpdateOneRequiredWithoutIncoming_edgesNestedInput
+}
+
+export type EdgeUncheckedUpdateWithoutSourceInput = {
+  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  target_id?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EdgeUncheckedUpdateManyWithoutSourceInput = {
+  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  target_id?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 
 export type EdgeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -678,8 +678,8 @@ export type EdgeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   properties?: boolean
   created_at?: boolean
   updated_at?: boolean
-  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
+  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["edge"]>
 
 export type EdgeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -690,8 +690,8 @@ export type EdgeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   properties?: boolean
   created_at?: boolean
   updated_at?: boolean
-  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
+  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["edge"]>
 
 export type EdgeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -702,8 +702,8 @@ export type EdgeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   properties?: boolean
   created_at?: boolean
   updated_at?: boolean
-  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
+  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["edge"]>
 
 export type EdgeSelectScalar = {
@@ -718,23 +718,23 @@ export type EdgeSelectScalar = {
 
 export type EdgeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"node_id" | "source_id" | "target_id" | "type" | "properties" | "created_at" | "updated_at", ExtArgs["result"]["edge"]>
 export type EdgeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
+  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
 }
 export type EdgeIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
+  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
 }
 export type EdgeIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
+  source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
 }
 
 export type $EdgePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Edge"
   objects: {
-    source: Prisma.$NodePayload<ExtArgs>
     target: Prisma.$NodePayload<ExtArgs>
+    source: Prisma.$NodePayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     node_id: number
@@ -1138,8 +1138,8 @@ readonly fields: EdgeFieldRefs;
  */
 export interface Prisma__EdgeClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  source<T extends Prisma.NodeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.NodeDefaultArgs<ExtArgs>>): Prisma.Prisma__NodeClient<runtime.Types.Result.GetResult<Prisma.$NodePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   target<T extends Prisma.NodeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.NodeDefaultArgs<ExtArgs>>): Prisma.Prisma__NodeClient<runtime.Types.Result.GetResult<Prisma.$NodePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  source<T extends Prisma.NodeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.NodeDefaultArgs<ExtArgs>>): Prisma.Prisma__NodeClient<runtime.Types.Result.GetResult<Prisma.$NodePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.

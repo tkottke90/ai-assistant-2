@@ -5,7 +5,7 @@ import type { ChatMessage } from '@tkottke90/ai-assistant-client';
 import { Signal, useSignal } from "@preact/signals";
 import { ChatMessageDisplay } from "./messages";
 import chatHistory from "./chat-history";
-import { useLlmSelection } from "./use-llm-selection";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
 
 function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
   return (

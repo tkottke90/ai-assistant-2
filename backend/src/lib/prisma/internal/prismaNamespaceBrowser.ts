@@ -54,7 +54,9 @@ export const ModelName = {
   Node: 'Node',
   Edge: 'Edge',
   Asset: 'Asset',
-  Agent: 'Agent'
+  Agent: 'Agent',
+  checkpoints: 'checkpoints',
+  writes: 'writes'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -116,11 +118,40 @@ export const AgentScalarFieldEnum = {
   version: 'version',
   system_prompt: 'system_prompt',
   auto_start: 'auto_start',
+  engine: 'engine',
+  model: 'model',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const
 
 export type AgentScalarFieldEnum = (typeof AgentScalarFieldEnum)[keyof typeof AgentScalarFieldEnum]
+
+
+export const CheckpointsScalarFieldEnum = {
+  thread_id: 'thread_id',
+  checkpoint_ns: 'checkpoint_ns',
+  checkpoint_id: 'checkpoint_id',
+  parent_checkpoint_id: 'parent_checkpoint_id',
+  type: 'type',
+  checkpoint: 'checkpoint',
+  metadata: 'metadata'
+} as const
+
+export type CheckpointsScalarFieldEnum = (typeof CheckpointsScalarFieldEnum)[keyof typeof CheckpointsScalarFieldEnum]
+
+
+export const WritesScalarFieldEnum = {
+  thread_id: 'thread_id',
+  checkpoint_ns: 'checkpoint_ns',
+  checkpoint_id: 'checkpoint_id',
+  task_id: 'task_id',
+  idx: 'idx',
+  channel: 'channel',
+  type: 'type',
+  value: 'value'
+} as const
+
+export type WritesScalarFieldEnum = (typeof WritesScalarFieldEnum)[keyof typeof WritesScalarFieldEnum]
 
 
 export const SortOrder = {

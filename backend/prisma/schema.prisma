@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client"
   output   = "../src/lib/prisma"
@@ -11,17 +8,14 @@ datasource db {
 }
 
 model Node {
-  node_id Int @id @default(autoincrement())
-
-  type String
-  
-  properties Json
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt @default(now())
-
-  outgoing_edges Edge[] @relation("source")
-  incoming_edges Edge[] @relation("target")
-  assets Asset[]
+  node_id        Int      @id @default(autoincrement())
+  type           String
+  properties     Json
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now()) @updatedAt
+  assets         Asset[]
+  incoming_edges Edge[]   @relation("target")
+  outgoing_edges Edge[]   @relation("source")
 
   @@index([type])
   @@index([created_at])
@@ -29,42 +23,35 @@ model Node {
 }
 
 model Edge {
-  node_id Int @id @default(autoincrement())
-  source_id Int
-  target_id Int
-
-  type String
+  node_id    Int      @id @default(autoincrement())
+  source_id  Int
+  target_id  Int
+  type       String
   properties Json
-  
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+  target     Node     @relation("target", fields: [target_id], references: [node_id], onDelete: Cascade)
+  source     Node     @relation("source", fields: [source_id], references: [node_id], onDelete: Cascade)
 
-  source Node @relation("source", fields: [source_id], references: [node_id], onDelete: Cascade)
-  target Node @relation("target", fields: [target_id], references: [node_id], onDelete: Cascade)
-
+  @@unique([source_id, target_id, type])
   @@index([type])
   @@index([source_id])
   @@index([target_id])
   @@index([created_at])
   @@index([updated_at])
-
-  @@unique([source_id, target_id, type])
 }
 
 model Asset {
-  asset_id Int @id @default(autoincrement())
-  node_id Int
-  
-  url String
-  mime_type String?
-  name String?
+  asset_id    Int      @id @default(autoincrement())
+  node_id     Int
+  url         String
+  mime_type   String?
+  name        String?
   description String?
-  nsfw Boolean?
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt @default(now())
-
-  node Node @relation(fields: [node_id], references: [node_id], onDelete: Cascade)
+  nsfw        Boolean?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+  node        Node     @relation(fields: [node_id], references: [node_id], onDelete: Cascade)
 
   @@index([node_id])
   @@index([created_at])
@@ -72,20 +59,43 @@ model Asset {
 }
 
 model Agent {
-  agent_id Int @id @default(autoincrement())
-
-  name String
-  description String?
-  version Int @default(1)
-
+  agent_id      Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  version       Int      @default(1)
   system_prompt String
-
-  auto_start Boolean @default(false)
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt @default(now())
+  auto_start    Boolean  @default(false)
+  engine        String?
+  model         String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
 
   @@unique([name, version])
   @@index([created_at])
   @@index([updated_at])
+}
+
+model checkpoints {
+  thread_id            String
+  checkpoint_ns        String  @default("")
+  checkpoint_id        String
+  parent_checkpoint_id String?
+  type                 String?
+  checkpoint           Bytes?
+  metadata             Bytes?
+
+  @@id([thread_id, checkpoint_ns, checkpoint_id])
+}
+
+model writes {
+  thread_id     String
+  checkpoint_ns String  @default("")
+  checkpoint_id String
+  task_id       String
+  idx           Int
+  channel       String
+  type          String?
+  value         Bytes?
+
+  @@id([thread_id, checkpoint_ns, checkpoint_id, task_id, idx])
 }

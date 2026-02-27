@@ -5,7 +5,9 @@ export const AgentProperties = z.object({
   name: z.string(),
   description: z.string().optional(),
   auto_start: z.boolean().default(false),
-  system_prompt: z.string()
+  system_prompt: z.string(),
+  engine: z.string().optional(),
+  model: z.string().optional()
 });
 
 export const AgentSchema = AgentProperties.extend({

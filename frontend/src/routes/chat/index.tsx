@@ -7,7 +7,6 @@ import { ChatMessageDisplay } from "./messages";
 import chatHistory from "./chat-history";
 import { useLlmSelection } from "./use-llm-selection";
 
-
 function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
   return (
     <div className="flex flex-col gap-2 pb-8">
@@ -38,7 +37,6 @@ export function ChatPage() {
       threadId.value = id;
 
       chatHistory.getChatHistory(id).then(response => {
-        console.log('Loaded chat history:', response);
         chatMessages.value = response.history;
       });
     });

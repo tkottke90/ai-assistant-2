@@ -1,8 +1,7 @@
-import { ChatOllama } from '@langchain/ollama';
 import { Router } from 'express';
 import { createAgent } from 'langchain';
 import { checkpointer } from '../../lib/database';
-import {ZodParamValidator } from '../../middleware/zod.middleware';
+import { ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
 import { InteractionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
 import { BaseMessage } from 'langchain';
@@ -10,18 +9,8 @@ import crypto from 'node:crypto';
 
 export const router = Router();
 
-const llm = new ChatOllama({
-  model: 'qwen3:8b',
-})
-
-const agent = createAgent({
-  model: llm,
-  checkpointer,
-  name: 'test-agent'
-});
-
 router.post('/', async (req, res) => {
-  const { message, threadId } = req.body;
+  const { message, threadId, alias, model } = req.body;
 
   // Set headers for Server-Sent Events streaming
   res.setHeader('Content-Type', 'text/event-stream');
@@ -29,6 +18,16 @@ router.post('/', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
 
   try {
+    const llm = (alias && model)
+      ? req.app.llm.getClientWithModel(alias, model)
+      : req.app.llm.getClient(alias);
+
+    const agent = createAgent({
+      model: llm,
+      checkpointer,
+      name: 'chat-agent'
+    });
+
     const stream = agent.stream(
       { messages: [{ role: "user", content: message }] },
       { streamMode: ["updates", "messages", "custom"], configurable: { thread_id: threadId } }

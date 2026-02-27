@@ -5,6 +5,7 @@ import type { ChatMessage } from '@tkottke90/ai-assistant-client';
 import { Signal, useSignal } from "@preact/signals";
 import { ChatMessageDisplay } from "./messages";
 import chatHistory from "./chat-history";
+import { useLlmSelection } from "./use-llm-selection";
 
 
 function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
@@ -22,6 +23,7 @@ export function ChatPage() {
   const chatMessages = useSignal<ChatMessage[]>([]);
   const isStreaming = useSignal(false);
   const scrollContainer = useRef<HTMLElement>(null);
+  const llmSelection = useLlmSelection();
 
   useEffect(() => {
     if (!scrollContainer.current) return;
@@ -57,7 +59,12 @@ export function ChatPage() {
         <ChatList messages={chatMessages} />
       </main>
       <footer className="w-full">
-        <ChatForm threadId={threadId} chatMessages={chatMessages} isStreaming={isStreaming} />
+        <ChatForm
+          threadId={threadId}
+          chatMessages={chatMessages}
+          isStreaming={isStreaming}
+          llmSelection={llmSelection}
+        />
       </footer>
     </BaseLayout>
   )

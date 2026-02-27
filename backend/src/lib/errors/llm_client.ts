@@ -18,3 +18,12 @@ export class LLMClientNotFound extends LLMClientError {
     this.name = 'LLMClientNotFound';
   }
 }
+
+export class LLMManagerCantGetModels extends LLMClientError {
+  code = LLM_CLIENT_ERROR_PREFIX + '002';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'LLMManagerCantGetModels';
+  }
+}

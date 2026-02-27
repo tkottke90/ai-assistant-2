@@ -1,0 +1,7 @@
+*.ts
+!*.d.ts
+*.map
+build.mjs
+tsconfig.json
+node_modules
+.DS_Store

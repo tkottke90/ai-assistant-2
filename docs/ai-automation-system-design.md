@@ -246,6 +246,8 @@ System SHALL validate required dependencies on startup and fail fast with action
 - FR-6.22: System SHALL retry failed venv creation with exponential backoff (3 attempts, max 5s backoff)
 - FR-6.23: System SHALL provide `rebuild-tool-venv <tool-name>` CLI command for manual venv recovery
 - FR-6.24: System SHALL verify venv integrity on tool load (check for Python executable and required files)
+- FR-6.25: System SHALL print config template to terminal after successful tool installation with example values
+- FR-6.26 (v1.1+): System MAY support `--auto-configure` flag to automatically append config template to config.yaml
 
 **FR-6 Implementation Phases** (see section 6.2):
 - **Phase 1 (V1.0)**: Package tools with isolated per-tool venv using `uv`
@@ -431,8 +433,14 @@ graph TD
 #### New Configuration Sections
 
 **Database Config** (`backend/src/config/models/database.py`):
-- **path**: SQLite database file location (default: "./data/ai_assistant.db")
-- **create_on_missing**: Boolean to automatically create database if it doesn't exist (default: true)
+The `database` section organizes all database-related configurations. This structure allows for multiple database types to coexist (SQLite, vector databases, etc.) in a clear, organized manner.
+
+- **sqlite**: SQLite database configuration (nested)
+  - **file_path**: SQLite database file location (default: "./data/ai_assistant.db")
+  - **create_on_missing**: Boolean to automatically create database if it doesn't exist (default: true)
+  - Supports special value ":memory:" for in-memory databases
+
+Future database types (e.g., Chroma vector DB, PostgreSQL) will be added as additional nested configurations under the `database` section.
 
 **Tools Config** (`backend/src/config/models/tools.py`):
 Tools are configured as a list, where each tool includes:
@@ -498,13 +506,14 @@ Notification delivery is configured with the following settings:
 
 **External Webhook**:
 - **enabled**: Boolean to enable webhook notifications (default: false)
-- **provider**: Webhook provider - "pushover", "custom" (default: pushover)
-- **pushover_user_key_env**: Environment variable containing Pushover user key
-- **pushover_app_token_env**: Environment variable containing Pushover app token
-- **custom_webhook_url**: URL for custom webhook endpoint (used if provider="custom")
-- **custom_webhook_auth_header_env**: Optional environment variable for custom webhook auth header
-- **retry_attempts**: Number of retry attempts for failed webhook delivery (default: 3)
-- **retry_backoff_seconds**: Base exponential backoff for retries (default: 1.0)
+- **url**: Webhook endpoint URL (supports any HTTP-based notification service)
+- **method**: HTTP method for webhook requests - "POST", "GET", "PUT", "DELETE" (default: POST)
+- **headers**: Dictionary of additional HTTP headers to include in webhook requests (e.g., for authentication)
+- **payload_type**: Format of webhook payload - "json", "form", "text" (default: json)
+- **payload_template**: Dictionary defining the webhook payload structure with property definitions:
+  - Each property has: `default` (optional default value), `description`, `required` (boolean), `options` (optional list of allowed values)
+  - Allows dynamic payload construction based on notification data
+- **Note**: This flexible configuration supports any HTTP-based notification service (Pushover, Slack, Discord, PagerDuty, custom endpoints, etc.)
 
 **Credentials Config Structure** (`backend/src/config/models/credentials.py`):
 
@@ -664,11 +673,96 @@ The `add-tool` command supports three modes:
 2. **Package Template Mode**: Use `--template package` flag to create directory structure with pyproject.toml
 3. **Single-File Template Mode**: Use `--template file` flag to create single Python file with PEP 723 header
 
-The `add-tool` command:
+The `add-tool` command workflow:
 1. Detects if argument is a git URL (contains `.git` or `github.com`)
 2. If git: Clone to `~/.ai_assistant/tools/{repo-name}`
 3. If not: Create template directory/file structure
-4. Output path and next steps
+4. **Generate and print config template** (FR-6.25):
+   - Analyzes tool to extract required configuration fields
+   - Detects environment variables referenced in tool code
+   - Generates YAML config block with tool id, type, and config fields
+   - Prints formatted template to terminal with inline comments
+5. **Optional auto-configuration** (v1.1+, FR-6.26):
+   - With `--auto-configure` flag, append config to config.yaml
+   - Validate no duplicate tool IDs before appending
+   - Show confirmation message with file path
+
+**Enhanced User Workflow Example**:
+
+```bash
+$ ai-assistant add-tool finance_tool --template package
+✓ Tool created: ~/.ai_assistant/tools/finance_tool/
+✓ Dependencies: requests, yfinance
+
+📋 Add this configuration to config.yaml:
+
+tools:
+  tools:
+    - id: finance-api
+      type: finance_tool
+      enabled: true
+      config:
+        api_key_env: FINANCE_API_KEY  # Set this environment variable
+        base_url: https://api.example.com
+        rate_limit: 100
+
+⚠  Environment Variables Required:
+  - FINANCE_API_KEY: API key for finance service
+
+📖 Next Steps:
+  1. Copy the config above to your config.yaml file
+  2. Set environment variable: export FINANCE_API_KEY="your-key"
+  3. Reload tools: curl -X POST http://localhost:8000/api/v1/tools/reload
+  4. Verify: ai-assistant list-tools
+
+$ # User copies config to config.yaml
+$ export FINANCE_API_KEY="abc123"
+
+$ ai-assistant reload-tools
+✓ Discovered tool: finance_tool
+✓ Loaded config: finance-api (type: finance_tool)
+✓ Tool ready for use
+```
+
+**Config Template Generation Logic**:
+
+1. **Tool Analysis**:
+   - Parse tool Python file for `os.getenv()` calls to detect required env vars
+   - Extract tool description from docstring
+   - Identify common config patterns (API keys, URLs, timeouts)
+
+2. **Template Structure**:
+   ```yaml
+   tools:
+     tools:
+       - id: <tool-name>-1  # Auto-generated unique ID
+         type: <tool-type>  # Matches tool directory/file name
+         enabled: true
+         config:
+           # Environment variables (detected from code)
+           <env_var>_env: <ENV_VAR_NAME>
+           # Common config fields (tool-specific)
+           <field>: <default_value>
+   ```
+
+3. **Smart Defaults**:
+   - `id`: Tool name + `-1` suffix for first instance
+   - `type`: Tool directory or file name (without .py)
+   - `enabled`: true (user can change)
+   - `config`: Tool-specific fields with sensible defaults
+
+4. **v1.1+ Auto-Configure** (with `--auto-configure` flag):
+   - Load existing config.yaml
+   - Check for duplicate tool IDs (fail if exists)
+   - Append new tool config to `tools.tools` array
+   - Write back to config.yaml with formatting preserved
+   - Print confirmation: "✓ Added to config.yaml"
+
+**Error Handling**:
+- Missing config.yaml: Suggest creating from config.example.yaml
+- Duplicate tool ID with `--auto-configure`: Fail with error message
+- Invalid tool structure: Show validation errors during creation
+- No environment variables detected: Print template without env var section
 
 #### Tool Dependency Management (Phased Implementation)
 
@@ -1778,7 +1872,7 @@ Content chunks (`{"type": "content"}`) are assembled in memory and only the fina
   - channels_sent: List of successfully delivered channels (e.g., ["in_app", "push"])
   - channels_failed: List of failed delivery attempts (e.g., ["webhook"] with error in metadata)
   - Auto-archive logic: INFO notifications older than config.auto_dismiss_after_days are marked acknowledged=true
-  - metadata JSON stores channel-specific details (e.g., pushover message_id, push subscription endpoint)
+  - metadata JSON stores channel-specific details (e.g., webhook_message_id, push subscription endpoint, webhook_response)
 
 **6. automations**
 - Purpose: Versioned automation instructions with per-automation LLM selection
@@ -2645,7 +2739,7 @@ sequenceDiagram
                 end
             and External Webhook
                 alt 'webhook' in channels
-                    NotifSvc->>Webhook: POST to configured endpoint<br/>(Pushover, custom)
+                    NotifSvc->>Webhook: HTTP request to configured endpoint<br/>(method/payload per config)
                     Webhook-->>NotifSvc: delivery_status
                 end
             end
@@ -2691,7 +2785,7 @@ sequenceDiagram
 |---------|-------------------|----------------|-------------|
 | **In-App** | Direct database insert, WebSocket broadcast to active sessions | No retry (persistent storage) | Click notification → view related schedule |
 | **Device Push** | Web Push API with VAPID authentication | 3 retries, exponential backoff (1s, 2s, 4s) | Tap notification → open app to schedule details |
-| **External Webhook** | HTTP POST to Pushover API or custom endpoint | 3 retries from config (default 1s backoff) | Receive on mobile device, click deep link |
+| **External Webhook** | HTTP request to configured webhook endpoint (method/payload configurable) | Configurable retry strategy | Delivery depends on webhook service (mobile push, Slack message, etc.) |
 
 **Severity Level Behavior**:
 
@@ -2759,20 +2853,26 @@ INSERT INTO schedules (
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Webhook Integration (Pushover Example)**:
+**Webhook Integration Examples**:
 
 ```python
-# Pushover API payload format
+# Generic JSON webhook (Slack, Discord, custom)
 {
-  "token": "<app_token>",      # From config
-  "user": "<user_key>",         # From config
+  "text": "Schedule Missed: Daily Backup",
+  "description": "Automation 'Daily Backup' has missed 3 consecutive executions...",
+  "severity": "WARNING",
+  "timestamp": 1737710405,
+  "link": "aiassistant://schedules/sched_xyz789"
+}
+
+# Pushover-style payload (configure via payload_template)
+{
+  "token": "{{env.PUSHOVER_APP_TOKEN}}",
+  "user": "{{env.PUSHOVER_USER_KEY}}",
   "title": "Schedule Missed: Daily Backup",
   "message": "Automation 'Daily Backup' has missed 3 consecutive executions...",
-  "priority": 1,                # 1 = high priority with notification sound
-  "sound": "pushover",          # Notification sound
-  "url": "aiassistant://schedules/sched_xyz789",  # Deep link
-  "url_title": "View Schedule",
-  "timestamp": 1737710405
+  "priority": 1,
+  "url": "aiassistant://schedules/sched_xyz789"
 }
 ```
 

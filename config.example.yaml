@@ -23,88 +23,247 @@ cors:
     - "*"
 
 # LLM Provider Configuration (for chat/generation)
-# Changes to this section do NOT require restart
+# Changes to this section require application restart
 llm:
-  provider: ollama  # Options: ollama, anthropic, openai
-  model: llama2
-  temperature: 0.7
-  max_tokens: 2048
-  api_key: null  # Set for anthropic/openai providers
-  base_url: http://localhost:11434  # Ollama base URL
-
-# Data & Storage Configuration
-# Changes to this section do NOT require restart (except database.path)
-data:
-  # SQLite database for activities, schedules, automations
-  database:
-    path: "./data/ai_assistant.db"
-    create_on_missing: true
-    backup_on_startup: true  # Create backup before migrations
-    max_connections: 10
+  # Default provider for new automations
+  default_provider: ollama
   
-  # Vector database for knowledge base (procedures, embeddings)
-  knowledge_base:
-    storage_path: "./data/chroma"
-    collection_name: "procedures"
-    max_results: 5  # Default search results
-    enable_fts: true  # Enable SQLite FTS5 alongside semantic search
-    sync_interval_seconds: 300  # Sync Chroma ↔ SQLite every 5 minutes
+  # Available LLM providers (can configure multiple instances)
+  providers:
+    # Ollama (local inference) - Primary provider
+    ollama:
+      type: ollama
+      base_url: http://localhost:11434
+      default_model: mistral:7b
+      api_key: null  # Optional: if your Ollama instance requires auth
+      
+      # Context window settings (conservative for local models)
+      max_context_activities: 10
+      max_context_tokens: 3000
+      max_tool_definition_tokens: 500
+      context_overflow_strategy: summarize  # Options: summarize, truncate
+      temperature: 0.7
+    
+    # Anthropic Claude (API) - Uncomment to enable
+    # anthropic:
+    #   type: anthropic
+    #   api_key_env: ANTHROPIC_API_KEY  # Environment variable name
+    #   base_url: null  # Optional: custom API endpoint
+    #   default_model: claude-3-5-sonnet-20241022
+    #   
+    #   # Context window settings (large for API models)
+    #   max_context_activities: 50
+    #   max_context_tokens: 150000
+    #   max_tool_definition_tokens: 2000
+    #   context_overflow_strategy: truncate
+    #   temperature: 0.7
+    
+    # OpenAI (API) - Uncomment to enable
+    # openai:
+    #   type: openai
+    #   api_key_env: OPENAI_API_KEY  # Environment variable name
+    #   base_url: null  # Optional: custom API endpoint (e.g., Azure OpenAI)
+    #   default_model: gpt-4
+    #   
+    #   # Context window settings (large for API models)
+    #   max_context_activities: 50
+    #   max_context_tokens: 120000
+    #   max_tool_definition_tokens: 2000
+    #   context_overflow_strategy: truncate
+    #   temperature: 0.7
+
+# Database Configuration
+# Changes to this section do NOT require restart
+database:
+  # SQLite database for activities, automations, schedules, and evaluations
+  sqlite:
+    file_path: "./data/ai_assistant.db"  # Path to SQLite database file
+    create_on_missing: true  # Automatically create database and directory if missing
   
   # Embedding model configuration (for knowledge base semantic search)
   embeddings:
-    provider: "ollama"  # Options: ollama, openai, anthropic
-    model: "nomic-embed-text"  # Provider-specific model name
+    provider: ollama  # Options: ollama, openai, anthropic
+    model: nomic-embed-text  # Provider-specific model name
     
     # Provider configurations (only active provider's config is used)
     providers:
       ollama:
-        base_url: "http://localhost:11434"
+        base_url: http://localhost:11434
         timeout_seconds: 30
       
-      openai:
-        api_key_env: "OPENAI_API_KEY"  # Environment variable name
-        # Alternative models: text-embedding-3-large, text-embedding-ada-002
+      # openai:
+      #   api_key_env: OPENAI_API_KEY  # Environment variable name
+      #   # Alternative models: text-embedding-3-large, text-embedding-ada-002
       
-      anthropic:
-        api_key_env: "ANTHROPIC_API_KEY"
-        # Anthropic doesn't offer embeddings yet (placeholder)
+      # anthropic:
+      #   api_key_env: ANTHROPIC_API_KEY
+      #   # Anthropic doesn't offer embeddings yet (placeholder)
 
-# Example configurations for different LLM providers:
+# Alternative SQLite configurations (comment out above and uncomment one below):
+# In-memory database (data lost on restart):
+# database:
+#   sqlite:
+#     file_path: ":memory:"
+#     create_on_missing: true
+#
+# Custom path:
+# database:
+#   sqlite:
+#     file_path: ~/.local/share/ai-assistant/app.db
+#     create_on_missing: true
 
-# Ollama (local):
+# Tools Configuration
+# Changes to this section do NOT require restart
+# Define available tools for AI agent to use during automation execution
+tools:
+  tools:
+    # Shell tool (enabled by default for basic automation)
+    - id: shell
+      type: shell
+      enabled: true
+      config:
+        timeout_seconds: 30  # Maximum command execution time (1-3600)
+        require_approval: true  # Require user approval before executing commands
+        use_shell: false  # Use subprocess with shell=False for safety
+        whitelisted_commands: []  # Commands that bypass approval (empty for safety)
+        show_full_command: true  # Display canonical command path in approval UI
+
+# Additional tool examples (uncomment and configure as needed):
+#
+# Gmail tool for email operations:
+#   tools:
+#     - id: gmail-personal
+#       type: gmail
+#       enabled: true
+#       config:
+#         imap_host: imap.gmail.com
+#         imap_port: 993
+#         credentials_env_prefix: GMAIL_  # Reads GMAIL_USER and GMAIL_PASSWORD from environment
+#         max_fetch_limit: 50  # Maximum emails to fetch per request (1-1000)
+#         operation_mode: recommend  # Options: recommend (AI suggests actions), execute (AI performs actions with approval)
+#         recommendation_types:  # Optional: types of recommendations to generate
+#           - summary
+#           - labels
+#           - duplicates
+#           - spam
+#         confidence_threshold: 60  # Minimum confidence (0-100) to include in recommendations
+#         batch_similar: true  # Group similar recommendations for efficient review
+#
+# Git tool for repository operations:
+#     - id: git
+#       type: git
+#       enabled: true
+#       config:
+#         default_repos:
+#           - ~/projects/main
+#           - ~/projects/tools
+#
+# Custom user tool example (flexible schema, no validation):
+#     - id: finance-api
+#       type: finance_tool  # Matches directory name in ~/.ai_assistant/tools/
+#       enabled: true
+#       config:
+#         api_key_env: FINANCE_API_KEY
+#         base_url: https://api.financequotes.com
+#         rate_limit: 100
+#         timeout_seconds: 30
+
+# Example: Multiple provider configuration
+# You can configure multiple instances of the same provider type with different settings:
+#
 # llm:
-#   provider: ollama
-#   model: llama2
-#   temperature: 0.7
-#   max_tokens: 2048
-#   base_url: http://localhost:11434
+#   default_provider: ollama-fast
+#   providers:
+#     ollama-fast:
+#       type: ollama
+#       base_url: http://localhost:11434
+#       default_model: mistral:7b
+#       temperature: 0.5
+#       max_context_tokens: 2000
+#     
+#     ollama-creative:
+#       type: ollama
+#       base_url: http://localhost:11434
+#       default_model: mixtral:8x7b
+#       temperature: 0.9
+#       max_context_tokens: 8000
+#     
+#     claude:
+#       type: anthropic
+#       api_key_env: ANTHROPIC_API_KEY
+#       default_model: claude-3-5-sonnet-20241022
+#       max_context_tokens: 150000
 
-# Anthropic Claude:
-# llm:
-#   provider: anthropic
-#   model: claude-3-sonnet-20240229
-#   temperature: 0.7
-#   max_tokens: 4096
-#   api_key: sk-ant-...
+# Credential Validation Configuration
+# Changes to this section do NOT require restart
+# Controls how the system validates external service credentials (API keys, tokens, etc.)
+credentials:
+  # Validation Strategy
+  # Options:
+  #   lazy - Validate credentials when first used by a tool (default, fastest startup)
+  #   startup - Validate all credentials at application startup (catch issues early)
+  #   disabled - Skip validation entirely (trust configuration, fastest but risky)
+  strategy: lazy
+  
+  # Log warnings when required credentials are missing from environment variables
+  warn_on_missing: true
+  
+  # Retry Settings (exponential backoff for transient network failures)
+  retry_attempts: 3  # Number of retry attempts (0-10, 0 disables retries)
+  retry_backoff_base_seconds: 0.1  # Initial delay (seconds), doubles each retry: 0.1s, 0.2s, 0.4s...
+  retry_backoff_max_seconds: 5.0  # Maximum delay between retries (caps exponential growth)
+  retry_total_timeout_seconds: 10.0  # Total time limit for all retry attempts
+  
+  # Credential Cache (reduces validation overhead for frequently-used credentials)
+  cache_duration_seconds: 300  # Cache duration in seconds (0 = no caching, 300 = 5 minutes)
+  
+  # Circuit Breaker (prevents cascading failures when external services are down)
+  circuit_breaker_enabled: true  # Enable circuit breaker pattern
+  circuit_breaker_failure_threshold: 3  # Consecutive failures before opening circuit
+  circuit_breaker_recovery_seconds: 3600  # Time before attempting recovery (1 hour)
+  circuit_breaker_half_open_max_attempts: 1  # Test attempts when recovering
+  
+  # Future: macOS Keychain Integration (not yet implemented)
+  keychain_enabled: false
+  keychain_service_name: ai-assistant-2
 
-# OpenAI:
-# llm:
-#   provider: openai
-#   model: gpt-4
-#   temperature: 0.7
-#   max_tokens: 4096
-#   api_key: sk-...
+# Alternative credential configurations (uncomment and modify as needed):
+#
+# Aggressive validation (catch credential issues immediately at startup):
+# credentials:
+#   strategy: startup  # Validate all credentials when app starts
+#   warn_on_missing: true
+#   retry_attempts: 1  # Fail fast on startup
+#   retry_backoff_base_seconds: 0.5
+#   retry_total_timeout_seconds: 5.0
+#   circuit_breaker_enabled: false  # Not useful at startup
+#
+# High-reliability configuration (for unstable networks):
+# credentials:
+#   strategy: lazy
+#   retry_attempts: 5  # More retries for flaky connections
+#   retry_backoff_base_seconds: 0.5
+#   retry_backoff_max_seconds: 10.0
+#   retry_total_timeout_seconds: 30.0
+#   cache_duration_seconds: 600  # Longer cache (10 minutes)
+#   circuit_breaker_failure_threshold: 5  # More tolerant of failures
+#   circuit_breaker_recovery_seconds: 1800  # Faster recovery (30 minutes)
+#
+# Minimal validation (for local development without external services):
+# credentials:
+#   strategy: disabled  # Skip all validation
+#   warn_on_missing: false
 
 # Logging Configuration
 # Changes to this section require application restart
 logging:
   # Basic settings
   level: INFO  # Options: DEBUG, HTTP, INFO, WARNING, ERROR, CRITICAL
-  format: json  # Options: json (for log aggregation), text (human-readable)
+  format: text  # Options: json (for log aggregation), text (human-readable, better for development)
 
   # File logging
   enable_file_logging: true
-  log_file: ~/.config/ai-assistant/logs/app.log
+  log_file: ./data/logs/app.log  # Log file path (directory created automatically)
   max_bytes: 10485760  # 10 MB - maximum log file size before rotation
   backup_count: 5  # Number of backup log files to keep
 
@@ -167,4 +326,161 @@ logging:
   log_response_body: false  # WARNING: Performance impact, large responses
   exclude_paths:
     - /health  # Don't log health check requests
+
+# Notification Configuration
+# Changes to this section do NOT require restart
+notifications:
+  # In-App Notifications (persistent UI notifications)
+  in_app:
+    enabled: true  # Enable persistent in-app notifications
+    max_unread: 50  # Maximum unread notifications before auto-archiving oldest
+    auto_dismiss_after_days: 7  # Days before INFO notifications auto-dismiss (WARNING/CRITICAL never auto-dismiss)
+  
+  # Device Push Notifications (Web Push API) - OPTIONAL
+  # Uncomment and configure to enable device push notifications:
+  # device_push:
+  #   enabled: true  # Enable web push notifications to browser/device
+  #   vapid_public_key: ""  # VAPID public key for Web Push (generate with web-push library)
+  #   vapid_private_key_env: "VAPID_PRIVATE_KEY"  # Environment variable containing VAPID private key
+  #   # To generate VAPID keys: npx web-push generate-vapid-keys
+  
+  # External Webhook Notifications (HTTP-based, supports any service) - OPTIONAL
+  # Uncomment and configure to enable webhook notifications:
+  # external_webhook:
+  #   enabled: true  # Enable webhook notifications
+  #   base_url: ""  # Webhook endpoint URL
+  #   method: "POST"  # HTTP method: POST, GET, PUT, DELETE
+  #   headers: {}  # Additional HTTP headers (e.g., for authentication)
+  #   payload_type: "json"  # Payload format: json, form, text
+  #   payload_template: {}  # Define payload structure (see examples below)
+
+# Example webhook configurations:
+
+# Slack webhook:
+# external_webhook:
+#   enabled: true
+#   url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+#   method: "POST"
+#   headers: {}
+#   payload_type: "json"
+#   payload_template:
+#     text:
+#       default: "{{title}}: {{message}}"
+#       description: "Main notification text"
+#       required: true
+
+# Discord webhook:
+# external_webhook:
+#   enabled: true
+#   url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+#   method: "POST"
+#   headers: {}
+#   payload_type: "json"
+#   payload_template:
+#     content:
+#       default: "**{{title}}**\n{{message}}"
+#       description: "Message content"
+#       required: true
+#     username:
+#       default: "AI Assistant"
+#       description: "Bot username"
+
+# Pushover:
+# external_webhook:
+#   enabled: true
+#   url: "https://api.pushover.net/1/messages.json"
+#   method: "POST"
+#   headers: {}
+#   payload_type: "json"
+#   payload_template:
+#     token:
+#       default: "{{env.PUSHOVER_APP_TOKEN}}"
+#       description: "Pushover app token"
+#       required: true
+#     user:
+#       default: "{{env.PUSHOVER_USER_KEY}}"
+#       description: "Pushover user key"
+#       required: true
+#     title:
+#       default: "{{title}}"
+#       description: "Notification title"
+#     message:
+#       default: "{{message}}"
+#       description: "Notification message"
+#       required: true
+#     priority:
+#       default: "0"
+#       description: "Priority level"
+#       options: ["-2", "-1", "0", "1", "2"]
+
+# Custom API with authentication:
+# external_webhook:
+#   enabled: true
+#   url: "https://api.example.com/notifications"
+#   method: "POST"
+#   headers:
+#     Authorization: "Bearer YOUR_API_TOKEN"
+#     X-Custom-Header: "custom-value"
+#   payload_type: "json"
+#   payload_template:
+#     event_type:
+#       default: "ai_assistant_notification"
+#       description: "Event type identifier"
+#     title:
+#       default: "{{title}}"
+#       description: "Notification title"
+#     body:
+#       default: "{{message}}"
+#       description: "Notification body"
+#     severity:
+#       default: "{{severity}}"
+#       description: "Severity level"
+#       options: ["INFO", "WARNING", "CRITICAL"]
+#     timestamp:
+#       default: "{{timestamp}}"
+#       description: "Event timestamp"
+
+# Schedules Configuration
+# Changes to this section do NOT require restart
+schedules:
+  # Automatically load and activate schedules on system startup
+  auto_load_on_startup: true
+  
+  # Default timezone for scheduling tasks (IANA timezone format)
+  # Examples: America/New_York, Europe/London, Asia/Tokyo, UTC
+  default_timezone: UTC
+  
+  # How to handle tasks that overlap with the next scheduled execution
+  # Options:
+  #   skip - Do not start a new task if the previous one is still running
+  #   queue - Queue the new task to run after the previous one completes
+  #   cancel - Cancel the previous task and start the new one immediately
+  overlap_policy: skip
+  
+  # Alert Settings
+  # Number of consecutive missed executions before sending an alert
+  default_alert_threshold: 3  # Min: 1
+  
+  # Default severity level for schedule alerts
+  # Options: INFO, WARNING, CRITICAL
+  default_alert_severity: WARNING
+  
+  # Default notification channels for schedule alerts
+  # Must match enabled channels in notifications section
+  default_alert_channels:
+    - in_app
+    # - device_push  # Uncomment if device_push is enabled
+    # - external_webhook  # Uncomment if external_webhook is enabled
+
+# Example: Custom schedule alert configuration
+# schedules:
+#   auto_load_on_startup: true
+#   default_timezone: America/Los_Angeles
+#   overlap_policy: queue  # Queue tasks instead of skipping
+#   default_alert_threshold: 1  # Alert on first miss (more aggressive)
+#   default_alert_severity: CRITICAL  # Treat missed schedules as critical
+#   default_alert_channels:
+#     - in_app
+#     - device_push
+#     - external_webhook
 

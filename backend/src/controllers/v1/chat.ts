@@ -105,6 +105,7 @@ router.get(
         created_at: ts,
         metadata: msg.additional_kwargs,
         role: msg.type,
+        model: (msg.response_metadata as Record<string, any>)?.model,
       }))
     }));
   }

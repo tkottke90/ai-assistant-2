@@ -35,9 +35,12 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
     >
       <header className="col-span-2 row-start-1 group-data-[role=human]:text-right text-neutral-200/50">
         { formatChatTimestamp(new Date(message.created_at)) }
+        { message.role !== 'human' && message.model && ` - ${message.model}` }
       </header>
       <aside className={`row-start-2 col-start-1 group-data-[role=human]:col-start-2 w-8`}>
-        <div className="w-8 h-8 flex justify-center items-center rounded-full bg-avatar-assistant group-data-[role=human]:bg-avatar-user">{message.role.charAt(0).toUpperCase()}</div>
+        <div className="w-8 h-8 flex justify-center items-center rounded-full bg-avatar-assistant group-data-[role=human]:bg-avatar-user">
+          { (message.name ?? message.role).charAt(0).toUpperCase()}
+        </div>
       </aside>
       <main className={`row-start-2 col-start-2 bg-neutral-300 dark:bg-neutral-500 p-4 dark:text-white max-w-11/12 xl:max-w-8/12
         group-data-[role=assistant]:rounded-r-md group-data-[role=assistant]:rounded-bl-md group-data-[role=assistant]:mr-auto

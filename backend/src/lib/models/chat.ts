@@ -28,6 +28,7 @@ export const InteractionSchema = MessageBase.extend({
   type: z.literal('chat_message'),
   role: z.string(),
   name: z.string().optional(),
+  model: z.string().optional(),
   usage: z.number().optional(),
   assets: z.array(ChatMessageAssetSchema).optional().default([]),
 });

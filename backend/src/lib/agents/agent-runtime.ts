@@ -4,6 +4,8 @@ import { Queue } from "../types/queue";
 import { createAgent } from "langchain";
 import { checkpointer } from '../../lib/database';
 import { AgentModel } from "../prisma/models";
+import { createMemoryTools } from "../tools/memory-tools";
+import { MEMORY_SYSTEM_PROMPT } from "./memory-prompt";
 
 export class AgentRuntime {
   private queue = new Queue<any>();
@@ -28,11 +30,19 @@ export class AgentRuntime {
   }
 
   getAgent(shutdownSignal: AbortSignal) {
+    const memoryTools = createMemoryTools(this.id);
+    const systemPrompt = [
+      this.systemPrompt,
+      `The user will refer to you as ${this.name}.`,
+      MEMORY_SYSTEM_PROMPT
+    ].join('\n\n');
+
     return createAgent({
       model: this.llm,
       name: this.name,
       checkpointer,
-      systemPrompt: this.systemPrompt,
+      systemPrompt,
+      tools: memoryTools,
       signal: shutdownSignal
     })
   }

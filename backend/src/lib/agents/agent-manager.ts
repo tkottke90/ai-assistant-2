@@ -23,6 +23,10 @@ export class AgentManager extends EventEmitter {
     return this.activeAgents.has(agentId);
   }
 
+  getAgent(agentId: number): AgentRuntime | undefined {
+    return this.agents.get(agentId);
+  }
+
   listActiveAgents() {
     return Array.from(this.activeAgents)
       .map(id => this.agents.get(id))

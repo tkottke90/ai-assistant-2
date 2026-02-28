@@ -1,16 +1,24 @@
 import { Router } from 'express';
 import { createAgent } from 'langchain';
 import { checkpointer, prisma } from '../../lib/database';
-import { ZodParamValidator } from '../../middleware/zod.middleware';
+import { ZodBodyValidator, ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
-import { InteractionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
+import { InteractionSchema, ServerActionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
 import { BaseMessage } from 'langchain';
 import crypto from 'node:crypto';
 
 export const router = Router();
 
-router.post('/', async (req, res) => {
-  const { message, threadId, alias, model } = req.body;
+const ChatRequestSchema = z.object({
+  message: z.string(),
+  threadId: z.string(),
+  alias: z.string().optional(),
+  model: z.string().optional(),
+  agentId: z.number().optional(),
+});
+
+router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
+  const { message, threadId, alias, model, agentId } = req.body;
 
   // Set headers for Server-Sent Events streaming
   res.setHeader('Content-Type', 'text/event-stream');
@@ -22,11 +30,28 @@ router.post('/', async (req, res) => {
       ? req.app.llm.getClientWithModel(alias, model)
       : req.app.llm.getClient(alias);
 
-    const agent = createAgent({
-      model: llm,
-      checkpointer,
-      name: 'chat-agent'
-    });
+    let agent;
+
+    if (agentId != null) {
+      const agentManager = req.app.agents;
+      const runtime = agentManager.getAgent(agentId);
+
+      if (!runtime || !agentManager.isActive(agentId)) {
+        res.write(`data: ${JSON.stringify({ error: 'Agent not found or not active' })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const abortController = new AbortController();
+      res.on('close', () => abortController.abort());
+      agent = runtime.getAgent(abortController.signal);
+    } else {
+      agent = createAgent({
+        model: llm,
+        checkpointer,
+        name: 'chat-agent'
+      });
+    }
 
     const stream = agent.stream(
       { messages: [{ role: "user", content: message }] },
@@ -108,22 +133,42 @@ router.get(
 
     const history = Array.from(historyMap.values());
 
-    res.json(threadHistoryResponseSchema.parse({
+    res.json(
+      threadHistoryResponseSchema.parse({
       threadId,
-      history: history.map(({ msg, ts }) => InteractionSchema.parse({
-        type: 'chat_message',
-        id: msg.id,
-        content: msg.content,
-        name: msg.name,
-        created_at: ts,
-        metadata: msg.additional_kwargs,
-        role: msg.type,
-        model: (msg.response_metadata as Record<string, any>)?.model,
-      }))
-    }));
-  }
-);
-
-
+      history: history
+        .filter(({ msg }) => msg.content !== '') // Filter out empty messages (placeholders for thinking)
+        .map(({ msg, ts }) => {
+          switch(msg.type) {
+            case 'tool':
+              return ServerActionSchema.parse({
+                type: 'server_action',
+                id: msg.id,
+                content: msg.content,
+                created_at: ts,
+                metadata: msg.additional_kwargs,
+                role: msg.type,
+                actions: (msg.response_metadata as Record<string, any>)?.actions || [],
+                severity: (msg.response_metadata as Record<string, any>)?.severity ?? 0,
+              })
+            case 'ai':
+            case 'human':
+            default: {
+              return InteractionSchema.parse({
+                type: 'chat_message',
+                id: msg.id,
+                content: msg.content,
+                name: msg.name,
+                created_at: ts,
+                metadata: msg.additional_kwargs,
+                role: msg.type,
+                model: (msg.response_metadata as Record<string, any>)?.model,
+              })
+            }
+          }
+        }) 
+    })
+  );
+});
 
 export default router;

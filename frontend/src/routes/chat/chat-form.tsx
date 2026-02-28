@@ -12,12 +12,15 @@ import {
   appendToMessage,
 } from "./chat-utils";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { AgentChips } from "./agent-chips";
+import type { AgentSelection } from "@/hooks/use-agent-selection";
 
 export function createSubmitHandler(
   chatMessages: Signal<ChatMessage[]>,
   isStreaming: Signal<boolean>,
   selectedAlias: Signal<string>,
   selectedModel: Signal<string>,
+  selectedAgentId: Signal<number | null>,
   onMessageSent?: () => void,
 ) {
   return async function handleSubmit(e: SubmitEvent) {
@@ -49,6 +52,7 @@ export function createSubmitHandler(
           threadId,
           alias: selectedAlias.value || undefined,
           model: selectedModel.value || undefined,
+          agentId: selectedAgentId.value ?? undefined,
         }),
       });
 
@@ -90,12 +94,13 @@ interface ChatFormProps {
   chatMessages: Signal<ChatMessage[]>;
   isStreaming: Signal<boolean>;
   llmSelection: ReturnType<typeof useLlmSelection>;
+  agentSelection: AgentSelection;
   onMessageSent?: () => void;
 }
 
-export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection, onMessageSent }: ChatFormProps) {
+export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection, agentSelection, onMessageSent }: ChatFormProps) {
   const { selectedAlias, selectedModel } = llmSelection;
-  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel, onMessageSent);
+  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel, agentSelection.selectedAgentId, onMessageSent);
 
   return (
     <form className="w-full flex flex-col gap-1" onSubmit={handleSubmit}>
@@ -119,7 +124,10 @@ export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection, on
         </Button>
       </div>
 
-      <LlmSelector llmSelection={llmSelection} disabled={isStreaming.value} />
+      <div className="w-full flex gap-8">
+        <LlmSelector llmSelection={llmSelection} disabled={isStreaming.value} />
+        <AgentChips agentSelection={agentSelection} disabled={isStreaming.value} />
+      </div>
     </form>
   );
 }

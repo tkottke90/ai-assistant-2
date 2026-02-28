@@ -1,5 +1,6 @@
 import { Router, Request } from 'express';
 import AgentDao from '../../lib/dao/agent.dao.js';
+import MemoryDao from '../../lib/dao/memory.dao.js';
 import { AgentProperties, CreateAgentDTO } from '../../lib/models/agent.js';
 import { ZodBodyValidator, ZodIdValidator, ZodQueryValidator } from '../../middleware/zod.middleware.js';
 import { PaginationQuerySchemaBase, PaginationQuery } from '../../lib/types/pagination.js';
@@ -80,12 +81,42 @@ async function getAgentById(req: Request) {
   return agent;
 }
 
+// List active agents (lightweight)
+router.get('/active', async (req, res) => {
+  const agentManager = req.app.agents;
+  const activeAgents = agentManager.listActiveAgents().map(runtime => ({
+    agent_id: runtime.id,
+    name: runtime.name,
+    description: runtime.description,
+  }));
+
+  res.json({ agents: activeAgents });
+});
+
 // Get a specific agent by ID (latest version)
 router.get('/:id',
   ZodIdValidator('id'),
   async (req, res) => {
     const agent = await getAgentById(req);
     res.json(agent);
+  }
+);
+
+// Get agent details including memories and tools
+router.get('/:id/details',
+  ZodIdValidator('id'),
+  async (req, res) => {
+    const agentManager = req.app.agents;
+    const agent = await getAgentById(req);
+
+    const memories = await MemoryDao.listMemories(agent.agent_id);
+
+    res.json({
+      ...agent,
+      is_active: agentManager.isActive(agent.agent_id),
+      memories,
+      tools: {},
+    });
   }
 );
 
@@ -192,5 +223,22 @@ router.delete(
     res.status(500).json({ error: 'Failed to delete agent' });
   }
 });
+
+// Delete a specific memory belonging to an agent
+router.delete('/:id/memories/:nodeId',
+  ZodIdValidator('id'),
+  ZodIdValidator('nodeId'),
+  async (req, res) => {
+    const agent = await getAgentById(req);
+    const nodeId = (req.params as any).nodeId as number;
+
+    const deleted = await MemoryDao.deleteMemory(nodeId, agent.agent_id);
+    if (!deleted) {
+      throw new NotFoundError('Memory not found');
+    }
+
+    res.status(204).send();
+  }
+);
 
 export default router;

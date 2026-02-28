@@ -6,6 +6,8 @@ import { Signal, useSignal } from "@preact/signals";
 import { ChatMessageDisplay } from "./messages";
 import chatHistory from "./chat-history";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { useAgentSelection } from "@/hooks/use-agent-selection";
+import { selectedAgentName } from "./agent-chips";
 import { useRoute, useLocation } from "preact-iso";
 
 function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
@@ -27,6 +29,12 @@ export function ChatPage() {
   const isStreaming = useSignal(false);
   const scrollContainer = useRef<HTMLElement>(null);
   const llmSelection = useLlmSelection();
+  const agentSelection = useAgentSelection();
+
+  const currentAgentName = selectedAgentName(
+    agentSelection.activeAgents.value,
+    agentSelection.selectedAgentId.value,
+  );
 
   useEffect(() => {
     if (!scrollContainer.current) return;
@@ -59,7 +67,11 @@ export function ChatPage() {
           <h2 className="inline">Chat</h2>
         </span>
         <span>
-
+          {currentAgentName && (
+            <span className="text-sm text-muted-foreground">
+              via <span className="font-medium">{currentAgentName}</span>
+            </span>
+          )}
         </span>
       </header>
       <main className="w-full grow overflow-y-auto pr-4" ref={scrollContainer}>
@@ -71,6 +83,7 @@ export function ChatPage() {
           chatMessages={chatMessages}
           isStreaming={isStreaming}
           llmSelection={llmSelection}
+          agentSelection={agentSelection}
           onMessageSent={() => { threadRefresh.value += 1; }}
         />
       </footer>

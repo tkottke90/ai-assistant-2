@@ -1,17 +1,32 @@
 import { Drawer } from "@/components/drawer";
-import { buttonVariants, LoadingButton } from "@/components/ui/button";
+import { buttonVariants, ConfirmButton, LoadingButton } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateAgent as updateAgentApi, type AgentListResponse, type CreateAgentInput } from "@tkottke90/ai-assistant-client";
-import { Pencil } from "lucide-preact";
-import { useCallback } from "preact/hooks";
-import { AgentTitle } from "./title";
-import { Signal, useSignal } from "@preact/signals";
+import { useApi } from "@/hooks/use-api";
+import { formatRelativeDate } from "@/lib/date-utils";
 import { createContextWithHook } from "@/lib/utils";
+import { Signal, useSignal } from "@preact/signals";
+import {
+  deleteAgentMemory,
+  getAgentDetails,
+  updateAgent as updateAgentApi,
+  type AgentDetails,
+  type AgentListResponse,
+  type CreateAgentInput,
+  type Memory,
+} from "@tkottke90/ai-assistant-client";
+import { Pencil, Trash2 } from "lucide-preact";
+import { useCallback } from "preact/hooks";
+import { toast } from "sonner";
+import { AgentTitle } from "./title";
 
 
 const { Provider: AgentDrawerContext, useHook: useAgentDrawer } = createContextWithHook<{
   agent: Signal<AgentListResponse | null>;
+  details: Signal<AgentDetails | null>;
+  detailsLoading: Signal<boolean>;
   updateAgent: (updates: Partial<CreateAgentInput>) => Promise<void>;
+  refreshDetails: () => void;
 }>()
 
 interface iAgentDrawerProps {
@@ -21,6 +36,10 @@ interface iAgentDrawerProps {
 
 export function AgentDrawer(props: iAgentDrawerProps) {
   const agent = useSignal(props.agent);
+
+  const { value: details, loading: detailsLoading, execute: fetchDetails } = useApi(
+    useCallback(() => getAgentDetails({ id: props.agent.agent_id }), [props.agent.agent_id])
+  );
 
   const updateAgent = useCallback(async (updates: Partial<CreateAgentInput>) => {
     if (!agent.value) return;
@@ -35,8 +54,9 @@ export function AgentDrawer(props: iAgentDrawerProps) {
       title={<AgentTitle agent={agent.value} />}
       trigger={<button className={buttonVariants({ size: "icon-xs", variant: "iconInfo" })}><Pencil className="size-full" /></button>}
       className="flex flex-col"
+      onOpen={fetchDetails}
     >
-      <AgentDrawerContext value={{ agent, updateAgent }}>
+      <AgentDrawerContext value={{ agent, details, detailsLoading, updateAgent, refreshDetails: fetchDetails }}>
         <header className="mb-4 min-h-16">
           <p><strong>Description:&nbsp;</strong>{agent.value.description}</p>
         </header>
@@ -54,8 +74,12 @@ export function AgentDrawer(props: iAgentDrawerProps) {
             <TabsContent value="system_prompt" className="h-full">
               <SystemPromptTab />
             </TabsContent>
-            <TabsContent value="tools">Manage Agent Tool Access</TabsContent>
-            <TabsContent value="memories">Change your password here.</TabsContent>
+            <TabsContent value="tools">
+              <ToolsTab />
+            </TabsContent>
+            <TabsContent value="memories">
+              <MemoriesTab />
+            </TabsContent>
           </Tabs>
         </main>
       </AgentDrawerContext>
@@ -114,4 +138,116 @@ function SystemPromptTab() {
       </footer>
     </form>
   )
+}
+
+function ToolsTab() {
+  return (
+    <div>Manage Agent Tool Access</div>
+  )
+}
+
+// ── Pure utility functions (extracted per UI guidelines) ──
+
+/** Strips the 'memory:' prefix and capitalizes the memory type for display. */
+function formatMemoryType(type: string): string {
+  const raw = type.startsWith('memory:') ? type.slice('memory:'.length) : type;
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/** Badge color classes for each memory type. */
+function memoryTypeBadgeClass(type: string): string {
+  const raw = type.startsWith('memory:') ? type.slice('memory:'.length) : type;
+  switch (raw) {
+    case 'semantic':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+    case 'episodic':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+    case 'procedural':
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    default:
+      return 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200';
+  }
+}
+
+function MemoriesTab() {
+  const { agent, details, detailsLoading, refreshDetails } = useAgentDrawer();
+  const deletingId = useSignal<number | null>(null);
+
+  const memories = details.value?.memories?.data ?? [];
+
+  const handleDelete = async (memory: Memory) => {
+    if (!agent.value) return;
+    deletingId.value = memory.node_id;
+    try {
+      await deleteAgentMemory({ id: agent.value.agent_id, nodeId: memory.node_id });
+      toast.success('Memory deleted');
+      refreshDetails();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete memory');
+    } finally {
+      deletingId.value = null;
+    }
+  };
+
+  if (detailsLoading.value) {
+    return (
+      <div className="space-y-3 p-2">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (memories.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
+        <p>This agent has no memories yet. Memories are created automatically during conversations.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-auto p-2">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-300 dark:border-neutral-600 text-left">
+            <th className="py-2 pr-3 font-medium w-28">Type</th>
+            <th className="py-2 pr-3 font-medium">Content</th>
+            <th className="py-2 pr-3 font-medium w-28">Created</th>
+            <th className="py-2 font-medium w-12"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {memories.map((memory) => (
+            <tr
+              key={memory.node_id}
+              className="border-b border-neutral-200 dark:border-neutral-700 last:border-0"
+            >
+              <td className="py-2 pr-3">
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${memoryTypeBadgeClass(memory.type)}`}>
+                  {formatMemoryType(memory.type)}
+                </span>
+              </td>
+              <td className="py-2 pr-3 max-w-xs truncate" title={memory.properties.content}>
+                {memory.properties.content}
+              </td>
+              <td className="py-2 pr-3 text-neutral-500 dark:text-neutral-400 text-xs whitespace-nowrap">
+                {formatRelativeDate(memory.created_at)}
+              </td>
+              <td className="py-2">
+                <ConfirmButton
+                  size="icon-xs"
+                  disabled={deletingId.value === memory.node_id}
+                  onConfirm={() => handleDelete(memory)}
+                >
+                  <Trash2 className="size-full" />
+                </ConfirmButton>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

@@ -1,14 +1,14 @@
 import { Dialog, useDialog } from "@/components/dialog";
-import { Drawer } from "@/components/drawer";
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
 import { LlmSelector } from "@/components/llm-selector";
 import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useApi } from "@/hooks/use-api";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { cn } from "@/lib/utils";
-import { batch, useSignal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type AgentListResponse } from '@tkottke90/ai-assistant-client';
-import { Bot, BotOff, Pencil, Trash2, TriangleAlert } from "lucide-preact";
+import { Bot, BotOff, Trash2, TriangleAlert } from "lucide-preact";
 import { useCallback, useEffect } from "preact/hooks";
 import { toast } from "sonner";
 import { AgentDrawer } from "./drawer";
@@ -21,37 +21,6 @@ function canGoToNextPage(currentPage: number, totalPages: number): boolean {
 
 function canGoToPreviousPage(currentPage: number): boolean {
   return currentPage > 1;
-}
-
-function useApi<T>(apiCall: () => Promise<T>) {
-  const value = useSignal<T | null>(null);
-  const loading = useSignal(false);
-  const error = useSignal<Error | null>(null);
-
-  // Memoized execute function to call the API and manage state
-  const execute = useCallback(() => {
-    return apiCall()
-      .then(result => {
-        // On success, update value and clear error
-        batch(() => {
-          value.value = result;
-          error.value = null;
-        });
-        return result;
-      })
-      .catch(err => {
-        // On error, log and update error state
-        console.error('API call error:', err);
-        error.value = err instanceof Error ? err : new Error(String(err));
-      })
-      .finally(() => {
-        // Always set loading to false after completion
-        loading.value = false;
-      });
-  }, [apiCall]);
-
-
-  return { value, loading, error, execute };
 }
 
 export function AgentsPage() {

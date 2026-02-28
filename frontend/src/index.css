@@ -160,6 +160,10 @@ html, body, #app {
   code {
     white-space: pre-wrap;
   }
+
+  textarea, input, select {
+    @apply border border-neutral-300 dark:border-neutral-700;
+  }
 }
 
 @layer components {

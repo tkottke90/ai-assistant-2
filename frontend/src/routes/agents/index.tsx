@@ -11,6 +11,8 @@ import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type Agent
 import { Bot, BotOff, Pencil, Trash2, TriangleAlert } from "lucide-preact";
 import { useCallback, useEffect } from "preact/hooks";
 import { toast } from "sonner";
+import { AgentDrawer } from "./drawer";
+import { AgentTitle } from "./title";
 
 // Pure utility functions for pagination navigation
 function canGoToNextPage(currentPage: number, totalPages: number): boolean {
@@ -156,8 +158,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
         <div key={agent.agent_id} className="min-w-75 p-4 border rounded border-neutral-500/75 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 w-full lg:max-w-[49%]">
           <header className="flex justify-between">
             <h3 className="text-lg font-medium">
-              <span>{agent.name}</span>
-              <span className="ml-2 px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-800/50 dark:text-gray-300/50">Version: {agent.version}</span>
+              <AgentTitle agent={agent} />
             </h3>
             <div className="flex gap-4 lg:gap-2">
               <Button variant="iconDefault" size="icon-xs"
@@ -185,13 +186,8 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                 { !agent.is_active &&  <BotOff className="size-full" /> }
                 { agent.is_active && <Bot className="size-full" /> }
               </Button>
-
-              <Drawer
-                title={`${agent.name} Details`}
-                trigger={<button className={buttonVariants({ size: "icon-xs", variant: "iconInfo" })}><Pencil className="size-full" /></button>}
-              >
-                <h2 className="text-xl font-bold mb-4">{agent.name} Details</h2>
-              </Drawer>
+              
+              <AgentDrawer agent={agent} onChange={() => { onChange() }} />
               
               <ConfirmButton onConfirm={() => {
                 deleteAgent({ id: agent.agent_id }).then(() => {
@@ -213,7 +209,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
 
 }
 
-function AgentDisplay({ agent }: { agent: AgentListResponse }) {}
+
 
 function CreateAgentForm() {
   const dialog = useDialog();

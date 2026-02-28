@@ -53,7 +53,7 @@ export function ChatPage() {
 
         </span>
       </header>
-      <main className="w-full grow overflow-y-auto" ref={scrollContainer}>
+      <main className="w-full grow overflow-y-auto pr-4" ref={scrollContainer}>
         <ChatList messages={chatMessages} />
       </main>
       <footer className="w-full">

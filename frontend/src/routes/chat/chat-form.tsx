@@ -18,6 +18,7 @@ export function createSubmitHandler(
   isStreaming: Signal<boolean>,
   selectedAlias: Signal<string>,
   selectedModel: Signal<string>,
+  onMessageSent?: () => void,
 ) {
   return async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -79,6 +80,7 @@ export function createSubmitHandler(
       chatMessages.value = chatMessages.value.filter(msg => msg.id !== assistantId);
     } finally {
       isStreaming.value = false;
+      onMessageSent?.();
     }
   };
 }
@@ -88,11 +90,12 @@ interface ChatFormProps {
   chatMessages: Signal<ChatMessage[]>;
   isStreaming: Signal<boolean>;
   llmSelection: ReturnType<typeof useLlmSelection>;
+  onMessageSent?: () => void;
 }
 
-export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection }: ChatFormProps) {
+export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection, onMessageSent }: ChatFormProps) {
   const { selectedAlias, selectedModel } = llmSelection;
-  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel);
+  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel, onMessageSent);
 
   return (
     <form className="w-full flex flex-col gap-1" onSubmit={handleSubmit}>

@@ -20,6 +20,8 @@ function App() {
         <main class="w-full h-full">
           <Router>
             <Route path="/" component={ChatPage} />
+            <Route path="/chat" component={ChatPage} />
+            <Route path="/chat/:threadId" component={ChatPage} />
             <Route path="/agents" component={AgentsPage} />
             <Route path="*" component={NotFound} />
           </Router>

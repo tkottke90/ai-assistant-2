@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createAgent } from 'langchain';
-import { checkpointer } from '../../lib/database';
+import { checkpointer, prisma } from '../../lib/database';
 import { ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
 import { InteractionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
@@ -59,8 +59,21 @@ router.post('/new-thread', async (req, res) => {
   res.json({ threadId: crypto.randomUUID() });
 });
 
+router.get('/threads', async (req, res) => {
+  try {
+    const rows = await prisma.checkpoints.findMany({
+      select: { thread_id: true },
+      distinct: ['thread_id'],
+      orderBy: { checkpoint_id: 'desc' },
+    });
 
-
+    const threads = rows.map(row => row.thread_id);
+    res.json({ threads });
+  } catch (error) {
+    req.logger.error('Failed to list threads:', error);
+    res.status(500).json({ error: 'Failed to list threads' });
+  }
+});
 
 
 router.get(

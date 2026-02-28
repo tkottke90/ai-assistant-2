@@ -4,11 +4,10 @@ import { Sidebar } from "lucide-preact";
 import { createContextWithHook } from "@/lib/utils";
 import { useEffect, useRef } from "preact/hooks";
 import { Signal, useSignal } from "@preact/signals";
-import { createPortal, type ComponentProps } from "preact/compat";
+import { type ComponentProps } from "preact/compat";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Drawer } from "../drawer";
-
-const portal = document.getElementById("dialogs") as HTMLElement;
+import { ThreadList } from "../thread-list";
 
 const slideIn: Keyframe[] = [
   { transform: "translateX(-100%)", opacity: 0 },
@@ -29,16 +28,19 @@ const {
   Provider: SidebarContext,
   useHook: useAppContext
 } = createContextWithHook<{
-  dialog: Signal<EventTarget>
+  dialog: Signal<EventTarget>;
+  threadRefresh: Signal<number>;
 }>()
 
 function SidebarContents() {
+  const { threadRefresh } = useAppContext();
 
   return (
     <div className="size-full flex flex-col">
-      <main className="grow flex flex-col justify-start">
+      <main className="grow flex flex-col justify-start overflow-y-auto">
         <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/agents">Agents</a>
-        <a className="w-full text-center py-4 px-6 hover:bg-neutral-500" href="/">Chat</a>
+        <hr className="border-neutral-500/30 my-2 mx-4" />
+        <ThreadList refreshSignal={threadRefresh} />
       </main>
       <footer>
 
@@ -138,12 +140,13 @@ export function BaseLayoutShowBtn() {
 
 export default function BaseLayout({ children, className }: ComponentProps<"main">) {
   const toggleEvent = useSignal(new EventTarget());
+  const threadRefresh = useSignal(0);
   
   return (
     <div
       className="relative h-full w-full flex"
     >
-      <SidebarContext value={{ dialog: toggleEvent }}>
+      <SidebarContext value={{ dialog: toggleEvent, threadRefresh }}>
         <AppSidebar />
         <main className={`h-full w-full py-8 px-2 lg:py-6 lg:px-6 border-l border-l-zinc-400/50 shadow-2xl base-layout--main bg-neutral-200 dark:bg-neutral-800 ${className}`}>
           {children}
@@ -152,3 +155,5 @@ export default function BaseLayout({ children, className }: ComponentProps<"main
     </div>
   )
 }
+
+export { useAppContext };

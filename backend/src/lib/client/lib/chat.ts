@@ -52,5 +52,6 @@ export {
   ChatMessageSchema,
   InteractionMessage,
   getThreadHistory,
+  listThreads,
   newThread
 }

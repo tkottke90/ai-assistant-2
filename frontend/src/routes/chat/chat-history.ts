@@ -38,19 +38,15 @@ async function newChatThread() {
 
   updateState(state);
 
-  return state;
+  return result.threadId;
 }
 
-async function loadCurrentThread() {
-  const state = loadState();
-
-  if (state.currentChat) {
-    return state.currentChat
-  }
-
-  await newChatThread();
-
-  return loadState().currentChat;
+/**
+ * Create a new thread and return its ID. The URL is now the
+ * source of truth for which thread is active.
+ */
+async function loadOrCreateThread() {
+  return newChatThread();
 }
 
 function loadState() {
@@ -78,6 +74,6 @@ function updateState(config: ChatConfig) {
 export default {
   initialize,
   newChatThread,
-  loadCurrentThread,
+  loadOrCreateThread,
   getChatHistory: getThreadHistory,
 }

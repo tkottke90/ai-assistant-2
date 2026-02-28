@@ -1,4 +1,4 @@
-import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
+import BaseLayout, { BaseLayoutShowBtn, useAppContext } from "@/components/layouts/base.layout";
 import { useRef, useEffect } from "preact/hooks";
 import { ChatForm } from "./chat-form";
 import type { ChatMessage } from '@tkottke90/ai-assistant-client';
@@ -6,6 +6,7 @@ import { Signal, useSignal } from "@preact/signals";
 import { ChatMessageDisplay } from "./messages";
 import chatHistory from "./chat-history";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { useRoute, useLocation } from "preact-iso";
 
 function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
   return (
@@ -18,6 +19,9 @@ function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
 }
 
 export function ChatPage() {
+  const route = useRoute();
+  const { route: navigate } = useLocation();
+  const { threadRefresh } = useAppContext();
   const threadId = useSignal('');
   const chatMessages = useSignal<ChatMessage[]>([]);
   const isStreaming = useSignal(false);
@@ -33,14 +37,19 @@ export function ChatPage() {
   }, [chatMessages.value]);
 
   useEffect(() => {
-    chatHistory.loadCurrentThread().then(id => {
-      threadId.value = id;
+    const routeThreadId = route.params?.threadId;
 
-      chatHistory.getChatHistory(id).then(response => {
+    if (routeThreadId) {
+      threadId.value = routeThreadId;
+      chatHistory.getChatHistory(routeThreadId).then(response => {
         chatMessages.value = response.history;
       });
-    });
-  }, []);
+    } else {
+      chatHistory.loadOrCreateThread().then(id => {
+        navigate(`/chat/${id}`, true);
+      });
+    }
+  }, [route.params?.threadId]);
 
   return (
     <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
@@ -62,6 +71,7 @@ export function ChatPage() {
           chatMessages={chatMessages}
           isStreaming={isStreaming}
           llmSelection={llmSelection}
+          onMessageSent={() => { threadRefresh.value += 1; }}
         />
       </footer>
     </BaseLayout>

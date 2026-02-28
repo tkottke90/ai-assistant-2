@@ -124,7 +124,25 @@ router.post('/:id/stop',
   }
 );
 
-// Update an agent (creates new version)
+// Create a new version of an agent, optionally with modifications
+router.post('/:id/version',
+  ZodIdValidator('id'),
+  ZodBodyValidator(AgentProperties.partial()),
+  async (req, res) => {
+    const agent = await getAgentById(req);
+
+    try {
+      const overrides: Partial<CreateAgentDTO> = req.body;
+      const newVersion = await AgentDao.createAgentVersion(agent.agent_id, overrides);
+      res.status(201).json(newVersion);
+    } catch (error) {
+      req.logger.error('Error creating agent version:', error);
+      res.status(500).json({ error: 'Failed to create agent version' });
+    }
+  }
+);
+
+// Update an agent
 router.put('/:id',
   ZodIdValidator('id'),
   ZodBodyValidator(AgentProperties.partial()),
@@ -143,7 +161,7 @@ router.put('/:id',
     const updatedAgent = await AgentDao.updateAgent(agentId, agentData);
     res.json(updatedAgent);
   } catch (error) {
-    console.error('Error updating agent:', error);
+    req.logger.error('Error updating agent:', error);
     if (error instanceof Error && error.message === 'Agent not found') {
       res.status(404).json({ error: 'Agent not found' });
       return;

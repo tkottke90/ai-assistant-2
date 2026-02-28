@@ -44,7 +44,7 @@ export const stopAgent = createClientMethod('/api/v1/agents/:id/stop', { method:
   return response; // No content expected, return raw response
 });
 
-export const updateAgent = createClientMethod('/api/v1/agents/:id', { method: 'put', inputSchema: AgentProperties.partial() }, async (response) => {
+export const updateAgent = createClientMethod('/api/v1/agents/:id', { method: 'put', inputSchema: AgentProperties.partial().extend({ id: z.number() }) }, async (response) => {
   if (!response.ok) {
     throw new Error(`Failed to update agent: ${response.statusText}`);
   }

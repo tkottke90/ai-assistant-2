@@ -1,4 +1,5 @@
 import { Dialog, useDialog } from "@/components/dialog";
+import { Drawer } from "@/components/drawer";
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
 import { LlmSelector } from "@/components/llm-selector";
 import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
@@ -160,6 +161,9 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
             </h3>
             <div className="flex gap-4 lg:gap-2">
               <Button variant="iconDefault" size="icon-xs"
+                className={cn(
+                  agent.is_active ? 'text-green-500 hover:text-green-600' : ''
+                )}
                 onClick={() => {
                   if (agent.is_active) {
                     // Stop the agent
@@ -181,9 +185,14 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                 { !agent.is_active &&  <BotOff className="size-full" /> }
                 { agent.is_active && <Bot className="size-full" /> }
               </Button>
-              <Button variant="iconInfo" size="icon-xs">
-                <Pencil className="size-full" />
-              </Button>
+
+              <Drawer
+                title={`${agent.name} Details`}
+                trigger={<button className={buttonVariants({ size: "icon-xs", variant: "iconInfo" })}><Pencil className="size-full" /></button>}
+              >
+                <h2 className="text-xl font-bold mb-4">{agent.name} Details</h2>
+              </Drawer>
+              
               <ConfirmButton onConfirm={() => {
                 deleteAgent({ id: agent.agent_id }).then(() => {
                   onChange();

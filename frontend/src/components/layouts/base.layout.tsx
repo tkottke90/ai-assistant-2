@@ -6,6 +6,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { Signal, useSignal } from "@preact/signals";
 import { createPortal, type ComponentProps } from "preact/compat";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { Drawer } from "../drawer";
 
 const portal = document.getElementById("dialogs") as HTMLElement;
 
@@ -35,9 +36,6 @@ function SidebarContents() {
 
   return (
     <div className="size-full flex flex-col">
-      <header>
-        <h1 className="text-2xl font-bold mb-4 text-center">Assistant</h1>
-      </header>
       <main className="grow flex flex-col justify-start">
         <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/agents">Agents</a>
         <a className="w-full text-center py-4 px-6 hover:bg-neutral-500" href="/">Chat</a>
@@ -108,18 +106,10 @@ export function AppSidebar() {
         <SidebarContents />
       </aside>
       {
-        portal && isMobile && createPortal(
-          <dialog 
-            class=" p-8 border-r fixed h-screen min-w-3/4 max-w-10/12 top-0 left-0 bottom-0 max-h-none m-0 focus-visible:outline-none shadow-2xl
-            base-layout--aside
-            bg-neutral-50/80 dark:bg-neutral-700/80
-            border-neutral-400/50 backdrop:bg-neutral-900/50 backdrop-blur-sm" 
-            ref={dialogRef}
-          >
-            <SidebarContents />
-          </dialog>,
-          portal
-        )
+        isMobile &&
+        <Drawer direction="left" showTrigger={false} eventTrigger={dialog} title="AI Assistant">
+          <SidebarContents />
+        </Drawer>
       }
     </Fragment>
   )

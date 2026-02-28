@@ -103,6 +103,9 @@ export function AppSidebar() {
     <Fragment>
       <aside className="h-full min-w-75 hidden lg:block pt-6 base-layout--aside
       ">
+        <header>
+          <h2 className="text-center">AI Assistant</h2>
+        </header>
         <SidebarContents />
       </aside>
       {

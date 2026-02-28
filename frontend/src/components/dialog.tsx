@@ -10,7 +10,7 @@ import { buttonVariants } from './ui/button';
 const X = XIcon as any;
 
 export interface DialogProps extends BaseProps {
-  title?: string;
+  title?: string | JSX.Element;
   trigger?: JSX.Element,
   disableClose?: boolean,
   open?: Signal<Boolean>,

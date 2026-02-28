@@ -4,9 +4,10 @@ import { X } from "lucide-preact";
 import { cloneElement } from "preact";
 import { createPortal } from "preact/compat";
 import { useEffect, useRef } from "preact/hooks";
-import { Fragment } from "preact/jsx-runtime";
+import { Fragment, type JSX } from "preact/jsx-runtime";
 import { openModal, type DialogProps } from "./dialog";
 import { Button } from "./ui/button";
+import { cn } from '@/lib/utils';
 
 const portal = document.getElementById("dialogs") as HTMLElement;
 
@@ -39,7 +40,7 @@ interface DrawerProps extends DialogProps {
   showTrigger?: boolean;
 }
 
-export function Drawer({ children, trigger, title, onOpen, eventTrigger, direction, showTrigger = true }: DrawerProps) {
+export function Drawer({ className, children, trigger, title, onOpen, eventTrigger, direction, showTrigger = true }: DrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   
   const triggerRef = useHtmlElementListeners(
@@ -67,14 +68,15 @@ export function Drawer({ children, trigger, title, onOpen, eventTrigger, directi
     dialogRef.current.addEventListener('click', (event) => {
       const target = event.target as HTMLDialogElement;
 
-      if (!target) return;
+      if (!target || !dialogRef.current) return;
 
-      const rect = target.getBoundingClientRect();
-      const minX = rect.left + target.clientLeft;
-      var minY = rect.top + target.clientTop;
-      if ((event.clientX < minX || event.clientX >= minX + target.clientWidth) ||
-          (event.clientY < minY || event.clientY >= minY + target.clientHeight)) {
-        animateExit(target, direction);
+      const rect = dialogRef.current.getBoundingClientRect();
+
+      const outsideX = event.clientX < rect.left || event.clientX >= rect.right;
+      const outsideY = event.clientY < rect.top || event.clientY >= rect.bottom;
+
+      if (outsideX || outsideY) {
+        animateExit(dialogRef.current, direction);
       }
     }, { signal: abortController.signal });
 
@@ -103,11 +105,15 @@ export function Drawer({ children, trigger, title, onOpen, eventTrigger, directi
             backdrop:bg-neutral-900/50 backdrop-blur-sm`}
             ref={dialogRef}
           >
-            <div className="flex justify-between">
-              <h2 className="text-xl font-bold mb-4">{title}</h2>
-              <Button variant="ghost" size="icon" onClick={() => { animateExit(dialogRef.current, direction) }}><X /></Button>
+            <div className="w-full h-full flex flex-col">
+              <div className="flex justify-between">
+                <h1 className="text-xl font-medium">{title}</h1>
+                <Button variant="ghost" size="icon" onClick={() => { animateExit(dialogRef.current, direction) }}><X /></Button>
+              </div>
+              <div className={cn("grow overflow-hidden", className)}>
+                {children}
+              </div>
             </div>
-            {children}
           </dialog>,
           portal
         )

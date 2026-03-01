@@ -1,16 +1,25 @@
 import { Router } from 'express';
 import { createAgent } from 'langchain';
-import { checkpointer } from '../../lib/database';
-import { ZodParamValidator } from '../../middleware/zod.middleware';
+import { checkpointer, prisma } from '../../lib/database';
+import { ZodBodyValidator, ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
-import { InteractionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
+import { InteractionSchema, ServerActionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
 import { BaseMessage } from 'langchain';
 import crypto from 'node:crypto';
+import ThreadDao from '../../lib/dao/thread.dao.js';
 
 export const router = Router();
 
-router.post('/', async (req, res) => {
-  const { message, threadId, alias, model } = req.body;
+const ChatRequestSchema = z.object({
+  message: z.string(),
+  threadId: z.string(),
+  alias: z.string().optional(),
+  model: z.string().optional(),
+  agentId: z.number().optional(),
+});
+
+router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
+  const { message, threadId, alias, model, agentId } = req.body;
 
   // Set headers for Server-Sent Events streaming
   res.setHeader('Content-Type', 'text/event-stream');
@@ -22,11 +31,28 @@ router.post('/', async (req, res) => {
       ? req.app.llm.getClientWithModel(alias, model)
       : req.app.llm.getClient(alias);
 
-    const agent = createAgent({
-      model: llm,
-      checkpointer,
-      name: 'chat-agent'
-    });
+    let agent;
+
+    if (agentId != null) {
+      const agentManager = req.app.agents;
+      const runtime = agentManager.getAgent(agentId);
+
+      if (!runtime || !agentManager.isActive(agentId)) {
+        res.write(`data: ${JSON.stringify({ error: 'Agent not found or not active' })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const abortController = new AbortController();
+      res.on('close', () => abortController.abort());
+      agent = runtime.getAgent(abortController.signal);
+    } else {
+      agent = createAgent({
+        model: llm,
+        checkpointer,
+        name: 'chat-agent'
+      });
+    }
 
     const stream = agent.stream(
       { messages: [{ role: "user", content: message }] },
@@ -59,8 +85,21 @@ router.post('/new-thread', async (req, res) => {
   res.json({ threadId: crypto.randomUUID() });
 });
 
+router.get('/threads', async (req, res) => {
+  try {
+    const rows = await prisma.checkpoints.findMany({
+      select: { thread_id: true },
+      distinct: ['thread_id'],
+      orderBy: { checkpoint_id: 'desc' },
+    });
 
-
+    const threads = rows.map(row => row.thread_id);
+    res.json({ threads });
+  } catch (error) {
+    req.logger.error('Failed to list threads:', error);
+    res.status(500).json({ error: 'Failed to list threads' });
+  }
+});
 
 
 router.get(
@@ -68,48 +107,45 @@ router.get(
   ZodParamValidator(z.object({ threadId: z.string() })),
   async (req, res) => {
     const { threadId } = req.params
-    
-    const historyGen = await checkpointer.list({ configurable: { thread_id: threadId } });
 
-    // The History is a generator function.  We should convert
-    // it to an array before sending it to the client.
-    // Checkpoints are newest-first; by overwriting `ts` on every occurrence
-    // we end up with the oldest (creation-time) checkpoint timestamp for each message.
-    const historyMap = new Map<string, { msg: BaseMessage; ts: string }>();
+    const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
 
-    for await (const item of historyGen) {
-      const values = item.checkpoint.channel_values;
-      const ts = item.checkpoint.ts;
-
-      if (values['messages']) {
-        for (const msg of values['messages'] as BaseMessage[]) {
-          if (!historyMap.has(msg.id!)) {
-            historyMap.set(msg.id!, { msg, ts });
-          } else {
-            // Overwrite with the older timestamp as we walk backwards in time
-            historyMap.get(msg.id!)!.ts = ts;
-          }
-        }
-      }
-    }
-
-    const history = Array.from(historyMap.values());
-
-    res.json(threadHistoryResponseSchema.parse({
+    res.json(
+      threadHistoryResponseSchema.parse({
       threadId,
-      history: history.map(({ msg, ts }) => InteractionSchema.parse({
-        type: 'chat_message',
-        id: msg.id,
-        content: msg.content,
-        name: msg.name,
-        created_at: ts,
-        metadata: msg.additional_kwargs,
-        role: msg.type,
-      }))
-    }));
-  }
-);
-
-
+      history: history
+        .filter(({ msg }) => msg.content !== '') // Filter out empty messages (placeholders for thinking)
+        .map(({ msg, ts }) => {
+          switch(msg.type) {
+            case 'tool':
+              return ServerActionSchema.parse({
+                type: 'server_action',
+                id: msg.id,
+                content: msg.content,
+                created_at: ts,
+                metadata: msg.additional_kwargs,
+                role: msg.type,
+                actions: (msg.response_metadata as Record<string, any>)?.actions || [],
+                severity: (msg.response_metadata as Record<string, any>)?.severity ?? 0,
+              })
+            case 'ai':
+            case 'human':
+            default: {
+              return InteractionSchema.parse({
+                type: 'chat_message',
+                id: msg.id,
+                content: msg.content,
+                name: msg.name,
+                created_at: ts,
+                metadata: msg.additional_kwargs,
+                role: msg.type,
+                model: (msg.response_metadata as Record<string, any>)?.model,
+              })
+            }
+          }
+        }) 
+    })
+  );
+});
 
 export default router;

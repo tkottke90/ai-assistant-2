@@ -7,6 +7,8 @@ export class AgentManager extends EventEmitter {
   private agents = new Map<number, AgentRuntime>();
   private activeAgents = new Set<number>();
 
+  private readonly shutdownSignal: AbortController = new AbortController();
+
   constructor(
     private readonly logger: Logger
   ) { super(); }
@@ -19,6 +21,23 @@ export class AgentManager extends EventEmitter {
 
   isActive(agentId: number) {
     return this.activeAgents.has(agentId);
+  }
+
+  getAgent(agentId: number): AgentRuntime | undefined {
+    return this.agents.get(agentId);
+  }
+
+  listActiveAgents() {
+    return Array.from(this.activeAgents)
+      .map(id => this.agents.get(id))
+      .filter(Boolean) as AgentRuntime[]; // Casting here since Maps can return undefined, but we filter those out.
+  }
+  
+  shutdown() {
+    this.logger.info('Shutting down Agent Manager, stopping all active agents');
+
+    this.shutdownSignal.abort();
+    this.activeAgents.clear();
   }
 
   startAgent(agentId: number) {

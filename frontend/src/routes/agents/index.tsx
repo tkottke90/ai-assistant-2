@@ -1,13 +1,18 @@
 import { Dialog, useDialog } from "@/components/dialog";
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
+import { LlmSelector } from "@/components/llm-selector";
 import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useApi } from "@/hooks/use-api";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { cn } from "@/lib/utils";
-import { batch, useSignal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type AgentListResponse } from '@tkottke90/ai-assistant-client';
-import { Bot, BotOff, Pencil, Trash2, TriangleAlert } from "lucide-preact";
+import { Bot, BotOff, Trash2, TriangleAlert } from "lucide-preact";
 import { useCallback, useEffect } from "preact/hooks";
 import { toast } from "sonner";
+import { AgentDrawer } from "./drawer";
+import { AgentTitle } from "./title";
 
 // Pure utility functions for pagination navigation
 function canGoToNextPage(currentPage: number, totalPages: number): boolean {
@@ -16,37 +21,6 @@ function canGoToNextPage(currentPage: number, totalPages: number): boolean {
 
 function canGoToPreviousPage(currentPage: number): boolean {
   return currentPage > 1;
-}
-
-function useApi<T>(apiCall: () => Promise<T>) {
-  const value = useSignal<T | null>(null);
-  const loading = useSignal(false);
-  const error = useSignal<Error | null>(null);
-
-  // Memoized execute function to call the API and manage state
-  const execute = useCallback(() => {
-    return apiCall()
-      .then(result => {
-        // On success, update value and clear error
-        batch(() => {
-          value.value = result;
-          error.value = null;
-        });
-        return result;
-      })
-      .catch(err => {
-        // On error, log and update error state
-        console.error('API call error:', err);
-        error.value = err instanceof Error ? err : new Error(String(err));
-      })
-      .finally(() => {
-        // Always set loading to false after completion
-        loading.value = false;
-      });
-  }, [apiCall]);
-
-
-  return { value, loading, error, execute };
 }
 
 export function AgentsPage() {
@@ -153,11 +127,13 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
         <div key={agent.agent_id} className="min-w-75 p-4 border rounded border-neutral-500/75 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 w-full lg:max-w-[49%]">
           <header className="flex justify-between">
             <h3 className="text-lg font-medium">
-              <span>{agent.name}</span>
-              <span className="ml-2 px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-800/50 dark:text-gray-300/50">Version: {agent.version}</span>
+              <AgentTitle agent={agent} />
             </h3>
             <div className="flex gap-4 lg:gap-2">
               <Button variant="iconDefault" size="icon-xs"
+                className={cn(
+                  agent.is_active ? 'text-green-500 hover:text-green-600' : ''
+                )}
                 onClick={() => {
                   if (agent.is_active) {
                     // Stop the agent
@@ -179,9 +155,9 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                 { !agent.is_active &&  <BotOff className="size-full" /> }
                 { agent.is_active && <Bot className="size-full" /> }
               </Button>
-              <Button variant="iconInfo" size="icon-xs">
-                <Pencil className="size-full" />
-              </Button>
+              
+              <AgentDrawer agent={agent} onChange={() => { onChange() }} />
+              
               <ConfirmButton onConfirm={() => {
                 deleteAgent({ id: agent.agent_id }).then(() => {
                   onChange();
@@ -202,12 +178,13 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
 
 }
 
-function AgentDisplay({ agent }: { agent: AgentListResponse }) {}
+
 
 function CreateAgentForm() {
   const dialog = useDialog();
   const loading = useSignal(false);
   const error = useSignal<string | null>(null);
+  const llmSelection = useLlmSelection();
 
   return (
      <form className="flex flex-col gap-4"
@@ -224,7 +201,9 @@ function CreateAgentForm() {
           name,
           description,
           system_prompt: 'You are the member of an AI Team. Collaborate with the user and other agents to complete tasks and achieve goals.',
-          auto_start: false
+          auto_start: false,
+          engine: llmSelection.selectedAlias.value || undefined,
+          model: llmSelection.selectedModel.value || undefined,
         }).then(() => {
             dialog.close();
           })
@@ -256,6 +235,7 @@ function CreateAgentForm() {
           placeholder="Enter agent description (optional)"
         />
       </div>
+      <LlmSelector llmSelection={llmSelection} disabled={loading.value} />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" type="button" onClick={() => {
           dialog.close();

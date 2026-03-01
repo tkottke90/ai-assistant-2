@@ -4,10 +4,10 @@ import { Sidebar } from "lucide-preact";
 import { createContextWithHook } from "@/lib/utils";
 import { useEffect, useRef } from "preact/hooks";
 import { Signal, useSignal } from "@preact/signals";
-import { createPortal, type ComponentProps } from "preact/compat";
+import { type ComponentProps } from "preact/compat";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-
-const portal = document.getElementById("dialogs") as HTMLElement;
+import { Drawer } from "../drawer";
+import { ThreadList } from "../thread-list";
 
 const slideIn: Keyframe[] = [
   { transform: "translateX(-100%)", opacity: 0 },
@@ -28,19 +28,19 @@ const {
   Provider: SidebarContext,
   useHook: useAppContext
 } = createContextWithHook<{
-  dialog: Signal<EventTarget>
+  dialog: Signal<EventTarget>;
+  threadRefresh: Signal<number>;
 }>()
 
 function SidebarContents() {
+  const { threadRefresh } = useAppContext();
 
   return (
     <div className="size-full flex flex-col">
-      <header>
-        <h1 className="text-2xl font-bold mb-4 text-center">Assistant</h1>
-      </header>
-      <main className="grow flex flex-col justify-start">
+      <main className="grow flex flex-col justify-start overflow-y-auto">
         <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/agents">Agents</a>
-        <a className="w-full text-center py-4 px-6 hover:bg-neutral-500" href="/">Chat</a>
+        <hr className="border-neutral-500/30 my-2 mx-4" />
+        <ThreadList refreshSignal={threadRefresh} />
       </main>
       <footer>
 
@@ -105,21 +105,16 @@ export function AppSidebar() {
     <Fragment>
       <aside className="h-full min-w-75 hidden lg:block pt-6 base-layout--aside
       ">
+        <header>
+          <h2 className="text-center">AI Assistant</h2>
+        </header>
         <SidebarContents />
       </aside>
       {
-        portal && isMobile && createPortal(
-          <dialog 
-            class=" p-8 border-r fixed h-screen min-w-3/4 max-w-10/12 top-0 left-0 bottom-0 max-h-none m-0 focus-visible:outline-none shadow-2xl
-            base-layout--aside
-            bg-neutral-50/80 dark:bg-neutral-700/80
-            border-neutral-400/50 backdrop:bg-neutral-900/50 backdrop-blur-sm" 
-            ref={dialogRef}
-          >
-            <SidebarContents />
-          </dialog>,
-          portal
-        )
+        isMobile &&
+        <Drawer direction="left" showTrigger={false} eventTrigger={dialog} title="AI Assistant">
+          <SidebarContents />
+        </Drawer>
       }
     </Fragment>
   )
@@ -145,12 +140,13 @@ export function BaseLayoutShowBtn() {
 
 export default function BaseLayout({ children, className }: ComponentProps<"main">) {
   const toggleEvent = useSignal(new EventTarget());
+  const threadRefresh = useSignal(0);
   
   return (
     <div
       className="relative h-full w-full flex"
     >
-      <SidebarContext value={{ dialog: toggleEvent }}>
+      <SidebarContext value={{ dialog: toggleEvent, threadRefresh }}>
         <AppSidebar />
         <main className={`h-full w-full py-8 px-2 lg:py-6 lg:px-6 border-l border-l-zinc-400/50 shadow-2xl base-layout--main bg-neutral-200 dark:bg-neutral-800 ${className}`}>
           {children}
@@ -159,3 +155,5 @@ export default function BaseLayout({ children, className }: ComponentProps<"main
     </div>
   )
 }
+
+export { useAppContext };

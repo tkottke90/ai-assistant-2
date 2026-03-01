@@ -1,5 +1,6 @@
 import z from 'zod';
 import {
+  ActionSeverity,
   ChatMessage,
   ChatAsset,
   ServerAction,
@@ -46,11 +47,13 @@ function getThreadHistory(threadId: string) {
 
 
 export {
+  ActionSeverity,
   ChatMessage,
   ChatAsset,
   ServerAction,
   ChatMessageSchema,
   InteractionMessage,
   getThreadHistory,
+  listThreads,
   newThread
 }

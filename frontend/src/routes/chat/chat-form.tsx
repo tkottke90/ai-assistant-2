@@ -1,11 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { LlmSelector } from "@/components/llm-selector";
 import type { Signal } from "@preact/signals";
 import { SendHorizonal } from "lucide-preact";
 import { toast } from "sonner";
@@ -17,13 +11,17 @@ import {
   isDoneEvent,
   appendToMessage,
 } from "./chat-utils";
-import { useLlmSelection } from "./use-llm-selection";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { AgentChips } from "./agent-chips";
+import type { AgentSelection } from "@/hooks/use-agent-selection";
 
 export function createSubmitHandler(
   chatMessages: Signal<ChatMessage[]>,
   isStreaming: Signal<boolean>,
   selectedAlias: Signal<string>,
   selectedModel: Signal<string>,
+  selectedAgentId: Signal<number | null>,
+  onMessageSent?: () => void,
 ) {
   return async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -54,6 +52,7 @@ export function createSubmitHandler(
           threadId,
           alias: selectedAlias.value || undefined,
           model: selectedModel.value || undefined,
+          agentId: selectedAgentId.value ?? undefined,
         }),
       });
 
@@ -85,6 +84,7 @@ export function createSubmitHandler(
       chatMessages.value = chatMessages.value.filter(msg => msg.id !== assistantId);
     } finally {
       isStreaming.value = false;
+      onMessageSent?.();
     }
   };
 }
@@ -94,11 +94,13 @@ interface ChatFormProps {
   chatMessages: Signal<ChatMessage[]>;
   isStreaming: Signal<boolean>;
   llmSelection: ReturnType<typeof useLlmSelection>;
+  agentSelection: AgentSelection;
+  onMessageSent?: () => void;
 }
 
-export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection }: ChatFormProps) {
-  const { selectedAlias, selectedModel, engines, models, modelsError, setAlias, setModel } = llmSelection;
-  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel);
+export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection, agentSelection, onMessageSent }: ChatFormProps) {
+  const { selectedAlias, selectedModel } = llmSelection;
+  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel, agentSelection.selectedAgentId, onMessageSent);
 
   return (
     <form className="w-full flex flex-col gap-1" onSubmit={handleSubmit}>
@@ -122,47 +124,9 @@ export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection }: 
         </Button>
       </div>
 
-      <div className="flex flex-row items-start gap-2">
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground">Engine</label>
-          <Select
-            value={selectedAlias.value}
-            onValueChange={setAlias}
-            disabled={isStreaming.value || engines.value.length === 0}
-          >
-            <SelectTrigger size="sm" className="w-auto dark:bg-transparent">
-              <SelectValue placeholder="Select engine" />
-            </SelectTrigger>
-            <SelectContent>
-              {engines.value.map(engine => (
-                <SelectItem key={engine.alias} value={engine.alias}>
-                  {engine.alias}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground">Model</label>
-          <Select
-            value={selectedModel.value}
-            onValueChange={setModel}
-            disabled={isStreaming.value || models.value.length === 0}
-          >
-            <SelectTrigger size="sm" className="w-auto dark:bg-transparent">
-              <SelectValue placeholder={modelsError.value ? 'Error loading models' : 'Select model'} />
-            </SelectTrigger>
-            <SelectContent>
-              {models.value.map(m => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {modelsError.value && (
-            <p className="text-xs text-destructive mt-0.5">{modelsError.value}</p>
-          )}
-        </div>
+      <div className="w-full flex gap-8">
+        <LlmSelector llmSelection={llmSelection} disabled={isStreaming.value} />
+        <AgentChips agentSelection={agentSelection} disabled={isStreaming.value} />
       </div>
     </form>
   );

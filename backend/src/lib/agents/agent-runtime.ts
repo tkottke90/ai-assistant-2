@@ -1,6 +1,11 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { Agent } from "../models/agent";
+import { Agent, AgentSchema } from "../models/agent";
 import { Queue } from "../types/queue";
+import { createAgent } from "langchain";
+import { checkpointer } from '../../lib/database';
+import { AgentModel } from "../prisma/models";
+import { createMemoryTools } from "../tools/memory-tools";
+import { MEMORY_SYSTEM_PROMPT } from "./memory-prompt";
 
 export class AgentRuntime {
   private queue = new Queue<any>();
@@ -12,7 +17,7 @@ export class AgentRuntime {
 
   constructor(
     private readonly agent: Agent,
-    private readonly llm: BaseChatModel
+    readonly llm: BaseChatModel,
   ) {
     this.name = agent.name;
     this.description = agent.description ?? '';
@@ -24,11 +29,37 @@ export class AgentRuntime {
     return this.agent.agent_id;
   }
 
+  getAgent(shutdownSignal: AbortSignal) {
+    const systemPrompt = [
+      this.systemPrompt,
+      `The user will refer to you as ${this.name}.`,
+      MEMORY_SYSTEM_PROMPT
+    ].join('\n\n');
+
+    return createAgent({
+      model: this.llm,
+      name: this.name,
+      checkpointer,
+      systemPrompt,
+      tools: this.getTools(),
+      signal: shutdownSignal
+    })
+  }
+
+  getTools(agentId: number = this.id) {
+    return [
+      ...createMemoryTools(agentId)
+    ];
+  }
+
   newMessage(message: any) {
     this.queue.enqueue(message);
   }
 
-  private nextTask() {
-
+  static fromDatabase(agentData: AgentModel, llm: BaseChatModel) {
+    return new AgentRuntime(
+      AgentSchema.parse(agentData),
+      llm
+    );
   }
 }

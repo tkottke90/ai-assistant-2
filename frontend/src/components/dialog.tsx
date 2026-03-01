@@ -9,8 +9,8 @@ import { buttonVariants } from './ui/button';
 
 const X = XIcon as any;
 
-interface DialogProps extends BaseProps {
-  title?: string;
+export interface DialogProps extends BaseProps {
+  title?: string | JSX.Element;
   trigger?: JSX.Element,
   disableClose?: boolean,
   open?: Signal<Boolean>,
@@ -29,7 +29,7 @@ const DialogContext = createContextWithHook<iDalogContext>()
 
 export const useDialog = DialogContext.useHook;
 
-export function Dialog({ children, trigger, disableClose, title, onCancel, onClose, onOpen }: DialogProps) {
+export function Dialog({ className, children, trigger, disableClose, title, onCancel, onClose, onOpen }: DialogProps) {
   const modalValue = useSignal<string | undefined>();
   const modalRef = useRef<HTMLDialogElement>(null)
 
@@ -59,14 +59,14 @@ export function Dialog({ children, trigger, disableClose, title, onCancel, onClo
       { triggerElement }
       <dialog
         ref={modalRef}
-        className="
-        p-6 text-neutral-800 dark:text-neutral-200
+        className={
+          className ?? `p-6 text-neutral-800 dark:text-neutral-200
         bg-neutral-50/80 dark:bg-neutral-700/80
         rounded border-neutral-400/50 backdrop:bg-neutral-900/50 backdrop-blur-sm
         absolute block pointer-events-none opacity-0 mx-auto my-4 translate-y-1 min-w-10/12
         sm:min-w-150
         backdrop:backdrop-blur-xs
-        open:translate-y-0 open:pointer-events-auto open:opacity-100 z-50"
+        open:translate-y-0 open:pointer-events-auto open:opacity-100 z-50`}
       >
         <div className="flex">
           <h2 className="grow">{title}</h2>

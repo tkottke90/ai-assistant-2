@@ -43,6 +43,8 @@ export type AgentMinAggregateOutputType = {
   version: number | null
   system_prompt: string | null
   auto_start: boolean | null
+  engine: string | null
+  model: string | null
   created_at: Date | null
   updated_at: Date | null
 }
@@ -54,6 +56,8 @@ export type AgentMaxAggregateOutputType = {
   version: number | null
   system_prompt: string | null
   auto_start: boolean | null
+  engine: string | null
+  model: string | null
   created_at: Date | null
   updated_at: Date | null
 }
@@ -65,6 +69,8 @@ export type AgentCountAggregateOutputType = {
   version: number
   system_prompt: number
   auto_start: number
+  engine: number
+  model: number
   created_at: number
   updated_at: number
   _all: number
@@ -88,6 +94,8 @@ export type AgentMinAggregateInputType = {
   version?: true
   system_prompt?: true
   auto_start?: true
+  engine?: true
+  model?: true
   created_at?: true
   updated_at?: true
 }
@@ -99,6 +107,8 @@ export type AgentMaxAggregateInputType = {
   version?: true
   system_prompt?: true
   auto_start?: true
+  engine?: true
+  model?: true
   created_at?: true
   updated_at?: true
 }
@@ -110,6 +120,8 @@ export type AgentCountAggregateInputType = {
   version?: true
   system_prompt?: true
   auto_start?: true
+  engine?: true
+  model?: true
   created_at?: true
   updated_at?: true
   _all?: true
@@ -208,6 +220,8 @@ export type AgentGroupByOutputType = {
   version: number
   system_prompt: string
   auto_start: boolean
+  engine: string | null
+  model: string | null
   created_at: Date
   updated_at: Date
   _count: AgentCountAggregateOutputType | null
@@ -242,6 +256,8 @@ export type AgentWhereInput = {
   version?: Prisma.IntFilter<"Agent"> | number
   system_prompt?: Prisma.StringFilter<"Agent"> | string
   auto_start?: Prisma.BoolFilter<"Agent"> | boolean
+  engine?: Prisma.StringNullableFilter<"Agent"> | string | null
+  model?: Prisma.StringNullableFilter<"Agent"> | string | null
   created_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
 }
@@ -253,6 +269,8 @@ export type AgentOrderByWithRelationInput = {
   version?: Prisma.SortOrder
   system_prompt?: Prisma.SortOrder
   auto_start?: Prisma.SortOrder
+  engine?: Prisma.SortOrderInput | Prisma.SortOrder
+  model?: Prisma.SortOrderInput | Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
 }
@@ -268,6 +286,8 @@ export type AgentWhereUniqueInput = Prisma.AtLeast<{
   version?: Prisma.IntFilter<"Agent"> | number
   system_prompt?: Prisma.StringFilter<"Agent"> | string
   auto_start?: Prisma.BoolFilter<"Agent"> | boolean
+  engine?: Prisma.StringNullableFilter<"Agent"> | string | null
+  model?: Prisma.StringNullableFilter<"Agent"> | string | null
   created_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
 }, "agent_id" | "name_version">
@@ -279,6 +299,8 @@ export type AgentOrderByWithAggregationInput = {
   version?: Prisma.SortOrder
   system_prompt?: Prisma.SortOrder
   auto_start?: Prisma.SortOrder
+  engine?: Prisma.SortOrderInput | Prisma.SortOrder
+  model?: Prisma.SortOrderInput | Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   _count?: Prisma.AgentCountOrderByAggregateInput
@@ -298,6 +320,8 @@ export type AgentScalarWhereWithAggregatesInput = {
   version?: Prisma.IntWithAggregatesFilter<"Agent"> | number
   system_prompt?: Prisma.StringWithAggregatesFilter<"Agent"> | string
   auto_start?: Prisma.BoolWithAggregatesFilter<"Agent"> | boolean
+  engine?: Prisma.StringNullableWithAggregatesFilter<"Agent"> | string | null
+  model?: Prisma.StringNullableWithAggregatesFilter<"Agent"> | string | null
   created_at?: Prisma.DateTimeWithAggregatesFilter<"Agent"> | Date | string
   updated_at?: Prisma.DateTimeWithAggregatesFilter<"Agent"> | Date | string
 }
@@ -308,6 +332,8 @@ export type AgentCreateInput = {
   version?: number
   system_prompt: string
   auto_start?: boolean
+  engine?: string | null
+  model?: string | null
   created_at?: Date | string
   updated_at?: Date | string
 }
@@ -319,6 +345,8 @@ export type AgentUncheckedCreateInput = {
   version?: number
   system_prompt: string
   auto_start?: boolean
+  engine?: string | null
+  model?: string | null
   created_at?: Date | string
   updated_at?: Date | string
 }
@@ -329,6 +357,8 @@ export type AgentUpdateInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -340,6 +370,8 @@ export type AgentUncheckedUpdateInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -351,6 +383,8 @@ export type AgentCreateManyInput = {
   version?: number
   system_prompt: string
   auto_start?: boolean
+  engine?: string | null
+  model?: string | null
   created_at?: Date | string
   updated_at?: Date | string
 }
@@ -361,6 +395,8 @@ export type AgentUpdateManyMutationInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -372,6 +408,8 @@ export type AgentUncheckedUpdateManyInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -388,6 +426,8 @@ export type AgentCountOrderByAggregateInput = {
   version?: Prisma.SortOrder
   system_prompt?: Prisma.SortOrder
   auto_start?: Prisma.SortOrder
+  engine?: Prisma.SortOrder
+  model?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
 }
@@ -404,6 +444,8 @@ export type AgentMaxOrderByAggregateInput = {
   version?: Prisma.SortOrder
   system_prompt?: Prisma.SortOrder
   auto_start?: Prisma.SortOrder
+  engine?: Prisma.SortOrder
+  model?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
 }
@@ -415,6 +457,8 @@ export type AgentMinOrderByAggregateInput = {
   version?: Prisma.SortOrder
   system_prompt?: Prisma.SortOrder
   auto_start?: Prisma.SortOrder
+  engine?: Prisma.SortOrder
+  model?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
 }
@@ -437,6 +481,8 @@ export type AgentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   version?: boolean
   system_prompt?: boolean
   auto_start?: boolean
+  engine?: boolean
+  model?: boolean
   created_at?: boolean
   updated_at?: boolean
 }, ExtArgs["result"]["agent"]>
@@ -448,6 +494,8 @@ export type AgentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   version?: boolean
   system_prompt?: boolean
   auto_start?: boolean
+  engine?: boolean
+  model?: boolean
   created_at?: boolean
   updated_at?: boolean
 }, ExtArgs["result"]["agent"]>
@@ -459,6 +507,8 @@ export type AgentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   version?: boolean
   system_prompt?: boolean
   auto_start?: boolean
+  engine?: boolean
+  model?: boolean
   created_at?: boolean
   updated_at?: boolean
 }, ExtArgs["result"]["agent"]>
@@ -470,11 +520,13 @@ export type AgentSelectScalar = {
   version?: boolean
   system_prompt?: boolean
   auto_start?: boolean
+  engine?: boolean
+  model?: boolean
   created_at?: boolean
   updated_at?: boolean
 }
 
-export type AgentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"agent_id" | "name" | "description" | "version" | "system_prompt" | "auto_start" | "created_at" | "updated_at", ExtArgs["result"]["agent"]>
+export type AgentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"agent_id" | "name" | "description" | "version" | "system_prompt" | "auto_start" | "engine" | "model" | "created_at" | "updated_at", ExtArgs["result"]["agent"]>
 
 export type $AgentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Agent"
@@ -486,6 +538,8 @@ export type $AgentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     version: number
     system_prompt: string
     auto_start: boolean
+    engine: string | null
+    model: string | null
     created_at: Date
     updated_at: Date
   }, ExtArgs["result"]["agent"]>
@@ -917,6 +971,8 @@ export interface AgentFieldRefs {
   readonly version: Prisma.FieldRef<"Agent", 'Int'>
   readonly system_prompt: Prisma.FieldRef<"Agent", 'String'>
   readonly auto_start: Prisma.FieldRef<"Agent", 'Boolean'>
+  readonly engine: Prisma.FieldRef<"Agent", 'String'>
+  readonly model: Prisma.FieldRef<"Agent", 'String'>
   readonly created_at: Prisma.FieldRef<"Agent", 'DateTime'>
   readonly updated_at: Prisma.FieldRef<"Agent", 'DateTime'>
 }

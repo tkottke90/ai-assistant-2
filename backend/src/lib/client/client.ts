@@ -71,17 +71,17 @@ export function createClientMethod<
       delete (params as any)[paramName]; // Remove the path parameter from params
     });
 
-    // For GET requests, append input as query parameters
-    if (options.method.toLowerCase() === 'get' && input && typeof input === 'object') {
-      const params = new URLSearchParams();
-      Object.entries(input).forEach(([key, value]) => {
+    // For GET requests, append remaining params as query parameters
+    if (options.method.toLowerCase() === 'get' && params && typeof params === 'object') {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          params.append(key, String(value));
+          queryParams.append(key, String(value));
         }
       });
-      const queryString = params.toString();
+      const queryString = queryParams.toString();
       if (queryString) {
-        requestPath = `${path}?${queryString}`;
+        requestPath = `${requestPath}?${queryString}`;
       }
     } else {
       // For non-GET requests, use body

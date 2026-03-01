@@ -4,8 +4,6 @@ import { AgentManager } from './agent-manager';
 import AgentDao from '../dao/agent.dao';
 
 export default async function initializeAgents(app: express.Application) {
-  const defaultClient = app.llm.getClient();
-
   app.logger.info('Initializing Agent Manager');
   app.agents = new AgentManager(
     app.logger.child({ location: 'AgentManager' })
@@ -15,7 +13,9 @@ export default async function initializeAgents(app: express.Application) {
   const agents = await AgentDao.getAllAgents()
   
   for (const agentData of agents) {
-    const agentRuntime = new AgentRuntime(agentData, defaultClient);
+    const llmEngine = app.llm.getClient(agentData.engine);
+
+    const agentRuntime = new AgentRuntime(agentData, llmEngine);
     app.agents.registerAgent(agentRuntime);
 
     if (agentData.auto_start) {

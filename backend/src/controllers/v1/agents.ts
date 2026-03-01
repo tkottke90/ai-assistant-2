@@ -1,9 +1,11 @@
 import { Router, Request } from 'express';
 import AgentDao from '../../lib/dao/agent.dao.js';
+import MemoryDao from '../../lib/dao/memory.dao.js';
 import { AgentProperties, CreateAgentDTO } from '../../lib/models/agent.js';
 import { ZodBodyValidator, ZodIdValidator, ZodQueryValidator } from '../../middleware/zod.middleware.js';
 import { PaginationQuerySchemaBase, PaginationQuery } from '../../lib/types/pagination.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors/http.errors.js';
+import { AgentRuntime } from '../../lib/agents/agent-runtime.js';
 
 export const router = Router();
 
@@ -22,7 +24,11 @@ router.post('/',
 
     req.logger.debug('Agent created successfully', { ...agent });
     req.logger.info('Registering agent with Agent Manager');
-    // agentManager.registerAgent(agent);
+    
+    const llmEngine = req.app.llm.getClient(agentData.engine);
+    agentManager.registerAgent(
+      AgentRuntime.fromDatabase(agent, llmEngine)
+    );
     
     req.logger.info('Agent registered successfully');
 
@@ -75,12 +81,56 @@ async function getAgentById(req: Request) {
   return agent;
 }
 
+// List active agents (lightweight)
+router.get('/active', async (req, res) => {
+  const agentManager = req.app.agents;
+  const activeAgents = agentManager.listActiveAgents().map(runtime => ({
+    agent_id: runtime.id,
+    name: runtime.name,
+    description: runtime.description,
+  }));
+
+  res.json({ agents: activeAgents });
+});
+
 // Get a specific agent by ID (latest version)
 router.get('/:id',
   ZodIdValidator('id'),
   async (req, res) => {
     const agent = await getAgentById(req);
     res.json(agent);
+  }
+);
+
+// Get agent details including memories and tools
+router.get('/:id/details',
+  ZodIdValidator('id'),
+  async (req, res) => {
+    const agentManager = req.app.agents;
+    const agent = await getAgentById(req);
+
+    const memories = await MemoryDao.listMemories(agent.agent_id);
+
+    const agentRuntime = agentManager.getAgent(agent.agent_id);
+
+    agentRuntime?.getTools()
+      .map(tool => tool.getName())
+      .reduce((acc, toolName) => {
+        acc[toolName] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+    res.json({
+      ...agent,
+      is_active: agentManager.isActive(agent.agent_id),
+      memories,
+      tools: agentRuntime?.getTools()
+      .map(tool => tool.getName())
+      .reduce((acc, toolName) => {
+        acc[toolName] = { allowEdit: false, value: true };
+        return acc;
+      }, {} as Record<string, { allowEdit: boolean, value: boolean }>)
+    });
   }
 );
 
@@ -119,7 +169,25 @@ router.post('/:id/stop',
   }
 );
 
-// Update an agent (creates new version)
+// Create a new version of an agent, optionally with modifications
+router.post('/:id/version',
+  ZodIdValidator('id'),
+  ZodBodyValidator(AgentProperties.partial()),
+  async (req, res) => {
+    const agent = await getAgentById(req);
+
+    try {
+      const overrides: Partial<CreateAgentDTO> = req.body;
+      const newVersion = await AgentDao.createAgentVersion(agent.agent_id, overrides);
+      res.status(201).json(newVersion);
+    } catch (error) {
+      req.logger.error('Error creating agent version:', error);
+      res.status(500).json({ error: 'Failed to create agent version' });
+    }
+  }
+);
+
+// Update an agent
 router.put('/:id',
   ZodIdValidator('id'),
   ZodBodyValidator(AgentProperties.partial()),
@@ -138,7 +206,7 @@ router.put('/:id',
     const updatedAgent = await AgentDao.updateAgent(agentId, agentData);
     res.json(updatedAgent);
   } catch (error) {
-    console.error('Error updating agent:', error);
+    req.logger.error('Error updating agent:', error);
     if (error instanceof Error && error.message === 'Agent not found') {
       res.status(404).json({ error: 'Agent not found' });
       return;
@@ -169,5 +237,22 @@ router.delete(
     res.status(500).json({ error: 'Failed to delete agent' });
   }
 });
+
+// Delete a specific memory belonging to an agent
+router.delete('/:id/memories/:nodeId',
+  ZodIdValidator('id'),
+  ZodIdValidator('nodeId'),
+  async (req, res) => {
+    const agent = await getAgentById(req);
+    const nodeId = (req.params as any).nodeId as number;
+
+    const deleted = await MemoryDao.deleteMemory(nodeId, agent.agent_id);
+    if (!deleted) {
+      throw new NotFoundError('Memory not found');
+    }
+
+    res.status(204).send();
+  }
+);
 
 export default router;

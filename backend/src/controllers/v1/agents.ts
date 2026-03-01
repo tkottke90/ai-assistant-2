@@ -111,11 +111,25 @@ router.get('/:id/details',
 
     const memories = await MemoryDao.listMemories(agent.agent_id);
 
+    const agentRuntime = agentManager.getAgent(agent.agent_id);
+
+    agentRuntime?.getTools()
+      .map(tool => tool.getName())
+      .reduce((acc, toolName) => {
+        acc[toolName] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+
     res.json({
       ...agent,
       is_active: agentManager.isActive(agent.agent_id),
       memories,
-      tools: {},
+      tools: agentRuntime?.getTools()
+      .map(tool => tool.getName())
+      .reduce((acc, toolName) => {
+        acc[toolName] = { allowEdit: false, value: true };
+        return acc;
+      }, {} as Record<string, { allowEdit: boolean, value: boolean }>)
     });
   }
 );

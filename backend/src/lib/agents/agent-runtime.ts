@@ -30,7 +30,6 @@ export class AgentRuntime {
   }
 
   getAgent(shutdownSignal: AbortSignal) {
-    const memoryTools = createMemoryTools(this.id);
     const systemPrompt = [
       this.systemPrompt,
       `The user will refer to you as ${this.name}.`,
@@ -42,9 +41,15 @@ export class AgentRuntime {
       name: this.name,
       checkpointer,
       systemPrompt,
-      tools: memoryTools,
+      tools: this.getTools(),
       signal: shutdownSignal
     })
+  }
+
+  getTools() {
+    return [
+      ...createMemoryTools(this.id)
+    ];
   }
 
   newMessage(message: any) {

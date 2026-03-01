@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-enum ActionSeverity {
+export enum ActionSeverity {
   INFO = 0,
   WARNING = 1,
   ERROR = 2,

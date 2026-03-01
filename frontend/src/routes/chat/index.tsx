@@ -69,7 +69,7 @@ export function ChatPage() {
         <span>
           {currentAgentName && (
             <span className="text-sm text-muted-foreground">
-              via <span className="font-medium">{currentAgentName}</span>
+              with <span className="font-medium">{currentAgentName}</span>
             </span>
           )}
         </span>

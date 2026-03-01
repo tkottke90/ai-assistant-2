@@ -141,9 +141,40 @@ function SystemPromptTab() {
 }
 
 function ToolsTab() {
-  return (
-    <div>Manage Agent Tool Access</div>
-  )
+  const { agent, details, detailsLoading, refreshDetails } = useAgentDrawer();
+
+  if (detailsLoading.value) {
+    return (
+      <div className="space-y-3 p-2">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (!agent.value) {
+    return (
+      <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
+        Agent not found.
+      </div>
+    );
+  }
+
+  return Object.entries(details.value?.tools ?? {}).length === 0 ? (
+    <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
+      This agent has no tool access configured.
+    </div>
+  ) : (
+    <div className="p-2 space-y-3">
+      {Object.entries(details.value?.tools ?? {}).map(([toolName, config]) => (
+        <div key={toolName} className="">
+          <input type="checkbox" id={toolName} name={toolName} checked={config.value} disabled />
+          <label htmlFor={toolName} className="ml-2">{toolName}</label>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Pure utility functions (extracted per UI guidelines) ──

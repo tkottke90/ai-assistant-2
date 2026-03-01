@@ -32,7 +32,10 @@ export const AgentDetailsSchema = AgentListResponseSchema.extend({
     pagination: PaginationSchema,
     data: z.array(MemorySchema),
   }),
-  tools: z.record(z.string(), z.boolean()),
+  tools: z.record(z.string(), z.object({
+    allowEdit: z.boolean(),
+    value: z.boolean()
+  })),
 });
 
 export type AgentDetails = z.infer<typeof AgentDetailsSchema>;

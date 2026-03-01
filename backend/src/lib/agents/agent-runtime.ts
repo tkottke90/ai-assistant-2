@@ -17,7 +17,7 @@ export class AgentRuntime {
 
   constructor(
     private readonly agent: Agent,
-    private readonly llm: BaseChatModel,
+    readonly llm: BaseChatModel,
   ) {
     this.name = agent.name;
     this.description = agent.description ?? '';
@@ -46,9 +46,9 @@ export class AgentRuntime {
     })
   }
 
-  getTools() {
+  getTools(agentId: number = this.id) {
     return [
-      ...createMemoryTools(this.id)
+      ...createMemoryTools(agentId)
     ];
   }
 

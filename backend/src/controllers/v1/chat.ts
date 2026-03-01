@@ -6,6 +6,7 @@ import z from 'zod';
 import { InteractionSchema, ServerActionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
 import { BaseMessage } from 'langchain';
 import crypto from 'node:crypto';
+import ThreadDao from '../../lib/dao/thread.dao.js';
 
 export const router = Router();
 
@@ -106,32 +107,8 @@ router.get(
   ZodParamValidator(z.object({ threadId: z.string() })),
   async (req, res) => {
     const { threadId } = req.params
-    
-    const historyGen = await checkpointer.list({ configurable: { thread_id: threadId } });
 
-    // The History is a generator function.  We should convert
-    // it to an array before sending it to the client.
-    // Checkpoints are newest-first; by overwriting `ts` on every occurrence
-    // we end up with the oldest (creation-time) checkpoint timestamp for each message.
-    const historyMap = new Map<string, { msg: BaseMessage; ts: string }>();
-
-    for await (const item of historyGen) {
-      const values = item.checkpoint.channel_values;
-      const ts = item.checkpoint.ts;
-
-      if (values['messages']) {
-        for (const msg of values['messages'] as BaseMessage[]) {
-          if (!historyMap.has(msg.id!)) {
-            historyMap.set(msg.id!, { msg, ts });
-          } else {
-            // Overwrite with the older timestamp as we walk backwards in time
-            historyMap.get(msg.id!)!.ts = ts;
-          }
-        }
-      }
-    }
-
-    const history = Array.from(historyMap.values());
+    const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
 
     res.json(
       threadHistoryResponseSchema.parse({

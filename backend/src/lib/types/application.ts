@@ -1,5 +1,6 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { type AgentManager } from '../agents/agent-manager';
+import { type ToolManager } from '../tools/manager';
 import express from 'express';
 import type { Logger } from 'winston';
 import z from 'zod';
@@ -10,6 +11,7 @@ declare global {
   namespace Express {
     interface Application {
       agents: AgentManager;
+      tools: ToolManager;
 
       config: {
         _configData: Record<string, any>;

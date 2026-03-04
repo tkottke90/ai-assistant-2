@@ -4,6 +4,7 @@ import setupStaticController from './controllers/static';
 import setupConfig from './lib/config';
 import setupLogger from './lib/logger';
 import setupLLMs from './lib/llm';
+import setupTools from './lib/tools/manager';
 import setupAgentManager from './lib/agents';
 import HttpEventMiddleware from './middleware/http.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
@@ -13,7 +14,6 @@ export const app = express();
 setupConfig(app);
 setupLogger(app);
 setupLLMs(app);
-setupAgentManager(app);
 
 // Middleware
 app.use(express.json());
@@ -26,6 +26,11 @@ setupStaticController(app);
 
 // Error Handling
 app.use(errorHandler); // Make sure this is the last middleware to be added
+
+// Async service init: tools must be ready before agents (agents depend on tools)
+setupTools(app)
+  .then(() => setupAgentManager(app))
+  .catch(err => app.logger?.error('Service init failed:', err));
 
 // Startup function
 export default function(callback: (app: express.Application) => void) {

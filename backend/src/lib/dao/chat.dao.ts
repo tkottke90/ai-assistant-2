@@ -3,7 +3,7 @@ import { ChatMessage } from '../models/chat.js';
 
 export function createChat(input: ChatMessage) {
   return prisma.node.create({
-    data: chatMessage.toNode(),
+    data: input.toNode()
   });
 }
 

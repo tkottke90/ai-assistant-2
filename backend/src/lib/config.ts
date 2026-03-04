@@ -11,6 +11,38 @@ import z from "zod";
 // Initialize the environment variables from the .env file
 dotenv.config();
 
+/**
+ * Recursively replaces ${VAR_NAME} patterns in all string values of a config object
+ * with the corresponding process.env value. Uppercase variable names only.
+ * Missing env vars produce a warning and are replaced with an empty string.
+ */
+function interpolateEnvVars(obj: unknown): unknown {
+  if (typeof obj === 'string') {
+    return obj.replace(/\$\{([A-Z_][A-Z0-9_]*)\}/g, (_match, varName) => {
+      const value = process.env[varName];
+      if (value === undefined) {
+        console.warn(`[Config] Warning: environment variable ${varName} not found, using empty string`);
+        return '';
+      }
+      return value;
+    });
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(interpolateEnvVars);
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = interpolateEnvVars(value);
+    }
+    return result;
+  }
+
+  return obj;
+}
+
 function saveConfig(configPath: string, configData: Record<string, any>) {
   fs.writeFileSync(
     configPath,
@@ -87,11 +119,10 @@ export default function initializeConfig(app: Application) {
   const configFile = fs.readFileSync(configFilePath, 'utf-8');
 
   // Validate the config file against our schema and apply defaults if missing
-  // This will automatically migrate old configs by adding any missing sections
-  const configData: Record<string, any> = validateConfig(
-    configFilePath,
-    yaml.parse(configFile)
-  );
+  // This will automatically migrate old configs by adding any missing sections.
+  // Interpolate env vars before validation so secrets stay out of the config file.
+  const rawConfig = interpolateEnvVars(yaml.parse(configFile)) as Record<string, any>;
+  const configData: Record<string, any> = validateConfig(configFilePath, rawConfig);
 
   // Setup some internal config values
   configData.appVersion = pkg.version;

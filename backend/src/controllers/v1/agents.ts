@@ -113,8 +113,9 @@ router.get('/:id/details',
 
     const agentRuntime = agentManager.getAgent(agent.agent_id);
 
-    agentRuntime?.getTools()
-      .map(tool => tool.getName())
+    const agentTools = await agentRuntime?.getTools();
+    agentTools
+      ?.map(tool => tool.getName())
       .reduce((acc, toolName) => {
         acc[toolName] = true;
         return acc;
@@ -124,8 +125,8 @@ router.get('/:id/details',
       ...agent,
       is_active: agentManager.isActive(agent.agent_id),
       memories,
-      tools: agentRuntime?.getTools()
-      .map(tool => tool.getName())
+      tools: agentTools
+      ?.map(tool => tool.getName())
       .reduce((acc, toolName) => {
         acc[toolName] = { allowEdit: false, value: true };
         return acc;

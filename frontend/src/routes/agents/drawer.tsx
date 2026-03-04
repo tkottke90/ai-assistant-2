@@ -9,13 +9,17 @@ import { Signal, useSignal } from "@preact/signals";
 import {
   deleteAgentMemory,
   getAgentDetails,
+  getAgentTools,
+  removeAgentTool,
+  upsertAgentTool,
   updateAgent as updateAgentApi,
   type AgentDetails,
   type AgentListResponse,
+  type AgentTool,
   type CreateAgentInput,
   type Memory,
 } from "@tkottke90/ai-assistant-client";
-import { Pencil, Trash2 } from "lucide-preact";
+import { Pencil, Plus, Trash2 } from "lucide-preact";
 import { useCallback } from "preact/hooks";
 import { toast } from "sonner";
 import { AgentTitle } from "./title";
@@ -140,15 +144,83 @@ function SystemPromptTab() {
   )
 }
 
-function ToolsTab() {
-  const { agent, details, detailsLoading, refreshDetails } = useAgentDrawer();
+// ── Tool tab utility functions ────────────────────────────────────────────────
 
-  if (detailsLoading.value) {
+/** Human-readable label describing where a tool comes from. */
+function getSourceLabel(source: string, mcpServer: { config_id: string } | null): string {
+  if (source === 'built-in') return 'Built-in';
+  if (source === 'simple') return 'Simple';
+  if (source === 'mcp' && mcpServer) return `MCP: ${mcpServer.config_id}`;
+  return source;
+}
+
+/** Tailwind badge classes for each tool source. */
+function sourceBadgeClass(source: string): string {
+  switch (source) {
+    case 'built-in':
+      return 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200';
+    case 'simple':
+      return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200';
+    case 'mcp':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+    default:
+      return 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200';
+  }
+}
+
+/** Whether a tool's tier is locked and cannot be changed. */
+function isSystemTool(lockedTier: number | null): boolean {
+  return lockedTier !== null;
+}
+
+/** Label for a given numeric tier. */
+function tierLabel(tier: number): string {
+  switch (tier) {
+    case 1: return 'Tier 1 — Requires Approval';
+    case 2: return 'Tier 2 — Automatic';
+    case 3: return 'Tier 3 — Always Available';
+    default: return `Tier ${tier}`;
+  }
+}
+
+function ToolsTab() {
+  const { agent } = useAgentDrawer();
+
+  const agentId = agent.value?.agent_id;
+
+  const { value: tools, loading, execute: refresh } = useApi(
+    useCallback(() => {
+      if (!agentId) return Promise.resolve([] as AgentTool[]);
+      return getAgentTools({ agentId });
+    }, [agentId])
+  );
+
+  const handleTierChange = async (tool: AgentTool, newTier: 1 | 2 | 3) => {
+    if (!agentId) return;
+    try {
+      await upsertAgentTool({ agentId, tool_id: tool.tool_id, tier: newTier });
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update tier');
+    }
+  };
+
+  const handleRemove = async (tool: AgentTool) => {
+    if (!agentId) return;
+    try {
+      await removeAgentTool({ agentId, toolId: tool.tool_id });
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove tool');
+    }
+  };
+
+  if (loading.value) {
     return (
       <div className="space-y-3 p-2">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </div>
     );
   }
@@ -161,18 +233,86 @@ function ToolsTab() {
     );
   }
 
-  return Object.entries(details.value?.tools ?? {}).length === 0 ? (
-    <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
-      This agent has no tool access configured.
-    </div>
-  ) : (
-    <div className="p-2 space-y-3">
-      {Object.entries(details.value?.tools ?? {}).map(([toolName, config]) => (
-        <div key={toolName} className="">
-          <input type="checkbox" id={toolName} name={toolName} checked={config.value} disabled />
-          <label htmlFor={toolName} className="ml-2">{toolName}</label>
-        </div>
-      ))}
+  if (!tools || tools.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
+        This agent has no tool access configured.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-auto p-2 space-y-3">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-300 dark:border-neutral-600 text-left">
+            <th className="py-2 pr-3 font-medium w-24">Source</th>
+            <th className="py-2 pr-3 font-medium">Tool</th>
+            <th className="py-2 pr-3 font-medium w-56">Tier</th>
+            <th className="py-2 font-medium w-12"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {tools.map((agentTool) => {
+            const locked = isSystemTool(agentTool.tool.locked_tier);
+            return (
+              <tr
+                key={agentTool.id}
+                className="border-b border-neutral-200 dark:border-neutral-700 last:border-0"
+              >
+                <td className="py-2 pr-3">
+                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${sourceBadgeClass(agentTool.tool.source)}`}>
+                    {getSourceLabel(agentTool.tool.source, agentTool.tool.mcp_server)}
+                  </span>
+                </td>
+                <td className="py-2 pr-3">
+                  <span className="font-medium">{agentTool.tool.name}</span>
+                  {locked && (
+                    <span className="ml-2 text-xs text-neutral-400 dark:text-neutral-500">system</span>
+                  )}
+                </td>
+                <td className="py-2 pr-3">
+                  <select
+                    disabled={locked}
+                    value={agentTool.tier}
+                    onChange={(e) => handleTierChange(agentTool, Number((e.target as HTMLSelectElement).value) as 1 | 2 | 3)}
+                    className="w-full text-xs rounded px-2 py-1
+                      bg-neutral-200 dark:bg-neutral-700
+                      border border-neutral-300 dark:border-neutral-600
+                      disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value={1}>{tierLabel(1)}</option>
+                    <option value={2}>{tierLabel(2)}</option>
+                    <option value={3}>{tierLabel(3)}</option>
+                  </select>
+                </td>
+                <td className="py-2">
+                  <ConfirmButton
+                    size="icon-xs"
+                    disabled={locked}
+                    onConfirm={() => handleRemove(agentTool)}
+                  >
+                    <Trash2 className="size-full" />
+                  </ConfirmButton>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="flex justify-end">
+        <button
+          disabled
+          title="Add Tool — coming soon"
+          className="flex items-center gap-1 text-xs px-3 py-1.5 rounded
+            bg-neutral-200 dark:bg-neutral-700
+            text-neutral-500 dark:text-neutral-400
+            opacity-50 cursor-not-allowed"
+        >
+          <Plus className="size-3" />
+          Add Tool
+        </button>
+      </div>
     </div>
   );
 }

@@ -53,6 +53,8 @@ npx prisma generate           # Regenerate Prisma client after schema changes
 
 The generated Prisma client is output to `backend/src/lib/prisma/` (not `node_modules`).
 
+> **⚠️ FTS Tables Warning**: The SQLite full-text search tables (`memory_fts`, `memory_fts_config`, `memory_fts_data`, `memory_fts_docsize`, `memory_fts_idx`) are created by a raw SQL migration and are **not represented in `schema.prisma`**. Prisma does not know about them and will warn that it is about to drop them every time you run `prisma migrate dev`. **Always review migration warnings before confirming** — if you see these FTS tables listed for deletion, that is expected and safe to confirm, but never allow a migration to drop them in production without explicit intent to remove the memory search feature.
+
 ## Configuration System (Critical Pattern)
 
 Config is loaded from `config/config.yaml`, validated against Zod schemas, and attached to the Express `app` object. The `app.config` object provides typed getters:

@@ -45,7 +45,7 @@ router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
 
       const abortController = new AbortController();
       res.on('close', () => abortController.abort());
-      agent = runtime.getAgent(abortController.signal);
+      agent = await runtime.getAgent(abortController.signal);
     } else {
       agent = createAgent({
         model: llm,

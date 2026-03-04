@@ -1,6 +1,7 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { type AgentManager } from '../agents/agent-manager';
 import { type ToolManager } from '../tools/manager';
+import { type DbHealthMonitor } from '../health';
 import express from 'express';
 import type { Logger } from 'winston';
 import z from 'zod';
@@ -12,6 +13,7 @@ declare global {
     interface Application {
       agents: AgentManager;
       tools: ToolManager;
+      dbHealth: DbHealthMonitor;
 
       config: {
         _configData: Record<string, any>;

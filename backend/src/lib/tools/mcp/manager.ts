@@ -148,21 +148,25 @@ export class McpServerManager {
     if (this.healthCheckTimer) return; // already running
 
     this.healthCheckTimer = setInterval(async () => {
-      const failedConfigs = this.configs.filter(cfg => {
-        const status = this.states.get(cfg.id)?.status;
-        return status === 'error' || status === 'disconnected';
-      });
+      try {
+        const failedConfigs = this.configs.filter(cfg => {
+          const status = this.states.get(cfg.id)?.status;
+          return status === 'error' || status === 'disconnected';
+        });
 
-      if (failedConfigs.length === 0) return;
+        if (failedConfigs.length === 0) return;
 
-      this.logger.debug(`MCP health check: retrying ${failedConfigs.length} server(s)`);
+        this.logger.debug(`MCP health check: retrying ${failedConfigs.length} server(s)`);
 
-      for (const cfg of failedConfigs) {
-        const state = this.states.get(cfg.id);
-        if (state) state.status = 'connecting';
+        for (const cfg of failedConfigs) {
+          const state = this.states.get(cfg.id);
+          if (state) state.status = 'connecting';
 
-        const tools = await this.attemptReconnect(cfg);
-        if (tools.size > 0) onReconnected(tools);
+          const tools = await this.attemptReconnect(cfg);
+          if (tools.size > 0) onReconnected(tools);
+        }
+      } catch (err) {
+        this.logger.error(`MCP health check interval threw unexpectedly: ${err instanceof Error ? err.message : String(err)}`);
       }
     }, intervalMs);
   }
@@ -197,19 +201,26 @@ export class McpServerManager {
       return result;
     }
 
-    const dbServer = await ToolDao.upsertMcpServer(cfg.id);
-    for (const tool of serverTools) {
-      const namespacedId = `mcp::${cfg.id}::${tool.name}`;
-      await ToolDao.upsertTool({
-        id: namespacedId,
-        name: tool.name,
-        description: tool.description ?? '',
-        source: 'mcp',
-        mcp_server_id: dbServer.server_id,
-        input_schema: (tool.schema as any)?.shape ?? {},
-        output_schema: null,
-      });
-      result.set(namespacedId, tool);
+    try {
+      const dbServer = await ToolDao.upsertMcpServer(cfg.id);
+      for (const tool of serverTools) {
+        const namespacedId = `mcp::${cfg.id}::${tool.name}`;
+        await ToolDao.upsertTool({
+          id: namespacedId,
+          name: tool.name,
+          description: tool.description ?? '',
+          source: 'mcp',
+          mcp_server_id: dbServer.server_id,
+          input_schema: (tool.schema as any)?.shape ?? {},
+          output_schema: null,
+        });
+        result.set(namespacedId, tool);
+      }
+    } catch (err) {
+      this.logger.error(`MCP reconnect for "${cfg.id}" succeeded but DB registration failed — will retry on next interval. Error: ${err instanceof Error ? err.message : String(err)}`);
+      const state = this.states.get(cfg.id);
+      if (state) { state.status = 'error'; state.last_error = err instanceof Error ? err.message : String(err); }
+      return new Map();
     }
 
     this.toolsByServer.set(cfg.id, serverTools);

@@ -24,7 +24,9 @@ Always use `GH_PAGER=cat gh` in place of `gh` for all GitHub CLI commands. The d
 
 3. **Generate a PR Description**
   - Use Clear Professional Language
-  - Save the description to a temporary file (e.g. `/tmp/pr-description.md`)
+  - Save the description to a temporary file
+    - Create a directory for the repo if one is missing in the `/tmp` directory with a unique name (e.g. `/tmp/<repo_name>`)
+    - Save the PR description to a file with a branch-specific name (e.g. `/tmp/<repo_name>/pr_description_<branch_name>.md`)
   - Structure the description with the following sections:
     - Overview of the Changes
       - Explain the purpose of the PR and the problem it solves

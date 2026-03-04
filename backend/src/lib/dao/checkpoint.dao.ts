@@ -1,5 +1,5 @@
-import { checkpointer } from '../database.js';
 import { BaseMessage } from 'langchain';
+import { checkpointer } from '../database.js';
 
 /**
  * Finds the checkpoint ID of the most recent user turn in a thread.
@@ -11,7 +11,7 @@ import { BaseMessage } from 'langchain';
  * keeps the denial-scope contract `(thread_id, agent_id, tool_id, user_turn_checkpoint_id)`
  * semantically correct.
  */
-export async function getUserTurnCheckpointId(threadId: string): Promise<string> {
+async function getUserTurnCheckpointId(threadId: string): Promise<string> {
   const historyGen = checkpointer.list({ configurable: { thread_id: threadId } });
 
   for await (const item of historyGen) {
@@ -24,3 +24,7 @@ export async function getUserTurnCheckpointId(threadId: string): Promise<string>
   // No HumanMessage found — fall back to thread_id for scoping semantics
   return threadId;
 }
+
+export default {
+  getUserTurnCheckpointId,
+};

@@ -1,7 +1,7 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import MemoryDao from '../dao/memory.dao.js';
-import { MemoryTypeEnum } from '../models/memory.js';
+import MemoryDao from '../../dao/memory.dao.js';
+import { MemoryTypeEnum } from '../../models/memory.js';
 
 /**
  * Creates an array of LangChain tools for agent memory management.

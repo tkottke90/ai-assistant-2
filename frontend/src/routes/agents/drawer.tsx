@@ -20,7 +20,7 @@ import {
   type Memory,
 } from "@tkottke90/ai-assistant-client";
 import { Pencil, Plus, Trash2 } from "lucide-preact";
-import { useCallback } from "preact/hooks";
+import { useCallback, useEffect } from "preact/hooks";
 import { toast } from "sonner";
 import { AgentTitle } from "./title";
 
@@ -195,6 +195,8 @@ function ToolsTab() {
     }, [agentId])
   );
 
+  useEffect(() => { refresh(); }, []);
+
   const handleTierChange = async (tool: AgentTool, newTier: 1 | 2 | 3) => {
     if (!agentId) return;
     try {
@@ -233,7 +235,7 @@ function ToolsTab() {
     );
   }
 
-  if (!tools || tools.length === 0) {
+  if (!tools.value || tools.value.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
         This agent has no tool access configured.
@@ -253,7 +255,7 @@ function ToolsTab() {
           </tr>
         </thead>
         <tbody>
-          {tools.map((agentTool) => {
+          {tools.value!.map((agentTool) => {
             const locked = isSystemTool(agentTool.tool.locked_tier);
             return (
               <tr

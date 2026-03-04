@@ -4,7 +4,7 @@ import { Queue } from "../types/queue";
 import { createAgent } from "langchain";
 import { checkpointer } from '../../lib/database';
 import { AgentModel } from "../prisma/models";
-import { createMemoryTools } from "../tools/memory-tools";
+import { createMemoryTools } from "../tools/builtin/memory-tools";
 import { MEMORY_SYSTEM_PROMPT } from "./memory-prompt";
 import type { ToolManager } from "../tools/manager";
 import type { StructuredTool } from "@langchain/core/tools";

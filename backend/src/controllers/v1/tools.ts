@@ -60,8 +60,8 @@ router.post('/actions', ZodBodyValidator(CreateActionBodySchema), async (req, re
     (await import('../../lib/config/tools.schema.js')).ToolsConfigSchema
   );
 
-  const { getUserTurnCheckpointId } = await import('../../lib/tools/checkpoint.js');
-  const userTurnCpId = await getUserTurnCheckpointId(thread_id);
+  const { default: CheckpointDao } = await import('../../lib/dao/checkpoint.dao.js');
+  const userTurnCpId = await CheckpointDao.getUserTurnCheckpointId(thread_id);
 
   const actionRecord = await AgentActionDao.createAgentAction({
     id: uuidv4(),
@@ -182,8 +182,35 @@ router.get('/:id', ZodParamValidator(ToolIdParamSchema), ZodQueryValidator(ToolQ
 const AgentToolParamSchema = z.object({ agentId: z.coerce.number().int().positive() });
 
 router.get('/agent/:agentId', ZodParamValidator(AgentToolParamSchema), async (req, res) => {
-  const tools = await AgentToolDao.listAgentTools(Number(req.params.agentId));
-  res.json(tools);
+  const agentId = Number(req.params.agentId);
+  const [assignedTools, builtinTools] = await Promise.all([
+    AgentToolDao.listAgentTools(agentId),
+    ToolDao.listTools('built-in'),
+  ]);
+
+  // Built-in tools are always available to every agent but have no AgentTool row.
+  // Synthesise AgentTool-shaped records so the client sees a uniform list.
+  const assignedToolIds = new Set(assignedTools.map(at => at.tool_id));
+  const syntheticBuiltins = builtinTools
+    .filter(t => !assignedToolIds.has(t.tool_id))
+    .map(t => ({
+      id: t.tool_id,           // no real AgentTool PK — use tool_id as a stable stand-in
+      agent_id: agentId,
+      tool_id: t.tool_id,
+      tier: (t.locked_tier ?? 3) as 1 | 2 | 3,
+      created_at: t.created_at,
+      updated_at: t.updated_at,
+      tool: {
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        source: t.source,
+        locked_tier: t.locked_tier,
+        mcp_server: t.mcp_server ?? null,
+      },
+    }));
+
+  res.json([...syntheticBuiltins, ...assignedTools]);
 });
 
 const UpsertAgentToolBodySchema = z.object({

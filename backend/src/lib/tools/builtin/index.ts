@@ -1,6 +1,7 @@
 import ToolDao from '../../dao/tool.dao.js';
 import type { StructuredTool } from '@langchain/core/tools';
 import type { Logger } from 'winston';
+export { createMemoryTools } from './memory-tools.js';
 
 /** Namespaced IDs for the five built-in tools */
 export const BUILTIN_IDS = {

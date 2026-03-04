@@ -1,16 +1,16 @@
+import type { StructuredTool } from '@langchain/core/tools';
 import { tool } from '@langchain/core/tools';
-import { interrupt, getConfig } from '@langchain/langgraph';
-import { z } from 'zod';
+import { getConfig, interrupt } from '@langchain/langgraph';
 import { v4 as uuidv4 } from 'uuid';
-import AgentActionDao, { computeActionHash } from '../../dao/agent-action.dao.js';
+import { z } from 'zod';
+import AgentActionDao from '../../dao/agent-action.dao.js';
+import CheckpointDao from '../../dao/checkpoint.dao.js';
 import AgentToolDao from '../../dao/agent-tool.dao.js';
 import ToolDao from '../../dao/tool.dao.js';
-import { discoverTools } from '../search.js';
-import { getToolManifest, resolveEffectiveTier } from '../registry.js';
 import { executeTool } from '../executor.js';
-import { getUserTurnCheckpointId } from '../checkpoint.js';
-import type { ToolCall, ToolCallBatch, McpServerStatus } from '../models.js';
-import type { StructuredTool } from '@langchain/core/tools';
+import type { McpServerStatus, ToolCallBatch } from '../models.js';
+import { getToolManifest, resolveEffectiveTier } from '../registry.js';
+import { discoverTools } from '../search.js';
 
 export interface BuiltinToolContext {
   agentId: number;
@@ -86,7 +86,7 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
       }
 
       // Check per-turn denial block
-      const userTurnCpId = await getUserTurnCheckpointId(threadId);
+      const userTurnCpId = await CheckpointDao.getUserTurnCheckpointId(threadId);
       const existingDenial = await AgentActionDao.findDeniedInTurn(
         ctx.agentId,
         threadId,

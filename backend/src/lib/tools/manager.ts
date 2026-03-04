@@ -4,7 +4,7 @@ import { createBuiltinTools } from './builtin/tools.js';
 import { loadSimpleTools } from './simple/loader.js';
 import { McpServerManager } from './mcp/manager.js';
 import AgentToolDao from '../dao/agent-tool.dao.js';
-import { createMemoryTools } from './memory-tools.js';
+import { createMemoryTools } from './builtin/memory-tools.js';
 import type { StructuredTool } from '@langchain/core/tools';
 import type { McpServerStatus } from './models.js';
 import type { Logger } from 'winston';

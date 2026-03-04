@@ -67,6 +67,32 @@ export type ActionStatus =
   | 'InProgress'
   | 'Completed';
 
+// ─── Agent tool view types ──────────────────────────────────────────────────
+
+/**
+ * Represents a single tool from the registry with the agent's assignment status
+ * resolved. Returned by GET /api/v1/tools/agent/:agentId/view.
+ *
+ * Built-ins are always assigned=true with locked_tier=3.
+ * Unassigned non-builtins have assigned=false and tier defaults to 1.
+ */
+export interface AgentToolView {
+  /** Prisma integer PK */
+  tool_id: number;
+  /** Namespaced string identifier, e.g. "built-in::discover_tools" */
+  id: string;
+  name: string;
+  description: string;
+  source: string;
+  mcp_server: { config_id: string } | null;
+  /** Whether this tool is currently assigned to the agent */
+  assigned: boolean;
+  /** Effective tier for this agent — defaults to 1 for unassigned tools */
+  tier: PermissionTier;
+  /** Non-null when the tier is locked and cannot be overridden per-agent */
+  locked_tier: number | null;
+}
+
 // ─── MCP server runtime types ────────────────────────────────────────────────
 
 export type McpServerStatus =

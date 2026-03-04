@@ -34,6 +34,18 @@ export const AgentToolSchema = z.object({
   }),
 });
 
+export const AgentToolViewSchema = z.object({
+  tool_id: z.number(),
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  source: z.string(),
+  mcp_server: z.object({ config_id: z.string() }).nullable(),
+  assigned: z.boolean(),
+  tier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  locked_tier: z.number().nullable(),
+});
+
 export const AgentActionSchema = z.object({
   action_id: z.number(),
   id: z.string(),
@@ -56,10 +68,21 @@ export const McpStatusSchema = z.record(
 export type ToolSummary = z.infer<typeof ToolSummarySchema>;
 export type ToolManifest = z.infer<typeof ToolManifestSchema>;
 export type AgentTool = z.infer<typeof AgentToolSchema>;
+export type AgentToolView = z.infer<typeof AgentToolViewSchema>;
 export type AgentAction = z.infer<typeof AgentActionSchema>;
 export type McpStatus = z.infer<typeof McpStatusSchema>;
 
 // ─── API methods ──────────────────────────────────────────────────────────────
+
+/** View all tools with resolved assignment status for an agent (single query) */
+export const viewAgentTools = createClientMethod(
+  '/api/v1/tools/agent/:agentId/view',
+  { method: 'get', inputSchema: z.object({ agentId: z.number() }) },
+  async (response) => {
+    if (!response.ok) throw new Error('Failed to fetch agent tool view');
+    return z.array(AgentToolViewSchema).parse(await response.json());
+  }
+);
 
 /** List all AgentTool assignments for an agent */
 export const getAgentTools = createClientMethod(

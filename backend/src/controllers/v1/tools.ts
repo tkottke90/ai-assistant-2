@@ -181,6 +181,17 @@ router.get('/:id', ZodParamValidator(ToolIdParamSchema), ZodQueryValidator(ToolQ
 
 const AgentToolParamSchema = z.object({ agentId: z.coerce.number().int().positive() });
 
+/**
+ * GET /agent/:agentId/view
+ * Returns all tools with assignment status resolved for the agent in one query.
+ * Must be registered before /agent/:agentId to avoid Express matching "view" as the param.
+ */
+router.get('/agent/:agentId/view', ZodParamValidator(AgentToolParamSchema), async (req, res) => {
+  const agentId = Number(req.params.agentId);
+  const tools = await ToolDao.viewAgentTools(agentId);
+  res.json(tools);
+});
+
 router.get('/agent/:agentId', ZodParamValidator(AgentToolParamSchema), async (req, res) => {
   const agentId = Number(req.params.agentId);
   const [assignedTools, builtinTools] = await Promise.all([

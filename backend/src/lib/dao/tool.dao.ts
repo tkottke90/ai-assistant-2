@@ -95,6 +95,45 @@ async function searchToolsByKeyword(query: string, limit: number = 5): Promise<t
   return scored as any;
 }
 
+/**
+ * Returns every tool in the registry with the given agent's assignment status
+ * resolved via a single query. Built-in tools are always considered assigned
+ * at Tier 3 (locked). All other tools use the AgentTool record if one exists,
+ * otherwise default to assigned=false, tier=1.
+ */
+async function viewAgentTools(agentId: number) {
+  const tools = await prisma.tool.findMany({
+    include: {
+      mcp_server: true,
+      agent_tools: {
+        where: { agent_id: agentId },
+        take: 1,
+      },
+    },
+    orderBy: [
+      { source: 'asc' },
+      { name: 'asc' },
+    ],
+  });
+
+  return tools.map((tool) => {
+    const assignment = tool.agent_tools[0] ?? null;
+    const isBuiltin = tool.source === 'built-in';
+
+    return {
+      tool_id: tool.tool_id,
+      id: tool.id,
+      name: tool.name,
+      description: tool.description,
+      source: tool.source,
+      mcp_server: tool.mcp_server ? { config_id: tool.mcp_server.config_id } : null,
+      assigned: isBuiltin ? true : assignment !== null,
+      tier: (isBuiltin ? 3 : (assignment?.tier ?? 1)) as 1 | 2 | 3,
+      locked_tier: isBuiltin ? 3 : null,
+    };
+  });
+}
+
 function deleteToolsByMcpServer(mcpServerId: number) {
   return prisma.tool.deleteMany({ where: { mcp_server_id: mcpServerId } });
 }
@@ -106,6 +145,7 @@ const ToolDao = {
   getTool,
   getToolById,
   listTools,
+  viewAgentTools,
   searchToolsByKeyword,
   deleteToolsByMcpServer,
 };

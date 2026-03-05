@@ -2,7 +2,7 @@ import { Application } from "express";
 import { LlmConfig, LlmConfigSchema } from '../config/llm.schema.js';
 import { createOllamaClient } from "./ollama.js";
 import { createOpenAIClient } from "./openai.js";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models.js";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { LLMClientError, LLMManagerCantGetModels } from "../errors/llm_client.js";
 import { Logger } from "winston";
 import { Ollama } from 'ollama';

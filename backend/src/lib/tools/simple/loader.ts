@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import z from 'zod';
 import type { SimpleToolConfig } from '../../config/tools.schema.js';
 import ToolDao from '../../dao/tool.dao.js';
 import type { StructuredTool } from '@langchain/core/tools';
@@ -85,12 +86,22 @@ export async function loadSimpleTools(
     const namespacedId = `simple::${config.id}`;
 
     // Upsert the Tool record so it appears in the registry
+    let input_schema: Record<string, unknown> = {};
+    if (tool.schema) {
+      try {
+        // tool.schema is typed as Zod v3 by LangChain but is a Zod v4 schema at runtime
+        input_schema = z.toJSONSchema(tool.schema as any) as Record<string, unknown>;
+      } catch (err: any) {
+        logger.warn(`Simple tool "${config.id}" — could not convert schema to JSON Schema: ${err?.message}`);
+      }
+    }
+
     await ToolDao.upsertTool({
       id: namespacedId,
       name: tool.name,
       description: tool.description ?? config.description,
       source: 'simple',
-      input_schema: (tool.schema as any)?.shape ?? {},
+      input_schema,
       output_schema: null,
     });
 

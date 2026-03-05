@@ -257,7 +257,7 @@ function ToolsTab() {
     }, [agentId])
   );
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(); }, [agentId, refresh]);
 
   const { builtins, assigned, available } = useMemo(
     () => partitionAgentToolViews(tools.value ?? []),

@@ -3,6 +3,7 @@ import { Application } from "express";
 import { ConfigSchema } from './config/config.schema.js';
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import yaml from "yaml";
 import _ from 'lodash';
 import pkg from '../../package.json' assert { type: 'json' };
@@ -109,7 +110,7 @@ function validateConfig(configPath: string, configData: Record<string, any>) {
 }
 
 export default function initializeConfig(app: Application) {
-  const configDir = path.resolve(process.env.CONFIG_DIR || '~/config/ai-assistant');
+  const configDir = path.resolve(process.env.CONFIG_DIR || path.join(os.homedir(), 'config/ai-assistant'));
   const configFilePath = path.join(configDir, 'config.yaml');
   
   // Make sure we have a config file to read from
@@ -132,6 +133,7 @@ export default function initializeConfig(app: Application) {
   // Set up a simple config getter on the app instance
   app.config = {
     _configData: configData,
+    configPath: configFilePath,
     get: function(key: string, defaultValue: string = ''): string {
       // First check environment variables, then config file, then default value
       const envValue = process.env[key];
@@ -144,6 +146,18 @@ export default function initializeConfig(app: Application) {
 
     getBoolean: function(key: string, defaultValue: boolean = false): boolean {
       return this.get(key, String(defaultValue)) === 'true';
+    },
+
+    getConfigDir: function(subPath: string = ''): string {
+      const baseDir = path.dirname(this.configPath);
+
+      // Ensure the directory exists
+      const fullDir = path.resolve(baseDir, subPath);
+      if (!fs.existsSync(fullDir)) {
+        fs.mkdirSync(fullDir, { recursive: true });
+      }
+
+      return path.resolve(baseDir, subPath);
     },
 
     getNumber: function(key: string, defaultValue: number = 0): number {

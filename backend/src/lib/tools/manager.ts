@@ -10,6 +10,7 @@ import type { McpServerStatus } from './models.js';
 import type { Logger } from 'winston';
 import type { ToolsConfig } from '../config/tools.schema.js';
 import path from 'node:path';
+import { ToolsConfigSchema } from '../config/tools.schema.js';
 
 /**
  * Central service for tool loading, registry access, and per-agent tool resolution.
@@ -147,17 +148,16 @@ export class ToolManager {
 }
 
 /**
- * Initialises the ToolManager service and attaches it to `app.tools`.
+ * Initializes the ToolManager service and attaches it to `app.tools`.
  */
 export default async function setupTools(app: Application): Promise<void> {
-  const toolsConfig = app.config.loadConfig('tools', (await import('../config/tools.schema.js')).ToolsConfigSchema);
-  const configDir = path.resolve(process.env.CONFIG_DIR || '~/config/ai-assistant');
+  const toolsConfig = app.config.loadConfig('tools', ToolsConfigSchema);
 
   const logger = app.logger.child({ location: 'ToolManager' });
   const mcpManager = new McpServerManager(logger.child({ location: 'McpServerManager' }));
   const manager = new ToolManager(logger, mcpManager);
 
-  await manager.init(toolsConfig, configDir);
+  await manager.init(toolsConfig, app.config.getConfigDir());
 
   app.tools = manager;
 }

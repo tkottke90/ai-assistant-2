@@ -1,4 +1,3 @@
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { type AgentManager } from '../agents/agent-manager';
 import { type ToolManager } from '../tools/manager';
 import { type DbHealthMonitor } from '../health';
@@ -17,6 +16,11 @@ declare global {
 
       config: {
         _configData: Record<string, any>;
+
+        /**
+         * The path to the loaded config file, if any. This is not guaranteed to be set (e.g. if config loading failed), so should be checked before use.
+         */
+        configPath: string;
 
         /**
          * Gets a config value by key, first checking environment variables, then the config file, and finally falling back to a default value if provided.
@@ -41,6 +45,8 @@ declare global {
          * @returns The config value parsed as a number, or the default value if the key is not found or cannot be parsed
          */
         getNumber(key: string, defaultValue?: number): number;
+
+        getConfigDir(path?: string): string;
 
         /**
          * Checks for the existence of a config key in either environment variables or the config file

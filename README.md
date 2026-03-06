@@ -16,7 +16,7 @@ A self-hosted AI assistant you run on your own computer or server. Chat with AI 
 
 ## What you need before starting
 
-- **[Node.js](https://nodejs.org)** version 18 or higher — the runtime that powers the application
+- **[Node.js](https://nodejs.org)** version 22 or higher — the runtime that powers the application
 - **An AI model to talk to** — either:
   - [Ollama](https://ollama.com) installed and running locally (free, private), or
   - An API key for an OpenAI-compatible service

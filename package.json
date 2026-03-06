@@ -16,6 +16,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=22"
+  },
   "bugs": {
     "url": "https://github.com/tkottke90/ai-assistant-2/issues"
   },

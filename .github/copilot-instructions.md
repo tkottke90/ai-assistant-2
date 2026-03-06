@@ -175,7 +175,7 @@ Use Zod middleware helpers from `middleware/zod.middleware.ts`:
 
 ## Environment & Build
 
-- **Node**: 18+ (tsx for dev, tsc for prod build)
+- **Node**: 22+ (tsx for dev, tsc for prod build)
 - **TypeScript**: ~5.9 across backend and frontend
 - **Database**: SQLite via Prisma + `@prisma/adapter-better-sqlite3`; set `DATABASE_URL=file:<path>` before running
 - **Config dir**: Set `CONFIG_DIR=<path>` before running the backend; defaults to `~/config/ai-assistant`

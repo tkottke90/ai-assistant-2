@@ -10,6 +10,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@langchain/core": "^1.1.27",
     "@langchain/langgraph-checkpoint-sqlite": "^1.0.1",

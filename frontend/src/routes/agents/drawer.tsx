@@ -178,8 +178,8 @@ function isSystemTool(lockedTier: number | null): boolean {
 function tierLabel(tier: number): string {
   switch (tier) {
     case 1: return 'Tier 1 — Requires Approval';
-    case 2: return 'Tier 2 — Automatic';
-    case 3: return 'Tier 3 — Always Available';
+    case 2: return 'Tier 2 — Read Access';
+    case 3: return 'Tier 3 — Full Access';
     default: return `Tier ${tier}`;
   }
 }

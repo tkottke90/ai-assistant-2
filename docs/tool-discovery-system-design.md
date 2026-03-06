@@ -86,9 +86,9 @@ Each tool assigned to an agent carries a tier that controls both visibility and 
 
 | Tier | Name | Appears in `discover_tools` | Execute Without Permission |
 |------|------|----------------------------|----------------------------|
-| **1** | No Permission (Default) | Only if search query matches | Never — always requires a grant |
-| **2** | Read-Only Permission | Always — injected regardless of query | Yes — for this read/non-mutating tool |
-| **3** | Full Permission | Always — injected regardless of query | Yes — unconditionally |
+| **1** | Requires Approval | Only if search query matches | Never — always requires a grant |
+| **2** | Read Access | Always — injected regardless of query | Yes — for this read/non-mutating tool |
+| **3** | Full Access | Always — injected regardless of query | Yes — unconditionally |
 
 **Key design decisions:**
 - Each tool has a single purpose (e.g. `file_system_read`, `file_system_write` are separate tools). The read/write boundary is at the tool level, not the operation level. Tier assignment *is* the read/write boundary.
@@ -110,6 +110,8 @@ file_system_write assigned to Agent A:
 Upgrading or downgrading a tier is a deliberate user action via the agent's Tools settings. Changes take effect immediately for all future executions. Any in-flight executions at the time of a downgrade are unaffected — they complete normally.
 
 **Default tier**: When a user adds a tool to an agent it always starts at Tier 1. Promotion to Tier 2 or 3 is always an explicit user decision.
+
+**Unassigned tools also default to Tier 1.** An agent can call `request_permission` for any tool in the registry, not just tools that have been explicitly assigned via the UI. When no `AgentTool` row exists for the agent/tool pair, the effective tier resolves to 1 — the most restrictive value. This is intentional: it allows agents to surface capability gaps ("I need tool X to complete this task") that the user can then address by assigning the tool and optionally promoting its tier. Every such request still requires explicit user approval.
 
 ---
 
@@ -267,7 +269,7 @@ The per-agent assignment of a tool and its tier. Replaces the earlier `AgentPerm
 }
 ```
 
-**Effective tier**: Always resolved as `tool.locked_tier ?? agentTool.tier`. The UI hides the tier selector and shows a "System Tool" badge when `locked_tier` is set.
+**Effective tier**: Resolved as `tool.locked_tier ?? agentTool?.tier ?? 1`. The UI hides the tier selector and shows a "system" badge when `locked_tier` is set. When no `AgentTool` row exists for the agent, the tier defaults to `1` — see *Default tier* above.
 
 ### ToolCallBatch
 The payload passed to `request_permission` and stored in `AgentAction.action`. In v1 always a single-item array. Typed as a plain object matching the target tool's Zod input schema — identical to what LangChain passes to the tool handler.

@@ -4,7 +4,19 @@ import type { ToolSummary, ToolManifest, PermissionTier } from './models.js';
 
 /**
  * Resolves the effective tier for a tool/agent pair.
- * Built-in tools carry a locked_tier that the user cannot override.
+ *
+ * Resolution order:
+ *   1. `tool.locked_tier` — set on built-in tools; the user cannot override this.
+ *   2. `agentTool.tier`   — the tier the user assigned to this tool for this agent.
+ *   3. `1` (Tier 1)       — the implicit default when no AgentTool row exists yet.
+ *
+ * Defaulting to Tier 1 for unassigned tools is **intentional**. It means agents can call
+ * `request_permission` for any tool in the registry — not just tools explicitly assigned in
+ * the UI. This lets the agent surface capability gaps ("I need tool X") that the user can
+ * then acknowledge by assigning and promoting the tool's tier. All such requests still require
+ * explicit user approval because Tier 1 always gates execution.
+ *
+ * Callers are expected to pass `agentTool?.tier ?? 1` when the AgentTool row may be absent.
  */
 export function resolveEffectiveTier(
   lockedTier: number | null,

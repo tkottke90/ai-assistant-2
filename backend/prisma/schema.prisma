@@ -65,14 +65,95 @@ model Agent {
   version       Int      @default(1)
   system_prompt String
   auto_start    Boolean  @default(false)
-  engine        String?
-  model         String?
   created_at    DateTime @default(now())
   updated_at    DateTime @default(now()) @updatedAt
+  engine        String?
+  model         String?
+
+  agent_tools AgentTool[]
+  actions     AgentAction[]
 
   @@unique([name, version])
   @@index([created_at])
   @@index([updated_at])
+}
+
+// Minimal record — stable PK for Tool.mcp_server_id FK only.
+// Server definition lives in config.yaml; runtime state lives in McpServerManager memory.
+model McpServer {
+  server_id Int    @id @default(autoincrement())
+  config_id String @unique
+
+  tools Tool[]
+}
+
+model Tool {
+  tool_id       Int        @id @default(autoincrement())
+  // Namespaced: "built-in::memory_read", "simple::web_search", "mcp::server::tool"
+  id            String     @unique
+  name          String
+  description   String
+  // "built-in" | "simple" | "mcp"
+  source        String
+  mcp_server_id Int?
+  // Set for built-in tools — user cannot override via AgentTool.tier
+  locked_tier   Int?
+  input_schema  Json
+  output_schema Json?
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
+
+  mcp_server  McpServer?  @relation(fields: [mcp_server_id], references: [server_id])
+  agent_tools AgentTool[]
+
+  @@index([source])
+  @@index([mcp_server_id])
+}
+
+model AgentTool {
+  id         Int      @id @default(autoincrement())
+  agent_id   Int
+  tool_id    Int
+  // Effective tier = tool.locked_tier ?? this field
+  tier       Int      @default(1)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  agent Agent @relation(fields: [agent_id], references: [agent_id], onDelete: Cascade)
+  tool  Tool  @relation(fields: [tool_id], references: [tool_id], onDelete: Cascade)
+
+  @@unique([agent_id, tool_id])
+  @@index([agent_id])
+  @@index([tool_id])
+}
+
+model AgentAction {
+  action_id               Int      @id @default(autoincrement())
+  id                      String   @default(uuid())
+  agent_id                Int
+  thread_id               String
+  user_turn_checkpoint_id String
+  description             String
+  action                  Json
+  action_hash             String
+  // Pending | Approved | Denied | InProgress | Completed
+  status                  String   @default("Pending")
+  justification           String?
+  auto_approved           Boolean  @default(false)
+  expires_at              DateTime
+  created_at              DateTime @default(now())
+  updated_at              DateTime @default(now()) @updatedAt
+
+  agent Agent @relation(fields: [agent_id], references: [agent_id], onDelete: Cascade)
+
+  @@index([user_turn_checkpoint_id])
+  @@index([id])
+  @@index([thread_id])
+  @@index([thread_id, agent_id])
+  @@index([status])
+  @@index([expires_at])
+
+  @@unique([id])
 }
 
 model checkpoints {

@@ -1,4 +1,9 @@
+## App
 
+- Deployment
+  - [ ] Support single-file executable
+  - [ ] Support Dockerfile deployment
+- [ ] Add Prompt Table and make it editable/viewable in the UI
 
 ## API
 
@@ -7,6 +12,11 @@
 ## UI
 
 - [x] Show toast message while starting/stopping agent
+- [ ] When an agent is selected in the a thread.  We should keep that agent active even if the user navigates away from the thread and back.  Currently, it resets to "No agent" when you leave the thread.  This causes issues because the user has to remember to re-select the agent every time they leave the thread and come back.
+- [ ] We have to refresh the page to see which agent sent a message
+- [ ] We have to refresh the page to detach an actions action from their response
+  - Likely due to the stream handling everything that comes back as a message and not paying attention to the content
+- [ ] We cannot delete/archive threads
 
 
 ---

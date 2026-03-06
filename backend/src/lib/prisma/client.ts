@@ -60,6 +60,26 @@ export type Asset = Prisma.AssetModel
  */
 export type Agent = Prisma.AgentModel
 /**
+ * Model McpServer
+ * 
+ */
+export type McpServer = Prisma.McpServerModel
+/**
+ * Model Tool
+ * 
+ */
+export type Tool = Prisma.ToolModel
+/**
+ * Model AgentTool
+ * 
+ */
+export type AgentTool = Prisma.AgentToolModel
+/**
+ * Model AgentAction
+ * 
+ */
+export type AgentAction = Prisma.AgentActionModel
+/**
  * Model checkpoints
  * 
  */

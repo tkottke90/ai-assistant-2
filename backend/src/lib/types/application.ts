@@ -1,5 +1,6 @@
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { type AgentManager } from '../agents/agent-manager';
+import { type ToolManager } from '../tools/manager';
+import { type DbHealthMonitor } from '../health';
 import express from 'express';
 import type { Logger } from 'winston';
 import z from 'zod';
@@ -10,9 +11,23 @@ declare global {
   namespace Express {
     interface Application {
       agents: AgentManager;
+      tools: ToolManager;
+      dbHealth: DbHealthMonitor;
+
+      /**
+       * Initiates a graceful shutdown: stops background services, closes the HTTP
+       * server to drain in-flight requests, then exits the process.
+       * @param code Process exit code. Defaults to 1 (error). Pass 0 for a clean stop.
+       */
+      shutdown: (code?: number) => void;
 
       config: {
         _configData: Record<string, any>;
+
+        /**
+         * The path to the loaded config file, if any. This is not guaranteed to be set (e.g. if config loading failed), so should be checked before use.
+         */
+        configPath: string;
 
         /**
          * Gets a config value by key, first checking environment variables, then the config file, and finally falling back to a default value if provided.
@@ -37,6 +52,8 @@ declare global {
          * @returns The config value parsed as a number, or the default value if the key is not found or cannot be parsed
          */
         getNumber(key: string, defaultValue?: number): number;
+
+        getConfigDir(path?: string): string;
 
         /**
          * Checks for the existence of a config key in either environment variables or the config file

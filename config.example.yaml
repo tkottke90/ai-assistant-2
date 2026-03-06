@@ -1,486 +1,170 @@
-# AI Assistant Configuration Example
-# Copy this file to ./config/config.yaml for local development
-# or to ~/.config/ai-assistant/config.yaml for system-wide configuration
+# AI Assistant 2 — Configuration Example
+# ─────────────────────────────────────────────────────────────────────────────
+# Copy this file to one of the following locations:
+#
+#   Development (npm run dev):  ./config/config.yaml
+#   Custom location:            set CONFIG_DIR=<path> before running the server
+#
+# All settings have sensible defaults. The server will auto-create a
+# config.yaml from defaults on first run if the file does not exist.
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Server Configuration
-# Changes to this section require application restart
+# ── Server ────────────────────────────────────────────────────────────────────
+# HTTP server binding. Requires restart to take effect.
 server:
-  host: 0.0.0.0
-  port: 8000
-  reload: true  # Auto-reload on code changes (development only)
-  workers: 1    # Number of worker processes
+  # Port the Express server listens on.
+  port: 3000
 
-# CORS Configuration
-# Changes to this section do NOT require restart
-cors:
-  allow_origins:
-    - http://localhost:5173  # Vite dev server
-    - http://localhost:3000  # Alternative frontend port
-  allow_credentials: true
-  allow_methods:
-    - "*"
-  allow_headers:
-    - "*"
+  # Network interface to bind to.
+  #   localhost  — only reachable from this machine (recommended for dev)
+  #   0.0.0.0   — reachable from other devices on your network
+  host: localhost
 
-# LLM Provider Configuration (for chat/generation)
-# Changes to this section require application restart
-llm:
-  # Default provider for new automations
-  default_provider: ollama
-  
-  # Available LLM providers (can configure multiple instances)
-  providers:
-    # Ollama (local inference) - Primary provider
-    ollama:
-      type: ollama
-      base_url: http://localhost:11434
-      default_model: mistral:7b
-      api_key: null  # Optional: if your Ollama instance requires auth
-      
-      # Context window settings (conservative for local models)
-      max_context_activities: 10
-      max_context_tokens: 3000
-      max_tool_definition_tokens: 500
-      context_overflow_strategy: summarize  # Options: summarize, truncate
-      temperature: 0.7
-    
-    # Anthropic Claude (API) - Uncomment to enable
-    # anthropic:
-    #   type: anthropic
-    #   api_key_env: ANTHROPIC_API_KEY  # Environment variable name
-    #   base_url: null  # Optional: custom API endpoint
-    #   default_model: claude-3-5-sonnet-20241022
-    #   
-    #   # Context window settings (large for API models)
-    #   max_context_activities: 50
-    #   max_context_tokens: 150000
-    #   max_tool_definition_tokens: 2000
-    #   context_overflow_strategy: truncate
-    #   temperature: 0.7
-    
-    # OpenAI (API) - Uncomment to enable
-    # openai:
-    #   type: openai
-    #   api_key_env: OPENAI_API_KEY  # Environment variable name
-    #   base_url: null  # Optional: custom API endpoint (e.g., Azure OpenAI)
-    #   default_model: gpt-4
-    #   
-    #   # Context window settings (large for API models)
-    #   max_context_activities: 50
-    #   max_context_tokens: 120000
-    #   max_tool_definition_tokens: 2000
-    #   context_overflow_strategy: truncate
-    #   temperature: 0.7
+  # CORS settings. Add any origin that should be allowed to call the API.
+  # The Vite dev server runs on 5173 by default.
+  cors:
+    allow_origins:
+      - http://localhost:5173   # Vite dev server
+      - http://localhost:3000   # Alternative / production frontend
+    allow_headers:
+      - Content-Type
+      - Authorization
 
-# Database Configuration
-# Changes to this section do NOT require restart
-database:
-  # SQLite database for activities, automations, schedules, and evaluations
-  sqlite:
-    file_path: "./data/ai_assistant.db"  # Path to SQLite database file
-    create_on_missing: true  # Automatically create database and directory if missing
-  
-  # Embedding model configuration (for knowledge base semantic search)
-  embeddings:
-    provider: ollama  # Options: ollama, openai, anthropic
-    model: nomic-embed-text  # Provider-specific model name
-    
-    # Provider configurations (only active provider's config is used)
-    providers:
-      ollama:
-        base_url: http://localhost:11434
-        timeout_seconds: 30
-      
-      # openai:
-      #   api_key_env: OPENAI_API_KEY  # Environment variable name
-      #   # Alternative models: text-embedding-3-large, text-embedding-ada-002
-      
-      # anthropic:
-      #   api_key_env: ANTHROPIC_API_KEY
-      #   # Anthropic doesn't offer embeddings yet (placeholder)
-
-# Alternative SQLite configurations (comment out above and uncomment one below):
-# In-memory database (data lost on restart):
-# database:
-#   sqlite:
-#     file_path: ":memory:"
-#     create_on_missing: true
-#
-# Custom path:
-# database:
-#   sqlite:
-#     file_path: ~/.local/share/ai-assistant/app.db
-#     create_on_missing: true
-
-# Tools Configuration
-# Changes to this section do NOT require restart
-# Define available tools for AI agent to use during automation execution
-tools:
-  tools:
-    # Shell tool (enabled by default for basic automation)
-    - id: shell
-      type: shell
-      enabled: true
-      config:
-        timeout_seconds: 30  # Maximum command execution time (1-3600)
-        require_approval: true  # Require user approval before executing commands
-        use_shell: false  # Use subprocess with shell=False for safety
-        whitelisted_commands: []  # Commands that bypass approval (empty for safety)
-        show_full_command: true  # Display canonical command path in approval UI
-
-# Additional tool examples (uncomment and configure as needed):
-#
-# Gmail tool for email operations:
-#   tools:
-#     - id: gmail-personal
-#       type: gmail
-#       enabled: true
-#       config:
-#         imap_host: imap.gmail.com
-#         imap_port: 993
-#         credentials_env_prefix: GMAIL_  # Reads GMAIL_USER and GMAIL_PASSWORD from environment
-#         max_fetch_limit: 50  # Maximum emails to fetch per request (1-1000)
-#         operation_mode: recommend  # Options: recommend (AI suggests actions), execute (AI performs actions with approval)
-#         recommendation_types:  # Optional: types of recommendations to generate
-#           - summary
-#           - labels
-#           - duplicates
-#           - spam
-#         confidence_threshold: 60  # Minimum confidence (0-100) to include in recommendations
-#         batch_similar: true  # Group similar recommendations for efficient review
-#
-# Git tool for repository operations:
-#     - id: git
-#       type: git
-#       enabled: true
-#       config:
-#         default_repos:
-#           - ~/projects/main
-#           - ~/projects/tools
-#
-# Custom user tool example (flexible schema, no validation):
-#     - id: finance-api
-#       type: finance_tool  # Matches directory name in ~/.ai_assistant/tools/
-#       enabled: true
-#       config:
-#         api_key_env: FINANCE_API_KEY
-#         base_url: https://api.financequotes.com
-#         rate_limit: 100
-#         timeout_seconds: 30
-
-# Example: Multiple provider configuration
-# You can configure multiple instances of the same provider type with different settings:
-#
-# llm:
-#   default_provider: ollama-fast
-#   providers:
-#     ollama-fast:
-#       type: ollama
-#       base_url: http://localhost:11434
-#       default_model: mistral:7b
-#       temperature: 0.5
-#       max_context_tokens: 2000
-#     
-#     ollama-creative:
-#       type: ollama
-#       base_url: http://localhost:11434
-#       default_model: mixtral:8x7b
-#       temperature: 0.9
-#       max_context_tokens: 8000
-#     
-#     claude:
-#       type: anthropic
-#       api_key_env: ANTHROPIC_API_KEY
-#       default_model: claude-3-5-sonnet-20241022
-#       max_context_tokens: 150000
-
-# Credential Validation Configuration
-# Changes to this section do NOT require restart
-# Controls how the system validates external service credentials (API keys, tokens, etc.)
-credentials:
-  # Validation Strategy
-  # Options:
-  #   lazy - Validate credentials when first used by a tool (default, fastest startup)
-  #   startup - Validate all credentials at application startup (catch issues early)
-  #   disabled - Skip validation entirely (trust configuration, fastest but risky)
-  strategy: lazy
-  
-  # Log warnings when required credentials are missing from environment variables
-  warn_on_missing: true
-  
-  # Retry Settings (exponential backoff for transient network failures)
-  retry_attempts: 3  # Number of retry attempts (0-10, 0 disables retries)
-  retry_backoff_base_seconds: 0.1  # Initial delay (seconds), doubles each retry: 0.1s, 0.2s, 0.4s...
-  retry_backoff_max_seconds: 5.0  # Maximum delay between retries (caps exponential growth)
-  retry_total_timeout_seconds: 10.0  # Total time limit for all retry attempts
-  
-  # Credential Cache (reduces validation overhead for frequently-used credentials)
-  cache_duration_seconds: 300  # Cache duration in seconds (0 = no caching, 300 = 5 minutes)
-  
-  # Circuit Breaker (prevents cascading failures when external services are down)
-  circuit_breaker_enabled: true  # Enable circuit breaker pattern
-  circuit_breaker_failure_threshold: 3  # Consecutive failures before opening circuit
-  circuit_breaker_recovery_seconds: 3600  # Time before attempting recovery (1 hour)
-  circuit_breaker_half_open_max_attempts: 1  # Test attempts when recovering
-  
-  # Future: macOS Keychain Integration (not yet implemented)
-  keychain_enabled: false
-  keychain_service_name: ai-assistant-2
-
-# Alternative credential configurations (uncomment and modify as needed):
-#
-# Aggressive validation (catch credential issues immediately at startup):
-# credentials:
-#   strategy: startup  # Validate all credentials when app starts
-#   warn_on_missing: true
-#   retry_attempts: 1  # Fail fast on startup
-#   retry_backoff_base_seconds: 0.5
-#   retry_total_timeout_seconds: 5.0
-#   circuit_breaker_enabled: false  # Not useful at startup
-#
-# High-reliability configuration (for unstable networks):
-# credentials:
-#   strategy: lazy
-#   retry_attempts: 5  # More retries for flaky connections
-#   retry_backoff_base_seconds: 0.5
-#   retry_backoff_max_seconds: 10.0
-#   retry_total_timeout_seconds: 30.0
-#   cache_duration_seconds: 600  # Longer cache (10 minutes)
-#   circuit_breaker_failure_threshold: 5  # More tolerant of failures
-#   circuit_breaker_recovery_seconds: 1800  # Faster recovery (30 minutes)
-#
-# Minimal validation (for local development without external services):
-# credentials:
-#   strategy: disabled  # Skip all validation
-#   warn_on_missing: false
-
-# Logging Configuration
-# Changes to this section require application restart
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Controls what the server writes to the console and to log files in
+# CONFIG_DIR/logs/. Requires restart to take effect.
 logging:
-  # Basic settings
-  level: INFO  # Options: DEBUG, HTTP, INFO, WARNING, ERROR, CRITICAL
-  format: text  # Options: json (for log aggregation), text (human-readable, better for development)
+  # Minimum severity to emit. One of:
+  #   error | warn | info | http | verbose | debug | silly
+  # "info" is a good default for production; use "debug" in development.
+  level: info
 
-  # File logging
-  enable_file_logging: true
-  log_file: ./data/logs/app.log  # Log file path (directory created automatically)
-  max_bytes: 10485760  # 10 MB - maximum log file size before rotation
-  backup_count: 5  # Number of backup log files to keep
+  # Write log lines to stdout/stderr.
+  toConsole: true
 
-  # Console logging
-  enable_console_logging: true
-  console_level: INFO  # Optional: separate level for console (defaults to global level)
+  # Write log lines to CONFIG_DIR/logs/ (one file per day, rotated automatically).
+  toFile: true
 
-  # OpenTelemetry Configuration (optional - for production observability)
-  # Vendor-neutral standard supporting Grafana, Jaeger, Datadog, New Relic, etc.
-  enable_otel: false
-  
-  # OTLP Endpoint (required when enable_otel is true)
-  # Examples:
-  #   Grafana Alloy gRPC: http://alloy:4317
-  #   Grafana Alloy HTTP: http://alloy:4318
-  #   Jaeger: http://jaeger:4317
-  otel_endpoint: null
-  
-  # Protocol selection
-  otel_protocol: grpc  # Options: grpc (default), http
-  
-  # Service Identification (appears as labels in observability platforms)
-  otel_service_name: ai-assistant
-  otel_service_version: null  # e.g., 1.0.0
-  otel_service_namespace: null  # e.g., production, staging
-  otel_deployment_environment: development  # e.g., development, staging, production
-  
-  # Connection Settings
-  otel_insecure: true  # Set to false with TLS in production
-  
-  # Optional: Authentication headers for cloud platforms
-  # otel_headers:
-  #   Authorization: "Bearer YOUR_TOKEN_HERE"
-  
-  # Export Configuration
-  otel_export_logs: true
-  otel_export_traces: true
-  otel_export_metrics: false  # Future use
-  
-  # Performance Tuning
-  otel_batch_size: 512  # Logs/traces per batch (1-2048)
-  otel_schedule_delay_ms: 5000  # Delay between batches (100-30000ms)
-  otel_export_timeout_ms: 30000  # Export timeout (1000-60000ms)
-  otel_max_queue_size: 2048  # Max pending items (512-8192)
-  
-  # Custom Resource Attributes (appear as labels in Grafana/observability platforms)
-  # otel_resource_attributes:
-  #   region: us-east-1
-  #   cluster: prod-cluster-01
-  #   team: platform
+  # URL paths to suppress from the HTTP access log.
+  # Useful for noisy health-check or metrics endpoints.
+  excludePaths:
+    - /api/health
 
-  # Module-specific log levels (optional)
-  module_levels:
-    # ai_assistant.llm: DEBUG  # Enable debug logs for LLM module
-    # ai_assistant.config: INFO
+# ── LLM Providers ─────────────────────────────────────────────────────────────
+# One or more AI model providers. The first entry in the list is used as the
+# default when no specific alias is requested.
+# Requires restart to take effect.
+llm:
+  apis:
+    # ── Ollama (local inference) ──────────────────────────────────────────────
+    # Ollama runs models entirely on your machine — nothing leaves your network.
+    # Install Ollama from https://ollama.com and pull a model first:
+    #   ollama pull qwen3:8b
+    - alias: local-ollama     # Arbitrary name used to select this provider
+      provider: ollama
+      defaultModel: qwen3:8b  # Any model you have pulled locally
+      location: http://localhost:11434
+      # apiKey is not required for a local Ollama instance.
+      # Uncomment if your Ollama setup uses an auth token.
+      # apiKey: ""
 
-  # HTTP Middleware settings
-  enable_http_logging: true
-  log_request_body: false  # WARNING: May log sensitive data (passwords, API keys)
-  log_response_body: false  # WARNING: Performance impact, large responses
-  exclude_paths:
-    - /health  # Don't log health check requests
+      # Optional cost tracking (informational only — not enforced).
+      # Rates are per 1 000 tokens (scale: 1000) or per 1 000 000 (scale: 1000000).
+      cost:
+        inputToken: 0
+        outputToken: 0
+        scale: 1000
 
-# Notification Configuration
-# Changes to this section do NOT require restart
-notifications:
-  # In-App Notifications (persistent UI notifications)
-  in_app:
-    enabled: true  # Enable persistent in-app notifications
-    max_unread: 50  # Maximum unread notifications before auto-archiving oldest
-    auto_dismiss_after_days: 7  # Days before INFO notifications auto-dismiss (WARNING/CRITICAL never auto-dismiss)
-  
-  # Device Push Notifications (Web Push API) - OPTIONAL
-  # Uncomment and configure to enable device push notifications:
-  # device_push:
-  #   enabled: true  # Enable web push notifications to browser/device
-  #   vapid_public_key: ""  # VAPID public key for Web Push (generate with web-push library)
-  #   vapid_private_key_env: "VAPID_PRIVATE_KEY"  # Environment variable containing VAPID private key
-  #   # To generate VAPID keys: npx web-push generate-vapid-keys
-  
-  # External Webhook Notifications (HTTP-based, supports any service) - OPTIONAL
-  # Uncomment and configure to enable webhook notifications:
-  # external_webhook:
-  #   enabled: true  # Enable webhook notifications
-  #   base_url: ""  # Webhook endpoint URL
-  #   method: "POST"  # HTTP method: POST, GET, PUT, DELETE
-  #   headers: {}  # Additional HTTP headers (e.g., for authentication)
-  #   payload_type: "json"  # Payload format: json, form, text
-  #   payload_template: {}  # Define payload structure (see examples below)
+    # ── OpenAI-compatible API ─────────────────────────────────────────────────
+    # Any OpenAI-compatible endpoint works here: OpenAI, Azure OpenAI, Groq,
+    # a remote Ollama instance, LM Studio, llama.cpp server, etc.
+    # Uncomment and fill in to enable.
+    #
+    # - alias: openai
+    #   provider: openai
+    #   defaultModel: gpt-4o
+    #   location: https://api.openai.com/v1
+    #   apiKey: sk-...   # Your OpenAI API key
+    #   cost:
+    #     inputToken: 2.50    # USD per 1 000 000 input tokens for gpt-4o
+    #     outputToken: 10.00
+    #     scale: 1000000
 
-# Example webhook configurations:
+    # ── Custom / self-hosted OpenAI-compatible server ─────────────────────────
+    # Example: a GPU workstation on your LAN running vLLM or a remote Ollama.
+    #
+    # - alias: home-gpu
+    #   provider: custom       # Use "custom" for any non-standard base URL
+    #   defaultModel: qwen3:14b
+    #   location: http://192.168.1.50:11434/v1
+    #   apiKey: ""
+    #   cost:
+    #     inputToken: 0
+    #     outputToken: 0
+    #     scale: 1000
 
-# Slack webhook:
-# external_webhook:
-#   enabled: true
-#   url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-#   method: "POST"
-#   headers: {}
-#   payload_type: "json"
-#   payload_template:
-#     text:
-#       default: "{{title}}: {{message}}"
-#       description: "Main notification text"
-#       required: true
+# ── Tools ─────────────────────────────────────────────────────────────────────
+# Extend what agents can do by giving them access to external tools.
+# All sub-sections are optional — omit any section you don't need.
+tools:
 
-# Discord webhook:
-# external_webhook:
-#   enabled: true
-#   url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
-#   method: "POST"
-#   headers: {}
-#   payload_type: "json"
-#   payload_template:
-#     content:
-#       default: "**{{title}}**\n{{message}}"
-#       description: "Message content"
-#       required: true
-#     username:
-#       default: "AI Assistant"
-#       description: "Bot username"
+  # ── Simple tools (user-defined JS modules) ──────────────────────────────────
+  # A "simple tool" is a JavaScript file that exports a create(config) factory
+  # returning a LangChain StructuredTool. The file is resolved relative to
+  # CONFIG_DIR.
+  #
+  # Example:
+  # simple:
+  #   - id: weather           # Unique identifier (used internally and in the UI)
+  #     name: Get Weather     # Human-readable name shown in the agent tool list
+  #     description: >        # Concise description — the agent uses this to decide when to call the tool
+  #       Returns current weather for a given city.
+  #     path: tools/weather.js  # Path relative to CONFIG_DIR
+  #     runtime: node           # Only "node" is supported
+  #     config:                 # Passed verbatim to the create(config) factory
+  #       apiKey: ""
+  #       units: metric
+  simple: []
 
-# Pushover:
-# external_webhook:
-#   enabled: true
-#   url: "https://api.pushover.net/1/messages.json"
-#   method: "POST"
-#   headers: {}
-#   payload_type: "json"
-#   payload_template:
-#     token:
-#       default: "{{env.PUSHOVER_APP_TOKEN}}"
-#       description: "Pushover app token"
-#       required: true
-#     user:
-#       default: "{{env.PUSHOVER_USER_KEY}}"
-#       description: "Pushover user key"
-#       required: true
-#     title:
-#       default: "{{title}}"
-#       description: "Notification title"
-#     message:
-#       default: "{{message}}"
-#       description: "Notification message"
-#       required: true
-#     priority:
-#       default: "0"
-#       description: "Priority level"
-#       options: ["-2", "-1", "0", "1", "2"]
+  # ── MCP servers (Model Context Protocol) ────────────────────────────────────
+  # Connect any MCP-compatible tool server. The agent can then call any tool
+  # that server exposes.
+  #
+  # Two transports are supported:
+  #   stdio — starts a local process and communicates over stdin/stdout
+  #   http  — connects to an already-running HTTP MCP server
+  #
+  # stdio example (Docker MCP gateway):
+  # mcp_servers:
+  #   - id: docker-mcp           # Unique identifier referenced in AgentTool assignments
+  #     name: Docker MCP Toolkit
+  #     transport: stdio
+  #     command: docker          # Executable to run
+  #     args:
+  #       - mcp
+  #       - gateway
+  #       - run
+  #     env: {}                  # Optional environment variables passed to the process
+  #
+  # http example:
+  # mcp_servers:
+  #   - id: my-mcp-server
+  #     name: My MCP Server
+  #     transport: http
+  #     url: http://localhost:8080
+  mcp_servers: []
 
-# Custom API with authentication:
-# external_webhook:
-#   enabled: true
-#   url: "https://api.example.com/notifications"
-#   method: "POST"
-#   headers:
-#     Authorization: "Bearer YOUR_API_TOKEN"
-#     X-Custom-Header: "custom-value"
-#   payload_type: "json"
-#   payload_template:
-#     event_type:
-#       default: "ai_assistant_notification"
-#       description: "Event type identifier"
-#     title:
-#       default: "{{title}}"
-#       description: "Notification title"
-#     body:
-#       default: "{{message}}"
-#       description: "Notification body"
-#     severity:
-#       default: "{{severity}}"
-#       description: "Severity level"
-#       options: ["INFO", "WARNING", "CRITICAL"]
-#     timestamp:
-#       default: "{{timestamp}}"
-#       description: "Event timestamp"
+  # ── Permission request settings ──────────────────────────────────────────────
+  # How long (seconds) a pending tool-approval request stays valid before it is
+  # automatically denied and the agent receives an error. Default: 900 (15 min).
+  permission_request_ttl_seconds: 900
 
-# Schedules Configuration
-# Changes to this section do NOT require restart
-schedules:
-  # Automatically load and activate schedules on system startup
-  auto_load_on_startup: true
-  
-  # Default timezone for scheduling tasks (IANA timezone format)
-  # Examples: America/New_York, Europe/London, Asia/Tokyo, UTC
-  default_timezone: UTC
-  
-  # How to handle tasks that overlap with the next scheduled execution
-  # Options:
-  #   skip - Do not start a new task if the previous one is still running
-  #   queue - Queue the new task to run after the previous one completes
-  #   cancel - Cancel the previous task and start the new one immediately
-  overlap_policy: skip
-  
-  # Alert Settings
-  # Number of consecutive missed executions before sending an alert
-  default_alert_threshold: 3  # Min: 1
-  
-  # Default severity level for schedule alerts
-  # Options: INFO, WARNING, CRITICAL
-  default_alert_severity: WARNING
-  
-  # Default notification channels for schedule alerts
-  # Must match enabled channels in notifications section
-  default_alert_channels:
-    - in_app
-    # - device_push  # Uncomment if device_push is enabled
-    # - external_webhook  # Uncomment if external_webhook is enabled
+  # ── Tool discovery settings ───────────────────────────────────────────────────
+  # When an agent searches for tools to use, these limits control the results.
 
-# Example: Custom schedule alert configuration
-# schedules:
-#   auto_load_on_startup: true
-#   default_timezone: America/Los_Angeles
-#   overlap_policy: queue  # Queue tasks instead of skipping
-#   default_alert_threshold: 1  # Alert on first miss (more aggressive)
-#   default_alert_severity: CRITICAL  # Treat missed schedules as critical
-#   default_alert_channels:
-#     - in_app
-#     - device_push
-#     - external_webhook
+  # Maximum number of tools returned by a single discovery search.
+  discovery_max_results: 5
 
+  # If a keyword search returns fewer results than this, the system falls back
+  # to a broader semantic search to fill the gap.
+  discovery_keyword_min_results: 2

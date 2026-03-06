@@ -14,6 +14,13 @@ declare global {
       tools: ToolManager;
       dbHealth: DbHealthMonitor;
 
+      /**
+       * Initiates a graceful shutdown: stops background services, closes the HTTP
+       * server to drain in-flight requests, then exits the process.
+       * @param code Process exit code. Defaults to 1 (error). Pass 0 for a clean stop.
+       */
+      shutdown: (code?: number) => void;
+
       config: {
         _configData: Record<string, any>;
 

@@ -36,16 +36,20 @@ dbHealth.start().catch(err => app.logger?.error('DbHealthMonitor failed to start
 // Async service init: tools must be ready before agents (agents depend on tools)
 setupTools(app)
   .then(() => setupAgentManager(app))
-  .catch(err => app.logger?.error('Service init failed:', err));
+  .catch(err => {
+    app.logger?.error('Service init failed:', err);
+    app.shutdown();
+  });
 
 // Startup function
-export default function(callback: (app: express.Application) => void) {
+export default function(callback?: (app: express.Application) => void) {
   const host = app.config.get('server.host', 'localhost');
   const port = app.config.getNumber('server.port', 6060);
 
   const server = app.listen(port, host, () => {
     app.logger.info(`Server is running at http://${host}:${port}`);
-    callback(app);
+    
+    if (callback) callback(app);
   });
 
   return server;

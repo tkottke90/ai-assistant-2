@@ -1,23 +1,16 @@
 import startApp, { app } from './app.js';
+import setupShutdown from './lib/shutdown.js';
 
 const server = startApp(() => {});
 
-function shutdown(signal: string) {
-  app.logger.info(`Received ${signal} — shutting down gracefully.`);
+setupShutdown(app, server);
 
-  app.dbHealth.stop();
+process.on('SIGTERM', () => {
+  app.logger.info('Received SIGTERM — shutting down gracefully.');
+  app.shutdown(0);
+});
 
-  server.close(() => {
-    app.logger.info('HTTP server closed.');
-    process.exit(0);
-  });
-
-  // Force-exit if the server hasn't closed within 10 seconds
-  setTimeout(() => {
-    app.logger.warn('Graceful shutdown timed out — forcing exit.');
-    process.exit(1);
-  }, 10_000).unref();
-}
-
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGINT', () => {
+  app.logger.info('Received SIGINT — shutting down gracefully.');
+  app.shutdown(0);
+});

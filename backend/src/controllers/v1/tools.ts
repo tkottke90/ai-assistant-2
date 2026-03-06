@@ -164,7 +164,9 @@ const ToolQuerySchema = z.object({ agent_id: z.coerce.number().int().positive().
 
 router.get('/:id', ZodParamValidator(ToolIdParamSchema), ZodQueryValidator(ToolQuerySchema), async (req, res) => {
   const { agent_id } = res.locals.query ?? {};
-  const toolId = decodeURIComponent(req.params.id as string);
+
+  // Casing here is safe because of the Zod validation, but TS doesn't narrow it properly without an explicit assertion.
+  const toolId = req.params.id as string;
 
   if (agent_id) {
     const manifest = await getToolManifest(toolId, agent_id);

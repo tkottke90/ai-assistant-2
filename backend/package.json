@@ -5,7 +5,8 @@
   "version": "1.0.0-alpha",
   "scripts": {
     "build": "tsc",
-    "dev": "DATABASE_URL='file:../config/data/dev.db' CONFIG_DIR='../config' tsx watch src/index.ts"
+    "dev": "DATABASE_URL='file:../config/data/dev.db' CONFIG_DIR='../config' tsx watch src/index.ts",
+    "new:db": "rm -rf config/data && npx prisma migrate deploy"
   },
   "keywords": [],
   "author": "",

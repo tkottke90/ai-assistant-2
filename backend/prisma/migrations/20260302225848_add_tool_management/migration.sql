@@ -52,6 +52,9 @@ CREATE TABLE "AgentAction" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "AgentAction_id_key" ON "AgentAction"("id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "McpServer_config_id_key" ON "McpServer"("config_id");
 
 -- CreateIndex

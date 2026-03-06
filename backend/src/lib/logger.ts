@@ -38,7 +38,7 @@ export default function initializeLogger(app: Application) {
 
   if (app.config.getBoolean('log.toFile', true)) {
     transports.push(new winston.transports.File({
-      filename: app.config.getConfigDir('logs') + '/app.log',
+      filename: path.join(app.config.getConfigDir('logs'), 'app.log'),
       format: JSON_LINES_FORMAT,
       level: logLevel,
       maxsize: 10 * 1024 * 1024, // 10 MB

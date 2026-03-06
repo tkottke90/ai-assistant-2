@@ -152,6 +152,8 @@ model AgentAction {
   @@index([thread_id, agent_id])
   @@index([status])
   @@index([expires_at])
+
+  @@unique([id])
 }
 
 model checkpoints {

@@ -1,16 +1,15 @@
-import { Application } from 'express';
-import { seedBuiltinTools } from './builtin/index.js';
-import { createBuiltinTools } from './builtin/tools.js';
-import { loadSimpleTools } from './simple/loader.js';
-import { McpServerManager } from './mcp/manager.js';
-import AgentToolDao from '../dao/agent-tool.dao.js';
-import { createMemoryTools } from './builtin/memory-tools.js';
 import type { StructuredTool } from '@langchain/core/tools';
-import type { McpServerStatus } from './models.js';
+import { Application } from 'express';
 import type { Logger } from 'winston';
 import type { ToolsConfig } from '../config/tools.schema.js';
-import path from 'node:path';
 import { ToolsConfigSchema } from '../config/tools.schema.js';
+import AgentToolDao from '../dao/agent-tool.dao.js';
+import { seedBuiltinTools } from './builtin/index.js';
+import { createMemoryTools } from './builtin/memory-tools.js';
+import { createBuiltinTools } from './builtin/tools.js';
+import { McpServerManager } from './mcp/manager.js';
+import type { McpServerStatus } from './models.js';
+import { loadSimpleTools } from './simple/loader.js';
 
 /**
  * Central service for tool loading, registry access, and per-agent tool resolution.

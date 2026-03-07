@@ -184,8 +184,13 @@ router.patch('/threads/:threadId', ZodBodyValidator(PatchThreadSchema), async (r
   res.json(updated);
 });
 
-router.delete('/threads/:threadId', async (req, res) => {
+router.delete('/threads/:threadId', async (req, res): Promise<void> => {
   const threadId = req.params.threadId as string;
+  const existing = await ThreadMetadataDao.findByThreadId(threadId);
+  if (!existing) {
+    res.status(404).json({ error: 'Thread not found' });
+    return;
+  }
   await ThreadMetadataDao.deleteThread(threadId);
   res.status(204).send();
 });

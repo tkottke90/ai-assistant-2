@@ -226,7 +226,7 @@ function ThreadHeader({ threadId, threadTitle, isArchived, onNavigateHome, onRef
         <ConfirmButton
           variant="ghost"
           size="icon"
-          className="side-9 p-1 text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
+          className="p-1 text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
           onConfirm={() => deleteThreadById(threadId.value, () => { onRefreshThreads(); onNavigateHome(); })}
           title="Delete thread"
         >

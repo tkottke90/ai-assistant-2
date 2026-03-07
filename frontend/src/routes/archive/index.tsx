@@ -1,6 +1,5 @@
 import { useEffect } from "preact/hooks";
-import { useSignal } from "@preact/signals";
-import { useLocation } from "preact-iso";
+import { Signal, useSignal } from "@preact/signals";
 import { listArchivedThreads, updateThread, deleteThread } from "@tkottke90/ai-assistant-client";
 import type { ThreadMetadata } from "@tkottke90/ai-assistant-client";
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
@@ -18,46 +17,52 @@ export function archiveAgentLabel(thread: ThreadMetadata & { agent?: { name: str
   return (thread as any).agent?.name ?? "—";
 }
 
+// --- Data / action helpers (extracted for independent testability) ---
+
+export async function loadArchivedThreads(
+  threads: Signal<ThreadMetadata[]>,
+  loading: Signal<boolean>,
+): Promise<void> {
+  loading.value = true;
+  try {
+    const data = await listArchivedThreads();
+    threads.value = data;
+  } catch (err) {
+    console.error("Failed to load archived threads:", err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+export async function unarchiveThread(threadId: string, reload: () => void): Promise<void> {
+  try {
+    await updateThread(threadId, { archived: false });
+    reload();
+  } catch (err) {
+    console.error("Failed to unarchive thread:", err);
+  }
+}
+
+export async function deleteArchivedThread(threadId: string, reload: () => void): Promise<void> {
+  try {
+    await deleteThread(threadId);
+    reload();
+  } catch (err) {
+    console.error("Failed to delete thread:", err);
+  }
+}
+
 // --- Component ---
 
 export function ArchivePage() {
   const threads = useSignal<ThreadMetadata[]>([]);
   const loading = useSignal(true);
-  const { route: navigate } = useLocation();
 
-  const load = async () => {
-    loading.value = true;
-    try {
-      const data = await listArchivedThreads();
-      threads.value = data;
-    } catch (err) {
-      console.error("Failed to load archived threads:", err);
-    } finally {
-      loading.value = false;
-    }
-  };
+  const load = () => loadArchivedThreads(threads, loading);
 
   useEffect(() => {
     load();
   }, []);
-
-  const handleUnarchive = async (threadId: string) => {
-    try {
-      await updateThread(threadId, { archived: false });
-      load();
-    } catch (err) {
-      console.error("Failed to unarchive thread:", err);
-    }
-  };
-
-  const handleDelete = async (threadId: string) => {
-    try {
-      await deleteThread(threadId);
-      load();
-    } catch (err) {
-      console.error("Failed to delete thread:", err);
-    }
-  };
 
   return (
     <BaseLayout className="flex flex-col gap-4 dark:bg-elevated">
@@ -113,7 +118,7 @@ export function ArchivePage() {
                     <td className="py-2">
                       <div className="flex items-center gap-2 justify-end">
                         <button
-                          onClick={() => handleUnarchive(thread.thread_id)}
+                          onClick={() => unarchiveThread(thread.thread_id, load)}
                           className="text-xs px-2 py-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                         >
                           Unarchive
@@ -122,7 +127,7 @@ export function ArchivePage() {
                           variant="ghost"
                           size="icon-xs"
                           className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
-                          onConfirm={() => handleDelete(thread.thread_id)}
+                          onConfirm={() => deleteArchivedThread(thread.thread_id, load)}
                         >
                           <Trash2 className="size-full" />
                         </ConfirmButton>

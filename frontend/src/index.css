@@ -172,11 +172,11 @@ html, body, #app {
     @apply my-4 ml-6;
   }
 
-   .orderList ol {
+  .prose ol {
     @apply list-decimal;
   }
 
-  .unorderList ul {
+  .prose ul {
     @apply list-disc;
   }
 

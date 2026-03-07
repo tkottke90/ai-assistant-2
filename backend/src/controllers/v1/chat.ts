@@ -116,9 +116,11 @@ router.get('/threads', async (req, res): Promise<void> => {
       return;
     }
 
-    // Fetch metadata and raw checkpoint thread IDs in parallel
+    // Fetch all metadata rows and raw checkpoint thread IDs in parallel.
+    // Using listAll() (not listActive()) so that archived threads are included
+    // in the map, preventing a per-thread findByThreadId query for each one.
     const [allMetadata, checkpointRows] = await Promise.all([
-      ThreadMetadataDao.listActive(),
+      ThreadMetadataDao.listAll(),
       prisma.checkpoints.findMany({
         select: { thread_id: true },
         distinct: ['thread_id'],
@@ -127,25 +129,19 @@ router.get('/threads', async (req, res): Promise<void> => {
 
     const metadataMap = new Map(allMetadata.map(m => [m.thread_id, m]));
 
-    // Backfill metadata for checkpoint threads that have no metadata row yet.
-    // Skip threads that already have a row (including archived ones).
+    // Backfill metadata only for checkpoint threads that have no row at all.
     const backfillPromises: Promise<any>[] = [];
     for (const { thread_id } of checkpointRows) {
       if (!metadataMap.has(thread_id)) {
         backfillPromises.push(
-          ThreadMetadataDao.findByThreadId(thread_id).then(existing => {
-            if (!existing) {
-              return ThreadMetadataDao.upsert(thread_id, {}).then(row => metadataMap.set(thread_id, row));
-            }
-            // Row exists but is archived — don't add to the active map
-            return;
-          }),
+          ThreadMetadataDao.upsert(thread_id, {}).then(row => metadataMap.set(thread_id, row)),
         );
       }
     }
     await Promise.all(backfillPromises);
 
-    const all = [...metadataMap.values()];
+    // Only surface active (non-archived) threads in the response.
+    const all = [...metadataMap.values()].filter(t => !t.archived);
 
     const agentManager = req.app.agents;
     const agentThreads = all

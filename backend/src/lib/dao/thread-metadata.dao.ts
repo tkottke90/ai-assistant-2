@@ -19,6 +19,13 @@ function upsert(
   });
 }
 
+function listAll() {
+  return prisma.threadMetadata.findMany({
+    include: { agent: true },
+    orderBy: { updated_at: 'desc' },
+  });
+}
+
 function listActive() {
   return prisma.threadMetadata.findMany({
     where: { archived: false },
@@ -53,6 +60,7 @@ async function deleteThread(threadId: string) {
 export default {
   findByThreadId,
   upsert,
+  listAll,
   listActive,
   listArchived,
   findAgentThread,

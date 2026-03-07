@@ -2,7 +2,7 @@ import BaseLayout, { BaseLayoutShowBtn, useAppContext } from "@/components/layou
 import { Button, ConfirmButton } from "@/components/ui/button";
 import { useAgentSelection } from "@/hooks/use-agent-selection";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
-import { Signal, useSignal } from "@preact/signals";
+import { Signal, useSignal, useSignalEffect } from "@preact/signals";
 import {
   deleteThread, getThread, listPendingActions, resolveAgentAction, summarizeThread, updateThread, type AgentAction,
   type ChatMessage,
@@ -137,50 +137,61 @@ function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
 
 // --- Thread Header ---
 
+export async function summarizeAndUpdateTitle(
+  threadId: string,
+  onSuccess: (title: string) => void,
+): Promise<void> {
+  try {
+    const { title } = await summarizeThread(threadId);
+    onSuccess(title);
+  } catch (err) {
+    console.error("Failed to summarize thread:", err);
+  }
+}
+
+export async function archiveThreadById(
+  threadId: string,
+  onSuccess: () => void,
+): Promise<void> {
+  try {
+    await updateThread(threadId, { archived: true });
+    onSuccess();
+  } catch (err) {
+    console.error("Failed to archive thread:", err);
+  }
+}
+
+export async function deleteThreadById(
+  threadId: string,
+  onSuccess: () => void,
+): Promise<void> {
+  try {
+    await deleteThread(threadId);
+    onSuccess();
+  } catch (err) {
+    console.error("Failed to delete thread:", err);
+  }
+}
+
 interface ThreadHeaderProps {
   threadId: Signal<string>;
   threadTitle: Signal<string | null>;
+  isArchived: Signal<boolean>;
   onNavigateHome: () => void;
   onRefreshThreads: () => void;
 }
 
-function ThreadHeader({ threadId, threadTitle, onNavigateHome, onRefreshThreads }: ThreadHeaderProps) {
+function ThreadHeader({ threadId, threadTitle, isArchived, onNavigateHome, onRefreshThreads }: ThreadHeaderProps) {
   const summarizing = useSignal(false);
 
   const handleSummarize = async () => {
     if (!threadId.value) return;
     summarizing.value = true;
-    try {
-      const { title } = await summarizeThread(threadId.value);
+    await summarizeAndUpdateTitle(threadId.value, (title) => {
       threadTitle.value = title;
       onRefreshThreads();
-    } catch (err) {
-      console.error("Failed to summarize thread:", err);
-    } finally {
-      summarizing.value = false;
-    }
-  };
-
-  const handleArchive = async () => {
-    if (!threadId.value) return;
-    try {
-      await updateThread(threadId.value, { archived: true });
-      onRefreshThreads();
-      onNavigateHome();
-    } catch (err) {
-      console.error("Failed to archive thread:", err);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!threadId.value) return;
-    try {
-      await deleteThread(threadId.value);
-      onRefreshThreads();
-      onNavigateHome();
-    } catch (err) {
-      console.error("Failed to delete thread:", err);
-    }
+    });
+    summarizing.value = false;
   };
 
   if (!threadId.value) return null;
@@ -191,26 +202,32 @@ function ThreadHeader({ threadId, threadTitle, onNavigateHome, onRefreshThreads 
         {threadTitle.value ?? "Untitled Thread"}
       </span>
       <div className="flex items-center gap-1 text-neutral-400">
-        <button
+        <Button
           onClick={handleSummarize}
           disabled={summarizing.value}
           title="Summarize thread"
           className="p-1 rounded hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+          variant="ghost"
+          size="icon"
         >
           <Sparkles size={14} />
-        </button>
-        <button
-          onClick={handleArchive}
-          title="Archive thread"
-          className="p-1 rounded hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-        >
-          <Archive size={14} />
-        </button>
+        </Button>
+        {!isArchived.value && (
+          <Button
+            onClick={() => archiveThreadById(threadId.value, () => { onRefreshThreads(); onNavigateHome(); })}
+            title="Archive thread"
+            className="p-1 rounded hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+            variant="ghost"
+            size="icon"
+          >
+            <Archive size={14} />
+          </Button>
+        )}
         <ConfirmButton
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
-          onConfirm={handleDelete}
+          className="side-9 p-1 text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
+          onConfirm={() => deleteThreadById(threadId.value, () => { onRefreshThreads(); onNavigateHome(); })}
           title="Delete thread"
         >
           <Trash2 size={14} />
@@ -228,6 +245,7 @@ function ChatPageContent() {
   const { threadRefresh } = useAppContext();
   const threadId = useSignal('');
   const threadTitle = useSignal<string | null>(null);
+  const threadArchived = useSignal(false);
   const chatMessages = useSignal<ChatMessage[]>([]);
   const isStreaming = useSignal(false);
   const pendingPanelKey = useSignal(0);
@@ -241,13 +259,14 @@ function ChatPageContent() {
     agentSelection.selectedAgentId.value,
   );
 
-  useEffect(() => {
-    if (!scrollContainer.current) return;
+  useSignalEffect(() => {
+    const messages = chatMessages.value;
+    if (!scrollContainer.current || messages.length === 0) return;
     scrollContainer.current.scrollTo({
       behavior: 'smooth',
       top: scrollContainer.current.scrollHeight,
     });
-  }, [chatMessages.value]);
+  });
 
   useEffect(() => {
     const routeThreadId = route.params?.threadId;
@@ -258,16 +277,18 @@ function ChatPageContent() {
         chatMessages.value = response.history;
       });
 
-      // Load thread metadata to get title and auto-select agent
+      // Load thread metadata to get title, archived status, and auto-select agent
       getThread(routeThreadId)
         .then(meta => {
           threadTitle.value = meta.title ?? null;
+          threadArchived.value = meta.archived;
           if (meta.agent_id != null) {
             agentSelection.selectAgent(meta.agent_id);
           }
         })
         .catch(() => {
           threadTitle.value = null;
+          threadArchived.value = false;
         });
     } else {
       chatHistory.loadOrCreateThread().then(id => {
@@ -283,11 +304,11 @@ function ChatPageContent() {
   }, [route.params?.threadId, chatRefreshKey.value]);
 
   // Re-mount the pending actions panel whenever streaming ends so it picks up new requests.
-  useEffect(() => {
+  useSignalEffect(() => {
     if (!isStreaming.value) {
       pendingPanelKey.value += 1;
     }
-  }, [isStreaming.value]);
+  });
 
   const selectedAgentId = agentSelection.selectedAgentId.value;
   const activeThreadId = threadId.value;
@@ -311,6 +332,7 @@ function ChatPageContent() {
       <ThreadHeader
         threadId={threadId}
         threadTitle={threadTitle}
+        isArchived={threadArchived}
         onNavigateHome={() => navigate('/')}
         onRefreshThreads={() => { threadRefresh.value += 1; }}
       />

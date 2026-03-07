@@ -13,10 +13,6 @@ export function archiveRowLabel(thread: ThreadMetadata): string {
   return thread.title ?? "Untitled";
 }
 
-export function archiveAgentLabel(thread: ThreadMetadata & { agent?: { name: string } | null }): string {
-  return (thread as any).agent?.name ?? "—";
-}
-
 // --- Data / action helpers (extracted for independent testability) ---
 
 export async function loadArchivedThreads(
@@ -90,7 +86,6 @@ export function ArchivePage() {
               <thead>
                 <tr className="border-b border-neutral-300 dark:border-neutral-600 text-left">
                   <th className="py-2 pr-3 font-medium">Title</th>
-                  <th className="py-2 pr-3 font-medium w-32">Agent</th>
                   <th className="py-2 pr-3 font-medium w-28">Last Activity</th>
                   <th className="py-2 font-medium w-36"></th>
                 </tr>
@@ -108,9 +103,6 @@ export function ArchivePage() {
                       >
                         {archiveRowLabel(thread)}
                       </a>
-                    </td>
-                    <td className="py-2 pr-3 text-neutral-500 dark:text-neutral-400">
-                      {archiveAgentLabel(thread)}
                     </td>
                     <td className="py-2 pr-3 text-neutral-500 dark:text-neutral-400 text-xs whitespace-nowrap">
                       {formatRelativeDate(thread.updated_at)}

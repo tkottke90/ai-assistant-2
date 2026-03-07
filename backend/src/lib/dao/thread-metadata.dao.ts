@@ -44,7 +44,7 @@ function listArchived() {
 
 function findAgentThread(agentId: number) {
   return prisma.threadMetadata.findFirst({
-    where: { agent_id: agentId, type: 'agent' },
+    where: { agent_id: agentId, type: 'agent', archived: false },
     include: { agent: true },
   });
 }

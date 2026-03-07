@@ -2,6 +2,9 @@
 
 A self-hosted AI assistant you run on your own computer or server. Chat with AI models you choose, create persistent agents that remember context over time, and connect external tools to extend what those agents can do — all without sending your data to a third-party service.
 
+> [!CAUTION]
+> This product currently does not have any access control mechanisms while in development. You will need to handle your own access control outside of the application if you wish to access this publicly.  I use a site-to-site VPN personally so I do not have to expose the application publicly.
+
 ## What it does
 
 **Chat** — Have threaded conversations with any AI model you have access to. Responses stream in as they're generated, and your conversation history is saved locally.

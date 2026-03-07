@@ -33,12 +33,12 @@ async function newChatThread() {
   const exp = new Date();
   exp.setDate(exp.getDate() + 7);
 
-  state.currentChat = result.threadId;
-  state.chats.set(result.threadId, { title: '', exp: exp.toISOString() });
+  state.currentChat = result.thread_id;
+  state.chats.set(result.thread_id, { title: '', exp: exp.toISOString() });
 
   updateState(state);
 
-  return result.threadId;
+  return result.thread_id;
 }
 
 /**

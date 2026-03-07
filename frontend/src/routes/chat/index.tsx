@@ -1,21 +1,20 @@
 import BaseLayout, { BaseLayoutShowBtn, useAppContext } from "@/components/layouts/base.layout";
-import { useRef, useEffect } from "preact/hooks";
-import { ChatForm } from "./chat-form";
+import { Button, ConfirmButton } from "@/components/ui/button";
+import { useAgentSelection } from "@/hooks/use-agent-selection";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { Signal, useSignal, useSignalEffect } from "@preact/signals";
 import {
-  listPendingActions,
-  resolveAgentAction,
-  type AgentAction,
+  deleteThread, getThread, listPendingActions, resolveAgentAction, summarizeThread, updateThread, type AgentAction,
   type ChatMessage,
 } from '@tkottke90/ai-assistant-client';
-import { Signal, useSignal } from "@preact/signals";
-import { ChatMessageDisplay } from "./messages";
-import chatHistory from "./chat-history";
-import { useLlmSelection } from "@/hooks/use-llm-selection";
-import { useAgentSelection } from "@/hooks/use-agent-selection";
-import { selectedAgentName } from "./agent-chips";
-import { useRoute, useLocation } from "preact-iso";
+import { Archive, Sparkles, Trash2 } from "lucide-preact";
+import { useLocation, useRoute } from "preact-iso";
+import { useEffect, useRef } from "preact/hooks";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { selectedAgentName } from "./agent-chips";
+import { ChatForm } from "./chat-form";
+import chatHistory from "./chat-history";
+import { ChatMessageDisplay } from "./messages";
 
 // ── Pure utility functions ───────────────────────────────────────────────────
 
@@ -136,11 +135,117 @@ function ChatList({ messages }: {messages: Signal<ChatMessage[]>}) {
   );
 }
 
-export function ChatPage() {
+// --- Thread Header ---
+
+export async function summarizeAndUpdateTitle(
+  threadId: string,
+  onSuccess: (title: string) => void,
+): Promise<void> {
+  try {
+    const { title } = await summarizeThread(threadId);
+    onSuccess(title);
+  } catch (err) {
+    console.error("Failed to summarize thread:", err);
+  }
+}
+
+export async function archiveThreadById(
+  threadId: string,
+  onSuccess: () => void,
+): Promise<void> {
+  try {
+    await updateThread(threadId, { archived: true });
+    onSuccess();
+  } catch (err) {
+    console.error("Failed to archive thread:", err);
+  }
+}
+
+export async function deleteThreadById(
+  threadId: string,
+  onSuccess: () => void,
+): Promise<void> {
+  try {
+    await deleteThread(threadId);
+    onSuccess();
+  } catch (err) {
+    console.error("Failed to delete thread:", err);
+  }
+}
+
+interface ThreadHeaderProps {
+  threadId: Signal<string>;
+  threadTitle: Signal<string | null>;
+  isArchived: Signal<boolean>;
+  onNavigateHome: () => void;
+  onRefreshThreads: () => void;
+}
+
+function ThreadHeader({ threadId, threadTitle, isArchived, onNavigateHome, onRefreshThreads }: ThreadHeaderProps) {
+  const summarizing = useSignal(false);
+
+  const handleSummarize = async () => {
+    if (!threadId.value) return;
+    summarizing.value = true;
+    await summarizeAndUpdateTitle(threadId.value, (title) => {
+      threadTitle.value = title;
+      onRefreshThreads();
+    });
+    summarizing.value = false;
+  };
+
+  if (!threadId.value) return null;
+
+  return (
+    <div className="flex items-center justify-between px-4 py-1.5 border-b border-neutral-200 dark:border-neutral-700 text-sm">
+      <span className="font-medium truncate text-neutral-700 dark:text-neutral-300">
+        {threadTitle.value ?? "Untitled Thread"}
+      </span>
+      <div className="flex items-center gap-1 text-neutral-400">
+        <Button
+          onClick={handleSummarize}
+          disabled={summarizing.value}
+          title="Summarize thread"
+          className="p-1 rounded hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+          variant="ghost"
+          size="icon"
+        >
+          <Sparkles size={14} />
+        </Button>
+        {!isArchived.value && (
+          <Button
+            onClick={() => archiveThreadById(threadId.value, () => { onRefreshThreads(); onNavigateHome(); })}
+            title="Archive thread"
+            className="p-1 rounded hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+            variant="ghost"
+            size="icon"
+          >
+            <Archive size={14} />
+          </Button>
+        )}
+        <ConfirmButton
+          variant="ghost"
+          size="icon"
+          className="p-1 text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
+          onConfirm={() => deleteThreadById(threadId.value, () => { onRefreshThreads(); onNavigateHome(); })}
+          title="Delete thread"
+        >
+          <Trash2 size={14} />
+        </ConfirmButton>
+      </div>
+    </div>
+  );
+}
+
+// --- Chat Page ---
+
+function ChatPageContent() {
   const route = useRoute();
   const { route: navigate } = useLocation();
   const { threadRefresh } = useAppContext();
   const threadId = useSignal('');
+  const threadTitle = useSignal<string | null>(null);
+  const threadArchived = useSignal(false);
   const chatMessages = useSignal<ChatMessage[]>([]);
   const isStreaming = useSignal(false);
   const pendingPanelKey = useSignal(0);
@@ -154,42 +259,58 @@ export function ChatPage() {
     agentSelection.selectedAgentId.value,
   );
 
-  useEffect(() => {
-    if (!scrollContainer.current) return;
+  useSignalEffect(() => {
+    const messages = chatMessages.value;
+    if (!scrollContainer.current || messages.length === 0) return;
     scrollContainer.current.scrollTo({
       behavior: 'smooth',
       top: scrollContainer.current.scrollHeight,
     });
-  }, [chatMessages.value]);
+  });
 
   useEffect(() => {
     const routeThreadId = route.params?.threadId;
-    if (!routeThreadId) {
+
+    if (routeThreadId) {
+      threadId.value = routeThreadId;
+      chatHistory.getChatHistory(routeThreadId).then(response => {
+        chatMessages.value = response.history;
+      });
+
+      // Load thread metadata to get title, archived status, and auto-select agent
+      getThread(routeThreadId)
+        .then(meta => {
+          threadTitle.value = meta.title ?? null;
+          threadArchived.value = meta.archived;
+          if (meta.agent_id != null) {
+            agentSelection.selectAgent(meta.agent_id);
+          }
+        })
+        .catch(() => {
+          threadTitle.value = null;
+          threadArchived.value = false;
+        });
+    } else {
       chatHistory.loadOrCreateThread().then(id => {
         navigate(`/chat/${id}`, true);
       });
       return;
     }
-
-    threadId.value = routeThreadId;
-    chatHistory.getChatHistory(routeThreadId).then(response => {
-      chatMessages.value = response.history;
-    });
   }, [route.params?.threadId, chatRefreshKey.value]);
 
   // Re-mount the pending actions panel whenever streaming ends so it picks up new requests.
-  useEffect(() => {
+  useSignalEffect(() => {
     if (!isStreaming.value) {
       pendingPanelKey.value += 1;
     }
-  }, [isStreaming.value]);
+  });
 
   const selectedAgentId = agentSelection.selectedAgentId.value;
   const activeThreadId = threadId.value;
   const showPendingPanel = !isStreaming.value && selectedAgentId !== null && activeThreadId !== '';
 
   return (
-    <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
+    <>
       <header className="flex gap-2 items-center w-full">
         <span className="flex gap-2 items-center">
           <BaseLayoutShowBtn />
@@ -203,6 +324,13 @@ export function ChatPage() {
           )}
         </span>
       </header>
+      <ThreadHeader
+        threadId={threadId}
+        threadTitle={threadTitle}
+        isArchived={threadArchived}
+        onNavigateHome={() => navigate('/')}
+        onRefreshThreads={() => { threadRefresh.value += 1; }}
+      />
       <main className="w-full grow overflow-y-auto pr-4" ref={scrollContainer}>
         <ChatList messages={chatMessages} />
       </main>
@@ -231,6 +359,14 @@ export function ChatPage() {
           }}
         />
       </footer>
+    </>
+  );
+}
+
+export function ChatPage() {
+  return (
+    <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
+      <ChatPageContent />
     </BaseLayout>
-  )
+  );
 }

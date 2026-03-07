@@ -2,6 +2,7 @@ import { ErrorBoundary, LocationProvider, Route, Router } from 'preact-iso';
 import { Toaster } from 'sonner';
 import { ChatPage } from './routes/chat/index.tsx';
 import { AgentsPage } from './routes/agents/index.tsx';
+import { ArchivePage } from './routes/archive/index.tsx';
 
 function NotFound() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/chat" component={ChatPage} />
             <Route path="/chat/:threadId" component={ChatPage} />
             <Route path="/agents" component={AgentsPage} />
+            <Route path="/archive" component={ArchivePage} />
             <Route path="*" component={NotFound} />
           </Router>
         </main>

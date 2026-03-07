@@ -16,10 +16,10 @@
  */
 
 import * as runtime from "@prisma/client/runtime/client"
-import type * as Prisma from "../models.js"
-import { type PrismaClient } from "./class.js"
+import type * as Prisma from "../models"
+import { type PrismaClient } from "./class"
 
-export type * from '../models.js'
+export type * from '../models'
 
 export type DMMF = typeof runtime.DMMF
 
@@ -393,7 +393,8 @@ export const ModelName = {
   AgentTool: 'AgentTool',
   AgentAction: 'AgentAction',
   checkpoints: 'checkpoints',
-  writes: 'writes'
+  writes: 'writes',
+  ThreadMetadata: 'ThreadMetadata'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -409,7 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "node" | "edge" | "asset" | "agent" | "mcpServer" | "tool" | "agentTool" | "agentAction" | "checkpoints" | "writes"
+    modelProps: "node" | "edge" | "asset" | "agent" | "mcpServer" | "tool" | "agentTool" | "agentAction" | "checkpoints" | "writes" | "threadMetadata"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1153,6 +1154,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ThreadMetadata: {
+      payload: Prisma.$ThreadMetadataPayload<ExtArgs>
+      fields: Prisma.ThreadMetadataFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThreadMetadataFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThreadMetadataFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>
+        }
+        findFirst: {
+          args: Prisma.ThreadMetadataFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThreadMetadataFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>
+        }
+        findMany: {
+          args: Prisma.ThreadMetadataFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>[]
+        }
+        create: {
+          args: Prisma.ThreadMetadataCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>
+        }
+        createMany: {
+          args: Prisma.ThreadMetadataCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThreadMetadataCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>[]
+        }
+        delete: {
+          args: Prisma.ThreadMetadataDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>
+        }
+        update: {
+          args: Prisma.ThreadMetadataUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>
+        }
+        deleteMany: {
+          args: Prisma.ThreadMetadataDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThreadMetadataUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThreadMetadataUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>[]
+        }
+        upsert: {
+          args: Prisma.ThreadMetadataUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadMetadataPayload>
+        }
+        aggregate: {
+          args: Prisma.ThreadMetadataAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThreadMetadata>
+        }
+        groupBy: {
+          args: Prisma.ThreadMetadataGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadMetadataGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThreadMetadataCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadMetadataCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1326,6 +1401,19 @@ export const WritesScalarFieldEnum = {
 } as const
 
 export type WritesScalarFieldEnum = (typeof WritesScalarFieldEnum)[keyof typeof WritesScalarFieldEnum]
+
+
+export const ThreadMetadataScalarFieldEnum = {
+  thread_id: 'thread_id',
+  agent_id: 'agent_id',
+  type: 'type',
+  title: 'title',
+  archived: 'archived',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type ThreadMetadataScalarFieldEnum = (typeof ThreadMetadataScalarFieldEnum)[keyof typeof ThreadMetadataScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1542,6 +1630,7 @@ export type GlobalOmitConfig = {
   agentAction?: Prisma.AgentActionOmit
   checkpoints?: Prisma.checkpointsOmit
   writes?: Prisma.writesOmit
+  threadMetadata?: Prisma.ThreadMetadataOmit
 }
 
 /* Types for Logging */

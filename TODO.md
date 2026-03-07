@@ -7,7 +7,10 @@
 
 ## API
 
-- 
+- Deployment
+  - [ ] Support single-file executable
+  - [ ] Support Dockerfile deployment
+- [ ] Add Prompt Table and make it editable/viewable in the UI
 
 ## UI
 

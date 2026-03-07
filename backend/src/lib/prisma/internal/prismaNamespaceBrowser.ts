@@ -17,8 +17,8 @@
 
 import * as runtime from "@prisma/client/runtime/index-browser"
 
-export type * from '../models.js'
-export type * from './prismaNamespace.js'
+export type * from '../models'
+export type * from './prismaNamespace'
 
 export const Decimal = runtime.Decimal
 
@@ -60,7 +60,8 @@ export const ModelName = {
   AgentTool: 'AgentTool',
   AgentAction: 'AgentAction',
   checkpoints: 'checkpoints',
-  writes: 'writes'
+  writes: 'writes',
+  ThreadMetadata: 'ThreadMetadata'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -213,6 +214,19 @@ export const WritesScalarFieldEnum = {
 } as const
 
 export type WritesScalarFieldEnum = (typeof WritesScalarFieldEnum)[keyof typeof WritesScalarFieldEnum]
+
+
+export const ThreadMetadataScalarFieldEnum = {
+  thread_id: 'thread_id',
+  agent_id: 'agent_id',
+  type: 'type',
+  title: 'title',
+  archived: 'archived',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type ThreadMetadataScalarFieldEnum = (typeof ThreadMetadataScalarFieldEnum)[keyof typeof ThreadMetadataScalarFieldEnum]
 
 
 export const SortOrder = {

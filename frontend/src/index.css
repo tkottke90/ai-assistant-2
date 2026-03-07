@@ -158,7 +158,7 @@ html, body, #app {
   }
 
   code {
-    white-space: pre-wrap;
+    white-space: break-spaces;
   }
 
   textarea, input, select {
@@ -167,6 +167,19 @@ html, body, #app {
 }
 
 @layer components {
+  .prose ol,
+  .prose ul {
+    @apply my-4 ml-6;
+  }
+
+  .prose ol {
+    @apply list-decimal;
+  }
+
+  .prose ul {
+    @apply list-disc;
+  }
+
   .prose hr {
     @apply my-4 border-neutral-400/50;
   }

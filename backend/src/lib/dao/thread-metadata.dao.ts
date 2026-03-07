@@ -50,11 +50,13 @@ function findAgentThread(agentId: number) {
 }
 
 async function deleteThread(threadId: string) {
-  // Delete LangGraph checkpoint data first
-  await prisma.writes.deleteMany({ where: { thread_id: threadId } });
-  await prisma.checkpoints.deleteMany({ where: { thread_id: threadId } });
-  // Delete the metadata row
-  await prisma.threadMetadata.delete({ where: { thread_id: threadId } });
+  await prisma.$transaction(async (tx) => {
+    // Delete LangGraph checkpoint data first
+    await tx.writes.deleteMany({ where: { thread_id: threadId } });
+    await tx.checkpoints.deleteMany({ where: { thread_id: threadId } });
+    // Delete the metadata row
+    await tx.threadMetadata.delete({ where: { thread_id: threadId } });
+  });
 }
 
 export default {

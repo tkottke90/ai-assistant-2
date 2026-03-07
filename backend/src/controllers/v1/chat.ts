@@ -7,6 +7,7 @@ import { InteractionSchema, ServerActionSchema, threadHistoryResponseSchema } fr
 import { BaseMessage } from 'langchain';
 import crypto from 'node:crypto';
 import ThreadDao from '../../lib/dao/thread.dao.js';
+import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
 
 export const router = Router();
 
@@ -81,24 +82,129 @@ router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
   }
 });
 
-router.post('/new-thread', async (req, res) => {
-  res.json({ threadId: crypto.randomUUID() });
+// --- Thread Management ---
+
+const NewThreadSchema = z.object({
+  agent_id: z.number().int().optional(),
+  type: z.enum(['chat', 'agent']).default('chat'),
 });
 
-router.get('/threads', async (req, res) => {
-  try {
-    const rows = await prisma.checkpoints.findMany({
-      select: { thread_id: true },
-      distinct: ['thread_id'],
-      orderBy: { checkpoint_id: 'desc' },
-    });
+router.post('/new-thread', ZodBodyValidator(NewThreadSchema), async (req, res): Promise<void> => {
+  const { agent_id, type } = req.body as z.infer<typeof NewThreadSchema>;
 
-    const threads = rows.map(row => row.thread_id);
-    res.json({ threads });
+  // Enforce one agent thread per agent
+  if (type === 'agent' && agent_id) {
+    const existing = await ThreadMetadataDao.findAgentThread(agent_id);
+    if (existing) {
+      res.json({ thread_id: existing.thread_id });
+      return;
+    }
+  }
+
+  const thread_id = crypto.randomUUID();
+  await ThreadMetadataDao.upsert(thread_id, { agent_id: agent_id ?? null, type });
+  res.json({ thread_id });
+});
+
+router.get('/threads', async (req, res): Promise<void> => {
+  try {
+    const archived = req.query.archived === 'true';
+
+    if (archived) {
+      const archivedThreads = await ThreadMetadataDao.listArchived();
+      res.json({ threads: archivedThreads });
+      return;
+    }
+
+    // Fetch metadata and raw checkpoint thread IDs in parallel
+    const [allMetadata, checkpointRows] = await Promise.all([
+      ThreadMetadataDao.listActive(),
+      prisma.checkpoints.findMany({
+        select: { thread_id: true },
+        distinct: ['thread_id'],
+      }),
+    ]);
+
+    const metadataMap = new Map(allMetadata.map(m => [m.thread_id, m]));
+
+    // Backfill metadata for checkpoint threads that have no metadata row yet.
+    // Skip threads that already have a row (including archived ones).
+    const backfillPromises: Promise<any>[] = [];
+    for (const { thread_id } of checkpointRows) {
+      if (!metadataMap.has(thread_id)) {
+        backfillPromises.push(
+          ThreadMetadataDao.findByThreadId(thread_id).then(existing => {
+            if (!existing) {
+              return ThreadMetadataDao.upsert(thread_id, {}).then(row => metadataMap.set(thread_id, row));
+            }
+            // Row exists but is archived — don't add to the active map
+          }),
+        );
+      }
+    }
+    await Promise.all(backfillPromises);
+
+    const all = [...metadataMap.values()];
+
+    const agentManager = req.app.agents;
+    const agentThreads = all
+      .filter(t => t.type === 'agent' && t.agent != null && agentManager.isActive(t.agent!.agent_id))
+      .map(t => ({ ...t, agentName: t.agent!.name }));
+
+    const threads = all.filter(t => t.type === 'chat');
+
+    res.json({ threads, agentThreads });
   } catch (error) {
     req.logger.error('Failed to list threads:', error);
     res.status(500).json({ error: 'Failed to list threads' });
   }
+});
+
+const PatchThreadSchema = z.object({
+  title: z.string().optional(),
+  archived: z.boolean().optional(),
+  agent_id: z.number().int().nullable().optional(),
+});
+
+router.patch('/threads/:threadId', ZodBodyValidator(PatchThreadSchema), async (req, res) => {
+  const threadId = req.params.threadId as string;
+  const data = req.body as z.infer<typeof PatchThreadSchema>;
+  const updated = await ThreadMetadataDao.upsert(threadId, data);
+  res.json(updated);
+});
+
+router.delete('/threads/:threadId', async (req, res) => {
+  const threadId = req.params.threadId as string;
+  await ThreadMetadataDao.deleteThread(threadId);
+  res.status(204).send();
+});
+
+router.post('/threads/:threadId/summarize', async (req, res): Promise<void> => {
+  const threadId = req.params.threadId as string;
+
+  const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
+  if (history.length === 0) {
+    res.status(404).json({ error: 'Thread not found or has no messages' });
+    return;
+  }
+
+  const excerpt = history
+    .slice(0, 6)
+    .map(({ msg }) => {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return `${msg.type}: ${content}`;
+    })
+    .join('\n');
+
+  const llm = req.app.llm.getClient();
+  const response = await llm.invoke([
+    { role: 'system', content: 'Summarize the following conversation in 8 words or fewer. Return only the summary, nothing else.' },
+    { role: 'user', content: excerpt },
+  ]);
+
+  const title = (response.content as string).trim();
+  await ThreadMetadataDao.upsert(threadId, { title });
+  res.json({ title });
 });
 
 

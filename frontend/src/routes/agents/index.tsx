@@ -1,5 +1,5 @@
 import { Dialog, useDialog } from "@/components/dialog";
-import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
+import BaseLayout, { BaseLayoutShowBtn, useAppContext } from "@/components/layouts/base.layout";
 import { LlmSelector } from "@/components/llm-selector";
 import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -7,12 +7,13 @@ import { useApi } from "@/hooks/use-api";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { cn } from "@/lib/utils";
 import { useSignal } from "@preact/signals";
-import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, type AgentListResponse } from '@tkottke90/ai-assistant-client';
-import { Bot, BotOff, Trash2, TriangleAlert } from "lucide-preact";
+import { createAgent, deleteAgent, listAgents, startAgent, stopAgent, newThread, type AgentListResponse } from '@tkottke90/ai-assistant-client';
+import { Bot, BotOff, MessageSquare, Trash2, TriangleAlert } from "lucide-preact";
 import { useCallback, useEffect } from "preact/hooks";
 import { toast } from "sonner";
 import { AgentDrawer } from "./drawer";
 import { AgentTitle } from "./title";
+import { useLocation } from "preact-iso";
 
 // Pure utility functions for pagination navigation
 function canGoToNextPage(currentPage: number, totalPages: number): boolean {
@@ -110,6 +111,18 @@ export function AgentsPage() {
 }
 
 function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange: () => void }) {
+  const { route: navigate } = useLocation();
+  const { threadRefresh } = useAppContext();
+
+  const handleOpenAgentThread = async (agentId: number) => {
+    try {
+      const { thread_id } = await newThread({ agent_id: agentId, type: 'agent' });
+      navigate(`/chat/${thread_id}`);
+    } catch (err) {
+      console.error("Failed to open agent thread:", err);
+      toast.error("Failed to open agent thread");
+    }
+  };
 
   // When there are no agents, we can show a friendly message encouraging the user to create their first agent
   if (agents.length === 0) {
@@ -140,6 +153,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                     stopAgent({ id: agent.agent_id })
                       .then(() => {
                         onChange();
+                        threadRefresh.value += 1;
                         toast.success('Agent stopped successfully', {  });
                       });
                   } else {
@@ -147,6 +161,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                     startAgent({ id: agent.agent_id })
                       .then(() => {
                         onChange();
+                        threadRefresh.value += 1;
                         toast.success('Agent started successfully');
                       });
                   }
@@ -155,6 +170,17 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                 { !agent.is_active &&  <BotOff className="size-full" /> }
                 { agent.is_active && <Bot className="size-full" /> }
               </Button>
+
+              {agent.is_active && (
+                <Button
+                  variant="iconDefault"
+                  size="icon-xs"
+                  title="Open Agent Thread"
+                  onClick={() => handleOpenAgentThread(agent.agent_id)}
+                >
+                  <MessageSquare className="size-full" />
+                </Button>
+              )}
               
               <AgentDrawer agent={agent} onChange={() => { onChange() }} />
               

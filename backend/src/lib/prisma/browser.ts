@@ -47,3 +47,8 @@ export type checkpoints = Prisma.checkpointsModel
  * 
  */
 export type writes = Prisma.writesModel
+/**
+ * Model ThreadMetadata
+ * 
+ */
+export type ThreadMetadata = Prisma.ThreadMetadataModel

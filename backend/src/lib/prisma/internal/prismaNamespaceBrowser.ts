@@ -56,7 +56,8 @@ export const ModelName = {
   Asset: 'Asset',
   Agent: 'Agent',
   checkpoints: 'checkpoints',
-  writes: 'writes'
+  writes: 'writes',
+  ThreadMetadata: 'ThreadMetadata'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -152,6 +153,19 @@ export const WritesScalarFieldEnum = {
 } as const
 
 export type WritesScalarFieldEnum = (typeof WritesScalarFieldEnum)[keyof typeof WritesScalarFieldEnum]
+
+
+export const ThreadMetadataScalarFieldEnum = {
+  thread_id: 'thread_id',
+  agent_id: 'agent_id',
+  type: 'type',
+  title: 'title',
+  archived: 'archived',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type ThreadMetadataScalarFieldEnum = (typeof ThreadMetadataScalarFieldEnum)[keyof typeof ThreadMetadataScalarFieldEnum]
 
 
 export const SortOrder = {

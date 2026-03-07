@@ -2,6 +2,9 @@
 
 A Python/FastAPI backend application with configuration-driven architecture and comprehensive logging and observability support.
 
+> [!CAUTION]
+> This product currently does not have any access control mechanisms while in development. You will need to handle your own access control outside of the application if you wish to access this publicly.  I use a site-to-site VPN personally so I do not have to expose the application publicly.
+
 ## Project Structure
 
 ```

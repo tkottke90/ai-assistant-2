@@ -70,6 +70,8 @@ model Agent {
   created_at    DateTime @default(now())
   updated_at    DateTime @default(now()) @updatedAt
 
+  thread_metadata ThreadMetadata[]
+
   @@unique([name, version])
   @@index([created_at])
   @@index([updated_at])
@@ -98,4 +100,20 @@ model writes {
   value         Bytes?
 
   @@id([thread_id, checkpoint_ns, checkpoint_id, task_id, idx])
+}
+
+model ThreadMetadata {
+  thread_id  String   @id
+  agent_id   Int?
+  type       String   @default("chat")
+  title      String?
+  archived   Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  agent Agent? @relation(fields: [agent_id], references: [agent_id], onDelete: SetNull)
+
+  @@index([agent_id])
+  @@index([type])
+  @@index([archived])
 }

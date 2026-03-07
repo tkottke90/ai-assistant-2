@@ -153,12 +153,24 @@ html, body, #app {
     @apply text-lg font-bold;
   }
 
+  ol, ul {
+    @apply my-4 ml-6;
+  }
+
+  ol {
+    @apply list-decimal;
+  }
+
+  ul {
+    @apply list-disc;
+  }
+
   pre {
     @apply bg-neutral-100 dark:bg-neutral-800 p-4 rounded-md overflow-x-auto;
   }
 
   code {
-    white-space: pre-wrap;
+    white-space: break-spaces;
   }
 
   textarea, input, select {
@@ -167,6 +179,14 @@ html, body, #app {
 }
 
 @layer components {
+   .orderList ol {
+    @apply list-decimal;
+  }
+
+  .unorderList ul {
+    @apply list-disc;
+  }
+
   .prose hr {
     @apply my-4 border-neutral-400/50;
   }

@@ -1,15 +1,18 @@
 import { useEffect } from "preact/hooks";
 import { Signal, useSignal } from "@preact/signals";
-import { listThreads, newThread } from "@tkottke90/ai-assistant-client";
+import { listThreads, newThread, updateThread } from "@tkottke90/ai-assistant-client";
+import type { ThreadMetadata, AgentThread, ThreadsResponse } from "@tkottke90/ai-assistant-client";
 import { useLocation } from "preact-iso";
-import { Plus, MessageSquare } from "lucide-preact";
+import { Plus, MessageSquare, Archive, Bot } from "lucide-preact";
 import { Button } from "./ui/button";
+import { formatRelativeDate } from "@/lib/date-utils";
 
 /**
- * Truncate a UUID to the first 8 characters for display.
+ * Format a thread's display label. Use title if available, otherwise fall back to a date string.
  */
-export function truncateThreadId(threadId: string): string {
-  return threadId.slice(0, 8);
+export function threadDisplayLabel(thread: ThreadMetadata): string {
+  if (thread.title) return thread.title;
+  return formatRelativeDate(thread.created_at);
 }
 
 /**
@@ -19,20 +22,101 @@ export function isActiveThread(threadId: string, currentPath: string): boolean {
   return currentPath === `/chat/${threadId}`;
 }
 
+// --- Sub-components ---
+
+interface AgentThreadsSectionProps {
+  agentThreads: AgentThread[];
+  currentPath: string;
+}
+
+function AgentThreadsSection({ agentThreads, currentPath }: AgentThreadsSectionProps) {
+  if (agentThreads.length === 0) return null;
+
+  return (
+    <div className="mb-1">
+      <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+        Agent Threads
+      </span>
+      {agentThreads.map(t => {
+        const active = isActiveThread(t.thread_id, currentPath);
+        return (
+          <a
+            key={t.thread_id}
+            href={`/chat/${t.thread_id}`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors truncate
+              ${active
+                ? "bg-neutral-300 dark:bg-neutral-700 font-medium"
+                : "hover:bg-neutral-200 dark:hover:bg-neutral-700/50"
+              }`}
+            title={t.agentName}
+          >
+            <Bot size={14} className="shrink-0" />
+            <span className="truncate">{t.agentName}</span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+interface ThreadRowProps {
+  thread: ThreadMetadata;
+  active: boolean;
+  onArchive: (threadId: string) => void;
+}
+
+function ThreadRow({ thread, active, onArchive }: ThreadRowProps) {
+  const hovered = useSignal(false);
+
+  return (
+    <a
+      href={`/chat/${thread.thread_id}`}
+      className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors
+        ${active
+          ? "bg-neutral-300 dark:bg-neutral-700 font-medium"
+          : "hover:bg-neutral-200 dark:hover:bg-neutral-700/50"
+        }`}
+      title={thread.thread_id}
+      onMouseEnter={() => { hovered.value = true; }}
+      onMouseLeave={() => { hovered.value = false; }}
+    >
+      <MessageSquare size={14} className="shrink-0" />
+      <span className="truncate flex-1">{threadDisplayLabel(thread)}</span>
+      {hovered.value && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onArchive(thread.thread_id);
+          }}
+          className="ml-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 shrink-0"
+          title="Archive thread"
+        >
+          <Archive size={14} />
+        </button>
+      )}
+    </a>
+  );
+}
+
+// --- Main Component ---
+
 interface ThreadListProps {
   refreshSignal: Signal<number>;
 }
 
 export function ThreadList({ refreshSignal }: ThreadListProps) {
-  const threads = useSignal<string[]>([]);
+  const threads = useSignal<ThreadMetadata[]>([]);
+  const agentThreads = useSignal<AgentThread[]>([]);
   const loading = useSignal(true);
   const { url: currentPath, route: navigate } = useLocation();
 
-  useEffect(() => {
+  const loadThreads = () => {
     loading.value = true;
     listThreads()
-      .then((result: string[]) => {
-        threads.value = result;
+      .then((result: ThreadsResponse) => {
+        threads.value = result.threads;
+        agentThreads.value = result.agentThreads;
       })
       .catch((err: Error) => {
         console.error("Failed to load threads:", err);
@@ -40,15 +124,28 @@ export function ThreadList({ refreshSignal }: ThreadListProps) {
       .finally(() => {
         loading.value = false;
       });
+  };
+
+  useEffect(() => {
+    loadThreads();
   }, [refreshSignal.value]);
 
   const handleNewChat = async () => {
     try {
-      const { threadId } = await newThread();
+      const { thread_id } = await newThread();
       refreshSignal.value += 1;
-      navigate(`/chat/${threadId}`);
+      navigate(`/chat/${thread_id}`);
     } catch (err) {
       console.error("Failed to create new thread:", err);
+    }
+  };
+
+  const handleArchive = async (threadId: string) => {
+    try {
+      await updateThread(threadId, { archived: true });
+      loadThreads();
+    } catch (err) {
+      console.error("Failed to archive thread:", err);
     }
   };
 
@@ -71,28 +168,31 @@ export function ThreadList({ refreshSignal }: ThreadListProps) {
         <span className="text-xs text-neutral-400 px-2">Loading...</span>
       )}
 
-      {!loading.value && threads.value.length === 0 && (
-        <span className="text-xs text-neutral-400 px-2">No threads yet</span>
-      )}
-
-      {threads.value.map(threadId => {
-        const active = isActiveThread(threadId, currentPath);
-        return (
+      {!loading.value && (
+        <>
+          <AgentThreadsSection agentThreads={agentThreads.value} currentPath={currentPath} />
+          {agentThreads.value.length > 0 && (
+            <hr className="border-neutral-500/30 my-1 mx-2" />
+          )}
+          {threads.value.length === 0 && (
+            <span className="text-xs text-neutral-400 px-2">No threads yet</span>
+          )}
+          {threads.value.map(thread => (
+            <ThreadRow
+              key={thread.thread_id}
+              thread={thread}
+              active={isActiveThread(thread.thread_id, currentPath)}
+              onArchive={handleArchive}
+            />
+          ))}
           <a
-            key={threadId}
-            href={`/chat/${threadId}`}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors truncate
-              ${active
-                ? "bg-neutral-300 dark:bg-neutral-700 font-medium"
-                : "hover:bg-neutral-200 dark:hover:bg-neutral-700/50"
-              }`}
-            title={threadId}
+            href="/archive"
+            className="px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
           >
-            <MessageSquare size={14} className="shrink-0" />
-            <span className="truncate">{truncateThreadId(threadId)}</span>
+            View Archive →
           </a>
-        );
-      })}
+        </>
+      )}
     </div>
   );
 }

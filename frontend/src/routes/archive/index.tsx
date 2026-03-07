@@ -2,6 +2,7 @@ import { useEffect } from "preact/hooks";
 import { Signal, useSignal } from "@preact/signals";
 import { listArchivedThreads, updateThread, deleteThread } from "@tkottke90/ai-assistant-client";
 import type { ThreadMetadata } from "@tkottke90/ai-assistant-client";
+import { toast } from "sonner";
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
 import { ConfirmButton } from "@/components/ui/button";
 import { formatRelativeDate } from "@/lib/date-utils";
@@ -43,8 +44,10 @@ export async function deleteArchivedThread(threadId: string, reload: () => void)
   try {
     await deleteThread(threadId);
     reload();
+    toast.success("Thread deleted");
   } catch (err) {
     console.error("Failed to delete thread:", err);
+    toast.error("Failed to delete thread");
   }
 }
 

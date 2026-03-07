@@ -4,9 +4,8 @@ import { useAgentSelection } from "@/hooks/use-agent-selection";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { Signal, useSignal } from "@preact/signals";
 import {
-  deleteThread, listPendingActions, listThreads, resolveAgentAction, summarizeThread, updateThread, type AgentAction,
+  deleteThread, getThread, listPendingActions, resolveAgentAction, summarizeThread, updateThread, type AgentAction,
   type ChatMessage,
-  type ThreadMetadata
 } from '@tkottke90/ai-assistant-client';
 import { Archive, Sparkles, Trash2 } from "lucide-preact";
 import { useLocation, useRoute } from "preact-iso";
@@ -260,18 +259,16 @@ function ChatPageContent() {
       });
 
       // Load thread metadata to get title and auto-select agent
-      listThreads().then(({ threads, agentThreads }) => {
-        const all = [...agentThreads, ...threads] as ThreadMetadata[];
-        const meta = all.find(t => t.thread_id === routeThreadId);
-        if (meta) {
+      getThread(routeThreadId)
+        .then(meta => {
           threadTitle.value = meta.title ?? null;
           if (meta.agent_id != null) {
             agentSelection.selectAgent(meta.agent_id);
           }
-        } else {
+        })
+        .catch(() => {
           threadTitle.value = null;
-        }
-      });
+        });
     } else {
       chatHistory.loadOrCreateThread().then(id => {
         navigate(`/chat/${id}`, true);

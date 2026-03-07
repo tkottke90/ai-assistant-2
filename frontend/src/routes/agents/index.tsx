@@ -110,19 +110,22 @@ export function AgentsPage() {
   )
 }
 
+export async function openAgentThread(
+  agentId: number,
+  navigate: (path: string) => void,
+): Promise<void> {
+  try {
+    const { thread_id } = await newThread({ agent_id: agentId, type: 'agent' });
+    navigate(`/chat/${thread_id}`);
+  } catch (err) {
+    console.error("Failed to open agent thread:", err);
+    toast.error("Failed to open agent thread");
+  }
+}
+
 function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange: () => void }) {
   const { route: navigate } = useLocation();
   const { threadRefresh } = useAppContext();
-
-  const handleOpenAgentThread = async (agentId: number) => {
-    try {
-      const { thread_id } = await newThread({ agent_id: agentId, type: 'agent' });
-      navigate(`/chat/${thread_id}`);
-    } catch (err) {
-      console.error("Failed to open agent thread:", err);
-      toast.error("Failed to open agent thread");
-    }
-  };
 
   // When there are no agents, we can show a friendly message encouraging the user to create their first agent
   if (agents.length === 0) {
@@ -176,7 +179,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                   variant="iconDefault"
                   size="icon-xs"
                   title="Open Agent Thread"
-                  onClick={() => handleOpenAgentThread(agent.agent_id)}
+                  onClick={() => openAgentThread(agent.agent_id, navigate)}
                 >
                   <MessageSquare className="size-full" />
                 </Button>

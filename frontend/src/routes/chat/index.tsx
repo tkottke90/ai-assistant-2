@@ -296,11 +296,6 @@ function ChatPageContent() {
       });
       return;
     }
-
-    threadId.value = routeThreadId;
-    chatHistory.getChatHistory(routeThreadId).then(response => {
-      chatMessages.value = response.history;
-    });
   }, [route.params?.threadId, chatRefreshKey.value]);
 
   // Re-mount the pending actions panel whenever streaming ends so it picks up new requests.

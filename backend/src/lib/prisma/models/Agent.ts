@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model Agent
@@ -258,11 +258,11 @@ export type AgentWhereInput = {
   auto_start?: Prisma.BoolFilter<"Agent"> | boolean
   created_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
-  thread_metadata?: Prisma.ThreadMetadataListRelationFilter
   engine?: Prisma.StringNullableFilter<"Agent"> | string | null
   model?: Prisma.StringNullableFilter<"Agent"> | string | null
   agent_tools?: Prisma.AgentToolListRelationFilter
   actions?: Prisma.AgentActionListRelationFilter
+  thread_metadata?: Prisma.ThreadMetadataListRelationFilter
 }
 
 export type AgentOrderByWithRelationInput = {
@@ -274,11 +274,11 @@ export type AgentOrderByWithRelationInput = {
   auto_start?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
-  thread_metadata?: Prisma.ThreadMetadataOrderByRelationAggregateInput
   engine?: Prisma.SortOrderInput | Prisma.SortOrder
   model?: Prisma.SortOrderInput | Prisma.SortOrder
   agent_tools?: Prisma.AgentToolOrderByRelationAggregateInput
   actions?: Prisma.AgentActionOrderByRelationAggregateInput
+  thread_metadata?: Prisma.ThreadMetadataOrderByRelationAggregateInput
 }
 
 export type AgentWhereUniqueInput = Prisma.AtLeast<{
@@ -294,11 +294,11 @@ export type AgentWhereUniqueInput = Prisma.AtLeast<{
   auto_start?: Prisma.BoolFilter<"Agent"> | boolean
   created_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"Agent"> | Date | string
-  thread_metadata?: Prisma.ThreadMetadataListRelationFilter
   engine?: Prisma.StringNullableFilter<"Agent"> | string | null
   model?: Prisma.StringNullableFilter<"Agent"> | string | null
   agent_tools?: Prisma.AgentToolListRelationFilter
   actions?: Prisma.AgentActionListRelationFilter
+  thread_metadata?: Prisma.ThreadMetadataListRelationFilter
 }, "agent_id" | "name_version">
 
 export type AgentOrderByWithAggregationInput = {
@@ -343,11 +343,11 @@ export type AgentCreateInput = {
   auto_start?: boolean
   created_at?: Date | string
   updated_at?: Date | string
-  thread_metadata?: Prisma.ThreadMetadataCreateNestedManyWithoutAgentInput
   engine?: string | null
   model?: string | null
   agent_tools?: Prisma.AgentToolCreateNestedManyWithoutAgentInput
   actions?: Prisma.AgentActionCreateNestedManyWithoutAgentInput
+  thread_metadata?: Prisma.ThreadMetadataCreateNestedManyWithoutAgentInput
 }
 
 export type AgentUncheckedCreateInput = {
@@ -359,11 +359,11 @@ export type AgentUncheckedCreateInput = {
   auto_start?: boolean
   created_at?: Date | string
   updated_at?: Date | string
-  thread_metadata?: Prisma.ThreadMetadataUncheckedCreateNestedManyWithoutAgentInput
   engine?: string | null
   model?: string | null
   agent_tools?: Prisma.AgentToolUncheckedCreateNestedManyWithoutAgentInput
   actions?: Prisma.AgentActionUncheckedCreateNestedManyWithoutAgentInput
+  thread_metadata?: Prisma.ThreadMetadataUncheckedCreateNestedManyWithoutAgentInput
 }
 
 export type AgentUpdateInput = {
@@ -374,11 +374,11 @@ export type AgentUpdateInput = {
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  thread_metadata?: Prisma.ThreadMetadataUpdateManyWithoutAgentNestedInput
   engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   agent_tools?: Prisma.AgentToolUpdateManyWithoutAgentNestedInput
   actions?: Prisma.AgentActionUpdateManyWithoutAgentNestedInput
+  thread_metadata?: Prisma.ThreadMetadataUpdateManyWithoutAgentNestedInput
 }
 
 export type AgentUncheckedUpdateInput = {
@@ -390,11 +390,11 @@ export type AgentUncheckedUpdateInput = {
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  thread_metadata?: Prisma.ThreadMetadataUncheckedUpdateManyWithoutAgentNestedInput
   engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   agent_tools?: Prisma.AgentToolUncheckedUpdateManyWithoutAgentNestedInput
   actions?: Prisma.AgentActionUncheckedUpdateManyWithoutAgentNestedInput
+  thread_metadata?: Prisma.ThreadMetadataUncheckedUpdateManyWithoutAgentNestedInput
 }
 
 export type AgentCreateManyInput = {
@@ -494,8 +494,41 @@ export type AgentScalarRelationFilter = {
   isNot?: Prisma.AgentWhereInput
 }
 
+export type AgentNullableScalarRelationFilter = {
+  is?: Prisma.AgentWhereInput | null
+  isNot?: Prisma.AgentWhereInput | null
+}
+
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
+}
+
+export type AgentCreateNestedOneWithoutAgent_toolsInput = {
+  create?: Prisma.XOR<Prisma.AgentCreateWithoutAgent_toolsInput, Prisma.AgentUncheckedCreateWithoutAgent_toolsInput>
+  connectOrCreate?: Prisma.AgentCreateOrConnectWithoutAgent_toolsInput
+  connect?: Prisma.AgentWhereUniqueInput
+}
+
+export type AgentUpdateOneRequiredWithoutAgent_toolsNestedInput = {
+  create?: Prisma.XOR<Prisma.AgentCreateWithoutAgent_toolsInput, Prisma.AgentUncheckedCreateWithoutAgent_toolsInput>
+  connectOrCreate?: Prisma.AgentCreateOrConnectWithoutAgent_toolsInput
+  upsert?: Prisma.AgentUpsertWithoutAgent_toolsInput
+  connect?: Prisma.AgentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AgentUpdateToOneWithWhereWithoutAgent_toolsInput, Prisma.AgentUpdateWithoutAgent_toolsInput>, Prisma.AgentUncheckedUpdateWithoutAgent_toolsInput>
+}
+
+export type AgentCreateNestedOneWithoutActionsInput = {
+  create?: Prisma.XOR<Prisma.AgentCreateWithoutActionsInput, Prisma.AgentUncheckedCreateWithoutActionsInput>
+  connectOrCreate?: Prisma.AgentCreateOrConnectWithoutActionsInput
+  connect?: Prisma.AgentWhereUniqueInput
+}
+
+export type AgentUpdateOneRequiredWithoutActionsNestedInput = {
+  create?: Prisma.XOR<Prisma.AgentCreateWithoutActionsInput, Prisma.AgentUncheckedCreateWithoutActionsInput>
+  connectOrCreate?: Prisma.AgentCreateOrConnectWithoutActionsInput
+  upsert?: Prisma.AgentUpsertWithoutActionsInput
+  connect?: Prisma.AgentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AgentUpdateToOneWithWhereWithoutActionsInput, Prisma.AgentUpdateWithoutActionsInput>, Prisma.AgentUncheckedUpdateWithoutActionsInput>
 }
 
 export type AgentCreateNestedOneWithoutThread_metadataInput = {
@@ -514,24 +547,18 @@ export type AgentUpdateOneWithoutThread_metadataNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AgentUpdateToOneWithWhereWithoutThread_metadataInput, Prisma.AgentUpdateWithoutThread_metadataInput>, Prisma.AgentUncheckedUpdateWithoutThread_metadataInput>
 }
 
-export type AgentCreateWithoutThread_metadataInput = {
+export type AgentCreateWithoutAgent_toolsInput = {
   name: string
   description?: string | null
   version?: number
   system_prompt: string
   auto_start?: boolean
-  engine?: string | null
-  model?: string | null
-  created_at?: Date | string
-  updated_at?: Date | string
-}
-
-export type AgentUncheckedCreateWithoutThread_metadataInput = {
   created_at?: Date | string
   updated_at?: Date | string
   engine?: string | null
   model?: string | null
   actions?: Prisma.AgentActionCreateNestedManyWithoutAgentInput
+  thread_metadata?: Prisma.ThreadMetadataCreateNestedManyWithoutAgentInput
 }
 
 export type AgentUncheckedCreateWithoutAgent_toolsInput = {
@@ -541,10 +568,160 @@ export type AgentUncheckedCreateWithoutAgent_toolsInput = {
   version?: number
   system_prompt: string
   auto_start?: boolean
-  engine?: string | null
-  model?: string | null
   created_at?: Date | string
   updated_at?: Date | string
+  engine?: string | null
+  model?: string | null
+  actions?: Prisma.AgentActionUncheckedCreateNestedManyWithoutAgentInput
+  thread_metadata?: Prisma.ThreadMetadataUncheckedCreateNestedManyWithoutAgentInput
+}
+
+export type AgentCreateOrConnectWithoutAgent_toolsInput = {
+  where: Prisma.AgentWhereUniqueInput
+  create: Prisma.XOR<Prisma.AgentCreateWithoutAgent_toolsInput, Prisma.AgentUncheckedCreateWithoutAgent_toolsInput>
+}
+
+export type AgentUpsertWithoutAgent_toolsInput = {
+  update: Prisma.XOR<Prisma.AgentUpdateWithoutAgent_toolsInput, Prisma.AgentUncheckedUpdateWithoutAgent_toolsInput>
+  create: Prisma.XOR<Prisma.AgentCreateWithoutAgent_toolsInput, Prisma.AgentUncheckedCreateWithoutAgent_toolsInput>
+  where?: Prisma.AgentWhereInput
+}
+
+export type AgentUpdateToOneWithWhereWithoutAgent_toolsInput = {
+  where?: Prisma.AgentWhereInput
+  data: Prisma.XOR<Prisma.AgentUpdateWithoutAgent_toolsInput, Prisma.AgentUncheckedUpdateWithoutAgent_toolsInput>
+}
+
+export type AgentUpdateWithoutAgent_toolsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
+  auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  actions?: Prisma.AgentActionUpdateManyWithoutAgentNestedInput
+  thread_metadata?: Prisma.ThreadMetadataUpdateManyWithoutAgentNestedInput
+}
+
+export type AgentUncheckedUpdateWithoutAgent_toolsInput = {
+  agent_id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
+  auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  actions?: Prisma.AgentActionUncheckedUpdateManyWithoutAgentNestedInput
+  thread_metadata?: Prisma.ThreadMetadataUncheckedUpdateManyWithoutAgentNestedInput
+}
+
+export type AgentCreateWithoutActionsInput = {
+  name: string
+  description?: string | null
+  version?: number
+  system_prompt: string
+  auto_start?: boolean
+  created_at?: Date | string
+  updated_at?: Date | string
+  engine?: string | null
+  model?: string | null
+  agent_tools?: Prisma.AgentToolCreateNestedManyWithoutAgentInput
+  thread_metadata?: Prisma.ThreadMetadataCreateNestedManyWithoutAgentInput
+}
+
+export type AgentUncheckedCreateWithoutActionsInput = {
+  agent_id?: number
+  name: string
+  description?: string | null
+  version?: number
+  system_prompt: string
+  auto_start?: boolean
+  created_at?: Date | string
+  updated_at?: Date | string
+  engine?: string | null
+  model?: string | null
+  agent_tools?: Prisma.AgentToolUncheckedCreateNestedManyWithoutAgentInput
+  thread_metadata?: Prisma.ThreadMetadataUncheckedCreateNestedManyWithoutAgentInput
+}
+
+export type AgentCreateOrConnectWithoutActionsInput = {
+  where: Prisma.AgentWhereUniqueInput
+  create: Prisma.XOR<Prisma.AgentCreateWithoutActionsInput, Prisma.AgentUncheckedCreateWithoutActionsInput>
+}
+
+export type AgentUpsertWithoutActionsInput = {
+  update: Prisma.XOR<Prisma.AgentUpdateWithoutActionsInput, Prisma.AgentUncheckedUpdateWithoutActionsInput>
+  create: Prisma.XOR<Prisma.AgentCreateWithoutActionsInput, Prisma.AgentUncheckedCreateWithoutActionsInput>
+  where?: Prisma.AgentWhereInput
+}
+
+export type AgentUpdateToOneWithWhereWithoutActionsInput = {
+  where?: Prisma.AgentWhereInput
+  data: Prisma.XOR<Prisma.AgentUpdateWithoutActionsInput, Prisma.AgentUncheckedUpdateWithoutActionsInput>
+}
+
+export type AgentUpdateWithoutActionsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
+  auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  agent_tools?: Prisma.AgentToolUpdateManyWithoutAgentNestedInput
+  thread_metadata?: Prisma.ThreadMetadataUpdateManyWithoutAgentNestedInput
+}
+
+export type AgentUncheckedUpdateWithoutActionsInput = {
+  agent_id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
+  auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  agent_tools?: Prisma.AgentToolUncheckedUpdateManyWithoutAgentNestedInput
+  thread_metadata?: Prisma.ThreadMetadataUncheckedUpdateManyWithoutAgentNestedInput
+}
+
+export type AgentCreateWithoutThread_metadataInput = {
+  name: string
+  description?: string | null
+  version?: number
+  system_prompt: string
+  auto_start?: boolean
+  created_at?: Date | string
+  updated_at?: Date | string
+  engine?: string | null
+  model?: string | null
+  agent_tools?: Prisma.AgentToolCreateNestedManyWithoutAgentInput
+  actions?: Prisma.AgentActionCreateNestedManyWithoutAgentInput
+}
+
+export type AgentUncheckedCreateWithoutThread_metadataInput = {
+  agent_id?: number
+  name: string
+  description?: string | null
+  version?: number
+  system_prompt: string
+  auto_start?: boolean
+  created_at?: Date | string
+  updated_at?: Date | string
+  engine?: string | null
+  model?: string | null
+  agent_tools?: Prisma.AgentToolUncheckedCreateNestedManyWithoutAgentInput
+  actions?: Prisma.AgentActionUncheckedCreateNestedManyWithoutAgentInput
 }
 
 export type AgentCreateOrConnectWithoutThread_metadataInput = {
@@ -569,10 +746,12 @@ export type AgentUpdateWithoutThread_metadataInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  agent_tools?: Prisma.AgentToolUpdateManyWithoutAgentNestedInput
+  actions?: Prisma.AgentActionUpdateManyWithoutAgentNestedInput
 }
 
 export type AgentUncheckedUpdateWithoutThread_metadataInput = {
@@ -582,10 +761,12 @@ export type AgentUncheckedUpdateWithoutThread_metadataInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   system_prompt?: Prisma.StringFieldUpdateOperationsInput | string
   auto_start?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engine?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  agent_tools?: Prisma.AgentToolUncheckedUpdateManyWithoutAgentNestedInput
+  actions?: Prisma.AgentActionUncheckedUpdateManyWithoutAgentNestedInput
 }
 
 
@@ -594,10 +775,14 @@ export type AgentUncheckedUpdateWithoutThread_metadataInput = {
  */
 
 export type AgentCountOutputType = {
+  agent_tools: number
+  actions: number
   thread_metadata: number
 }
 
 export type AgentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  agent_tools?: boolean | AgentCountOutputTypeCountAgent_toolsArgs
+  actions?: boolean | AgentCountOutputTypeCountActionsArgs
   thread_metadata?: boolean | AgentCountOutputTypeCountThread_metadataArgs
 }
 
@@ -609,6 +794,20 @@ export type AgentCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extens
    * Select specific fields to fetch from the AgentCountOutputType
    */
   select?: Prisma.AgentCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * AgentCountOutputType without action
+ */
+export type AgentCountOutputTypeCountAgent_toolsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AgentToolWhereInput
+}
+
+/**
+ * AgentCountOutputType without action
+ */
+export type AgentCountOutputTypeCountActionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AgentActionWhereInput
 }
 
 /**
@@ -628,6 +827,10 @@ export type AgentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   auto_start?: boolean
   created_at?: boolean
   updated_at?: boolean
+  engine?: boolean
+  model?: boolean
+  agent_tools?: boolean | Prisma.Agent$agent_toolsArgs<ExtArgs>
+  actions?: boolean | Prisma.Agent$actionsArgs<ExtArgs>
   thread_metadata?: boolean | Prisma.Agent$thread_metadataArgs<ExtArgs>
   _count?: boolean | Prisma.AgentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["agent"]>
@@ -671,8 +874,10 @@ export type AgentSelectScalar = {
   model?: boolean
 }
 
-export type AgentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"agent_id" | "name" | "description" | "version" | "system_prompt" | "auto_start" | "engine" | "model" | "created_at" | "updated_at", ExtArgs["result"]["agent"]>
+export type AgentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"agent_id" | "name" | "description" | "version" | "system_prompt" | "auto_start" | "created_at" | "updated_at" | "engine" | "model", ExtArgs["result"]["agent"]>
 export type AgentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  agent_tools?: boolean | Prisma.Agent$agent_toolsArgs<ExtArgs>
+  actions?: boolean | Prisma.Agent$actionsArgs<ExtArgs>
   thread_metadata?: boolean | Prisma.Agent$thread_metadataArgs<ExtArgs>
   _count?: boolean | Prisma.AgentCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -682,6 +887,8 @@ export type AgentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
 export type $AgentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Agent"
   objects: {
+    agent_tools: Prisma.$AgentToolPayload<ExtArgs>[]
+    actions: Prisma.$AgentActionPayload<ExtArgs>[]
     thread_metadata: Prisma.$ThreadMetadataPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1089,6 +1296,8 @@ readonly fields: AgentFieldRefs;
  */
 export interface Prisma__AgentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  agent_tools<T extends Prisma.Agent$agent_toolsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Agent$agent_toolsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AgentToolPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  actions<T extends Prisma.Agent$actionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Agent$actionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AgentActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   thread_metadata<T extends Prisma.Agent$thread_metadataArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Agent$thread_metadataArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadMetadataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1512,6 +1721,54 @@ export type AgentDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Limit how many Agents to delete.
    */
   limit?: number
+}
+
+/**
+ * Agent.agent_tools
+ */
+export type Agent$agent_toolsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AgentTool
+   */
+  select?: Prisma.AgentToolSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AgentTool
+   */
+  omit?: Prisma.AgentToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AgentToolInclude<ExtArgs> | null
+  where?: Prisma.AgentToolWhereInput
+  orderBy?: Prisma.AgentToolOrderByWithRelationInput | Prisma.AgentToolOrderByWithRelationInput[]
+  cursor?: Prisma.AgentToolWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AgentToolScalarFieldEnum | Prisma.AgentToolScalarFieldEnum[]
+}
+
+/**
+ * Agent.actions
+ */
+export type Agent$actionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AgentAction
+   */
+  select?: Prisma.AgentActionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AgentAction
+   */
+  omit?: Prisma.AgentActionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AgentActionInclude<ExtArgs> | null
+  where?: Prisma.AgentActionWhereInput
+  orderBy?: Prisma.AgentActionOrderByWithRelationInput | Prisma.AgentActionOrderByWithRelationInput[]
+  cursor?: Prisma.AgentActionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AgentActionScalarFieldEnum | Prisma.AgentActionScalarFieldEnum[]
 }
 
 /**

@@ -52,11 +52,8 @@ npx prisma generate           # Regenerate Prisma client after schema changes
 ```
 
 The generated Prisma client is output to `backend/src/lib/prisma/` (not `node_modules`).
-<<<<<<< HEAD
-=======
 
 > **⚠️ FTS Tables Warning**: The SQLite full-text search tables (`memory_fts`, `memory_fts_config`, `memory_fts_data`, `memory_fts_docsize`, `memory_fts_idx`) are created by a raw SQL migration and are **not represented in `schema.prisma`**. Prisma does not know about them and will warn that it is about to drop them every time you run `prisma migrate dev`. **Always review migration warnings before confirming** — if you see these FTS tables listed for deletion, that is expected and safe to confirm, but never allow a migration to drop them in production without explicit intent to remove the memory search feature.
->>>>>>> main
 
 ## Configuration System (Critical Pattern)
 
@@ -178,11 +175,7 @@ Use Zod middleware helpers from `middleware/zod.middleware.ts`:
 
 ## Environment & Build
 
-<<<<<<< HEAD
-- **Node**: 18+ (tsx for dev, tsc for prod build)
-=======
 - **Node**: 22+ (tsx for dev, tsc for prod build)
->>>>>>> main
 - **TypeScript**: ~5.9 across backend and frontend
 - **Database**: SQLite via Prisma + `@prisma/adapter-better-sqlite3`; set `DATABASE_URL=file:<path>` before running
 - **Config dir**: Set `CONFIG_DIR=<path>` before running the backend; defaults to `~/config/ai-assistant`

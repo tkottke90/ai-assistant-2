@@ -1,25 +1,21 @@
 import BaseLayout, { BaseLayoutShowBtn, useAppContext } from "@/components/layouts/base.layout";
-import { useRef, useEffect } from "preact/hooks";
-import { ChatForm } from "./chat-form";
-import { listThreads, updateThread, deleteThread, summarizeThread } from '@tkottke90/ai-assistant-client';
+import { Button, ConfirmButton } from "@/components/ui/button";
+import { useAgentSelection } from "@/hooks/use-agent-selection";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { Signal, useSignal } from "@preact/signals";
 import {
-  listPendingActions,
-  resolveAgentAction,
-  type AgentAction,
+  deleteThread, listPendingActions, listThreads, resolveAgentAction, summarizeThread, updateThread, type AgentAction,
   type ChatMessage,
   type ThreadMetadata
 } from '@tkottke90/ai-assistant-client';
-import { Signal, useSignal } from "@preact/signals";
-import { ChatMessageDisplay } from "./messages";
-import chatHistory from "./chat-history";
-import { useLlmSelection } from "@/hooks/use-llm-selection";
-import { useAgentSelection } from "@/hooks/use-agent-selection";
-import { selectedAgentName } from "./agent-chips";
-import { useRoute, useLocation } from "preact-iso";
-import { Sparkles, Archive, Trash2 } from "lucide-preact";
-import { ConfirmButton } from "@/components/ui/button";
+import { Archive, Sparkles, Trash2 } from "lucide-preact";
+import { useLocation, useRoute } from "preact-iso";
+import { useEffect, useRef } from "preact/hooks";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { selectedAgentName } from "./agent-chips";
+import { ChatForm } from "./chat-form";
+import chatHistory from "./chat-history";
+import { ChatMessageDisplay } from "./messages";
 
 // ── Pure utility functions ───────────────────────────────────────────────────
 

@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model AgentAction
@@ -311,10 +311,10 @@ export type AgentActionOrderByWithRelationInput = {
 
 export type AgentActionWhereUniqueInput = Prisma.AtLeast<{
   action_id?: number
+  id?: string
   AND?: Prisma.AgentActionWhereInput | Prisma.AgentActionWhereInput[]
   OR?: Prisma.AgentActionWhereInput[]
   NOT?: Prisma.AgentActionWhereInput | Prisma.AgentActionWhereInput[]
-  id?: Prisma.StringFilter<"AgentAction"> | string
   agent_id?: Prisma.IntFilter<"AgentAction"> | number
   thread_id?: Prisma.StringFilter<"AgentAction"> | string
   user_turn_checkpoint_id?: Prisma.StringFilter<"AgentAction"> | string
@@ -328,7 +328,7 @@ export type AgentActionWhereUniqueInput = Prisma.AtLeast<{
   created_at?: Prisma.DateTimeFilter<"AgentAction"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"AgentAction"> | Date | string
   agent?: Prisma.XOR<Prisma.AgentScalarRelationFilter, Prisma.AgentWhereInput>
-}, "action_id">
+}, "action_id" | "id">
 
 export type AgentActionOrderByWithAggregationInput = {
   action_id?: Prisma.SortOrder

@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model ThreadMetadata
@@ -445,14 +445,6 @@ export type ThreadMetadataUncheckedUpdateManyWithoutAgentNestedInput = {
   update?: Prisma.ThreadMetadataUpdateWithWhereUniqueWithoutAgentInput | Prisma.ThreadMetadataUpdateWithWhereUniqueWithoutAgentInput[]
   updateMany?: Prisma.ThreadMetadataUpdateManyWithWhereWithoutAgentInput | Prisma.ThreadMetadataUpdateManyWithWhereWithoutAgentInput[]
   deleteMany?: Prisma.ThreadMetadataScalarWhereInput | Prisma.ThreadMetadataScalarWhereInput[]
-}
-
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
 }
 
 export type ThreadMetadataCreateWithoutAgentInput = {

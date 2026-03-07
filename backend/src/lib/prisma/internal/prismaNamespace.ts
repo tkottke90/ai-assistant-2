@@ -16,10 +16,10 @@
  */
 
 import * as runtime from "@prisma/client/runtime/client"
-import type * as Prisma from "../models.js"
-import { type PrismaClient } from "./class.js"
+import type * as Prisma from "../models"
+import { type PrismaClient } from "./class"
 
-export type * from '../models.js'
+export type * from '../models'
 
 export type DMMF = typeof runtime.DMMF
 
@@ -410,11 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-<<<<<<< HEAD
-    modelProps: "node" | "edge" | "asset" | "agent" | "checkpoints" | "writes" | "threadMetadata"
-=======
-    modelProps: "node" | "edge" | "asset" | "agent" | "mcpServer" | "tool" | "agentTool" | "agentAction" | "checkpoints" | "writes"
->>>>>>> main
+    modelProps: "node" | "edge" | "asset" | "agent" | "mcpServer" | "tool" | "agentTool" | "agentAction" | "checkpoints" | "writes" | "threadMetadata"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {

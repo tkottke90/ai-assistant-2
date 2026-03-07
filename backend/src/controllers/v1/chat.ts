@@ -138,6 +138,7 @@ router.get('/threads', async (req, res): Promise<void> => {
               return ThreadMetadataDao.upsert(thread_id, {}).then(row => metadataMap.set(thread_id, row));
             }
             // Row exists but is archived — don't add to the active map
+            return;
           }),
         );
       }

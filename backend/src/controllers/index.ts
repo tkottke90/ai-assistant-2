@@ -16,6 +16,17 @@ router.get('/health', (req, res) => {
   res.json({ status: 'OKAY' });
 });
 
+router.get('/health/db', (req, res) => {
+  const { healthy, checkedAt, lastError } = req.app.dbHealth.state;
+  const body = { healthy, checkedAt };
+
+  if (!healthy) {
+    res.status(503).json({ ...body, error: lastError });
+  } else {
+    res.json(body);
+  }
+});
+
 export default function(app: Router) {
   app.use('/api', router);
 };

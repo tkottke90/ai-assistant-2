@@ -11,10 +11,33 @@ const severityStyles = {
   3: "bg-red-300/35 border-red-500 font-bold"
 }
 
+function getToolSummary(message: ServerAction): string | undefined {
+  return message.metadata?.tool_summary as string | undefined;
+}
+
+function formatRawContent(content: string): string {
+  try {
+    return JSON.stringify(JSON.parse(content), null, 2);
+  } catch {
+    return content;
+  }
+}
+
 function ActionMessage({ message }: {message: ServerAction}) {
+  const summary = getToolSummary(message);
   return (
-    <div className={`p-4 rounded-md border min-w-10/12 xl:min-w-1/2 mx-auto ${severityStyles[message.severity ?? 0]}`}>
-      <p className="mb-2">{message.content}</p>
+    <div className={`p-4 rounded-md border min-w-10/12 max-w-3/4 xl:min-w-1/2 mx-auto ${severityStyles[message.severity ?? 0]}`}>
+      {summary ? (
+        <div className="mb-2">
+          <p>{summary}</p>
+          <details className="mt-1">
+            <summary className="cursor-pointer text-xs text-current/60 select-none">Show raw output</summary>
+            <pre className="text-xs mt-2 overflow-auto whitespace-pre-wrap break-all opacity-75">{formatRawContent(message.content)}</pre>
+          </details>
+        </div>
+      ) : (
+        <p className="mb-2">{message.content}</p>
+      )}
       <div className="flex gap-2 justify-end">
         {message.actions?.map((action, index) => (
           <Button 

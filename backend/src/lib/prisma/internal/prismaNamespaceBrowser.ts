@@ -55,6 +55,10 @@ export const ModelName = {
   Edge: 'Edge',
   Asset: 'Asset',
   Agent: 'Agent',
+  McpServer: 'McpServer',
+  Tool: 'Tool',
+  AgentTool: 'AgentTool',
+  AgentAction: 'AgentAction',
   checkpoints: 'checkpoints',
   writes: 'writes',
   ThreadMetadata: 'ThreadMetadata'
@@ -119,13 +123,70 @@ export const AgentScalarFieldEnum = {
   version: 'version',
   system_prompt: 'system_prompt',
   auto_start: 'auto_start',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
   engine: 'engine',
-  model: 'model',
+  model: 'model'
+} as const
+
+export type AgentScalarFieldEnum = (typeof AgentScalarFieldEnum)[keyof typeof AgentScalarFieldEnum]
+
+
+export const McpServerScalarFieldEnum = {
+  server_id: 'server_id',
+  config_id: 'config_id'
+} as const
+
+export type McpServerScalarFieldEnum = (typeof McpServerScalarFieldEnum)[keyof typeof McpServerScalarFieldEnum]
+
+
+export const ToolScalarFieldEnum = {
+  tool_id: 'tool_id',
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  source: 'source',
+  mcp_server_id: 'mcp_server_id',
+  locked_tier: 'locked_tier',
+  input_schema: 'input_schema',
+  output_schema: 'output_schema',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const
 
-export type AgentScalarFieldEnum = (typeof AgentScalarFieldEnum)[keyof typeof AgentScalarFieldEnum]
+export type ToolScalarFieldEnum = (typeof ToolScalarFieldEnum)[keyof typeof ToolScalarFieldEnum]
+
+
+export const AgentToolScalarFieldEnum = {
+  id: 'id',
+  agent_id: 'agent_id',
+  tool_id: 'tool_id',
+  tier: 'tier',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type AgentToolScalarFieldEnum = (typeof AgentToolScalarFieldEnum)[keyof typeof AgentToolScalarFieldEnum]
+
+
+export const AgentActionScalarFieldEnum = {
+  action_id: 'action_id',
+  id: 'id',
+  agent_id: 'agent_id',
+  thread_id: 'thread_id',
+  user_turn_checkpoint_id: 'user_turn_checkpoint_id',
+  description: 'description',
+  action: 'action',
+  action_hash: 'action_hash',
+  status: 'status',
+  justification: 'justification',
+  auto_approved: 'auto_approved',
+  expires_at: 'expires_at',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type AgentActionScalarFieldEnum = (typeof AgentActionScalarFieldEnum)[keyof typeof AgentActionScalarFieldEnum]
 
 
 export const CheckpointsScalarFieldEnum = {
@@ -181,6 +242,14 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const JsonNullValueFilter = {

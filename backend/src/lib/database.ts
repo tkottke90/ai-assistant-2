@@ -17,3 +17,12 @@ export const prisma = new PrismaClient({
 });
 
 export const checkpointer = SqliteSaver.fromConnString(dbUrl);
+
+/**
+ * Lightweight DB liveness probe — used by DbHealthMonitor.
+ * Returns true if Prisma can reach the SQLite file, false otherwise.
+ */
+export async function checkDbHealth(): Promise<boolean> {
+  await prisma.$queryRaw`SELECT 1`;
+  return true;
+}

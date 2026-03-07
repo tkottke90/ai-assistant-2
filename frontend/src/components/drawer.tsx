@@ -99,7 +99,7 @@ export function Drawer({ className, children, trigger, title, onOpen, eventTrigg
             starting:open:opacity-0 open:opacity-100
             ${DIRECTIONS[direction ?? "right"]}
             transition-discrete transition-transform duration-300 ease-out
-            py-9 px-6 w-full h-screen md:w-3/4 xl:w-1/2 max-h-none m-0 focus-visible:outline-none shadow-2xl
+            py-6 px-6 w-full h-screen md:w-3/4 xl:w-1/2 max-h-none m-0 focus-visible:outline-none shadow-2xl
             bg-neutral-100 dark:bg-neutral-700
             text-neutral-800 dark:text-neutral-200
             backdrop:bg-neutral-900/50 backdrop-blur-sm`}
@@ -110,7 +110,7 @@ export function Drawer({ className, children, trigger, title, onOpen, eventTrigg
                 <h1 className="text-xl font-medium">{title}</h1>
                 <Button variant="ghost" size="icon" onClick={() => { animateExit(dialogRef.current, direction) }}><X /></Button>
               </div>
-              <div className={cn("grow overflow-hidden", className)}>
+              <div className={cn("grow overflow-hidden py-1", className)}>
                 {children}
               </div>
             </div>

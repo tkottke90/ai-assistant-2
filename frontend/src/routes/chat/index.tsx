@@ -1,4 +1,4 @@
-import BaseLayout, { BaseLayoutShowBtn, useAppContext as useLayoutContext } from "@/components/layouts/base.layout";
+import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
 import { Button } from "@/components/ui/button";
 import { useAgentSelection } from "@/hooks/use-agent-selection";
 import { useComputed, useSignal, useSignalEffect } from "@preact/signals";
@@ -216,7 +216,7 @@ export function ChatPage() {
 
 function ChatPageContent() {
   const { agentSelection, isStreaming, thread } = useChatContext();
-  const { threadRefresh } = useLayoutContext();
+  const { threadRefresh } = useAppContext();
 
   const agentName = useComputed(() =>
     selectedAgentName(agentSelection.activeAgents.value, agentSelection.selectedAgentId.value)

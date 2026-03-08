@@ -156,17 +156,6 @@ router.get('/threads', async (req, res): Promise<void> => {
   }
 });
 
-router.get('/threads/:threadId', async (req, res): Promise<void> => {
-  const threadId = req.params.threadId as string;
-  const meta = await ThreadMetadataDao.findByThreadId(threadId);
-  if (!meta) {
-    res.status(404).json({ error: 'Thread not found' });
-    return;
-  }
-  res.setHeader('Cache-Control', 'no-store');
-  res.json(meta);
-});
-
 const PatchThreadSchema = z.object({
   title: z.string().optional(),
   archived: z.boolean().optional(),

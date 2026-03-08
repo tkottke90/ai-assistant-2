@@ -1,11 +1,12 @@
 import { useEffect } from "preact/hooks";
-import { Signal, useSignal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { listThreads, newThread, updateThread } from "@tkottke90/ai-assistant-client";
 import type { ThreadMetadata, AgentThread, ThreadsResponse } from "@tkottke90/ai-assistant-client";
 import { useLocation } from "preact-iso";
 import { Plus, MessageSquare, Archive, Bot } from "lucide-preact";
 import { Button } from "./ui/button";
 import { formatRelativeDate } from "@/lib/date-utils";
+import { useAppContext } from "@/app-context";
 
 /**
  * Format a thread's display label. Use title if available, otherwise fall back to a date string.
@@ -101,11 +102,8 @@ function ThreadRow({ thread, active, onArchive }: ThreadRowProps) {
 
 // --- Main Component ---
 
-interface ThreadListProps {
-  refreshSignal: Signal<number>;
-}
-
-export function ThreadList({ refreshSignal }: ThreadListProps) {
+export function ThreadList() {
+  const { threadRefresh: refreshSignal } = useAppContext();
   const threads = useSignal<ThreadMetadata[]>([]);
   const agentThreads = useSignal<AgentThread[]>([]);
   const loading = useSignal(true);

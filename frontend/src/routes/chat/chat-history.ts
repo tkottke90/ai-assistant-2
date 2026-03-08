@@ -1,6 +1,5 @@
 import {
   newThread,
-  getThreadHistory
 } from "@tkottke90/ai-assistant-client";
 
 interface ChatRegistryItem {
@@ -75,5 +74,4 @@ export default {
   initialize,
   newChatThread,
   loadOrCreateThread,
-  getChatHistory: getThreadHistory,
 }

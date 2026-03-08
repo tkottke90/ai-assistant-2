@@ -70,18 +70,6 @@ function newThread(options?: { agent_id?: number; type?: 'chat' | 'agent' }): Pr
     });
 }
 
-function getThread(threadId: string): Promise<ThreadResponse> {
-  return fetch(`/api/v1/chat/threads/${threadId}`)
-    .then(res => {
-      if (res.status === 404) throw new Error('Thread not found');
-      return res.json();
-    })
-    .then(data => {
-      if ((data as any).error) throw new Error((data as any).error);
-      return data as ThreadResponse;
-    });
-}
-
 function updateThread(
   threadId: string,
   data: Partial<Pick<ThreadMetadata, 'title' | 'archived' | 'agent_id'>>,
@@ -144,7 +132,6 @@ export {
   InteractionMessage,
   ThreadResponse,
   getThreadHistory,
-  getThread,
   listThreads,
   listArchivedThreads,
   newThread,

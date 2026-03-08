@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
+    "build:client": "(cd src/lib/client && npm run build)",
     "dev": "node build.mjs --watch",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"

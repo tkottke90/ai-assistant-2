@@ -3,6 +3,7 @@ import './index.css'
 import App from './app.tsx'
 import ChatHistory from './routes/chat/chat-history';
 import 'highlight.js';
+import './lib/workerClient.ts';
 
 ChatHistory.initialize();
 

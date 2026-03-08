@@ -3,7 +3,7 @@ import { LlmSelector } from "@/components/llm-selector";
 import type { Signal } from "@preact/signals";
 import { SendHorizonal } from "lucide-preact";
 import { toast } from "sonner";
-import type { ChatMessage } from "@tkottke90/ai-assistant-client";
+import type { ChatMessage, ThreadResponse } from "@tkottke90/ai-assistant-client";
 import {
   buildUserMessage,
   buildAssistantMessage,
@@ -13,10 +13,10 @@ import {
 } from "./chat-utils";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { AgentChips } from "./agent-chips";
-import type { AgentSelection } from "@/hooks/use-agent-selection";
+import { useChatContext } from "./chat-context";
 
 export function createSubmitHandler(
-  chatMessages: Signal<ChatMessage[]>,
+  thread: Signal<ThreadResponse>,
   isStreaming: Signal<boolean>,
   selectedAlias: Signal<string>,
   selectedModel: Signal<string>,
@@ -29,18 +29,20 @@ export function createSubmitHandler(
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
     const message = formData.get('message') as string;
-    const threadId = formData.get('threadId') as string;
+    const threadId = thread.value.threadId;
 
     if (!message.trim()) return;
 
     form.reset();
-    form.querySelector('#threadId')?.setAttribute('value', threadId);
 
     const userMessage = buildUserMessage(message);
     const assistantMessage = buildAssistantMessage();
     const assistantId = assistantMessage.id;
 
-    chatMessages.value = [...chatMessages.value, userMessage, assistantMessage];
+    thread.value = {
+      ...thread.value,
+      history: [...(thread.value.history ?? []), userMessage, assistantMessage],
+    };
     isStreaming.value = true;
 
     try {
@@ -73,15 +75,20 @@ export function createSubmitHandler(
 
           const content = parseMessagesChunk(line);
           if (content) {
-            chatMessages.value = appendToMessage(chatMessages.value, assistantId, content);
+            thread.value = {
+              ...thread.value,
+              history: appendToMessage(thread.value.history as ChatMessage[], assistantId, content),
+            };
           }
         }
       }
     } catch (err) {
       console.error('Chat stream error:', err);
       toast.error('Failed to get a response. Please try again.');
-      // Remove the empty assistant placeholder on failure
-      chatMessages.value = chatMessages.value.filter(msg => msg.id !== assistantId);
+      thread.value = {
+        ...thread.value,
+        history: (thread.value.history ?? []).filter((msg: ChatMessage) => msg.id !== assistantId),
+      };
     } finally {
       isStreaming.value = false;
       onMessageSent?.();
@@ -90,21 +97,26 @@ export function createSubmitHandler(
 }
 
 interface ChatFormProps {
-  threadId: Signal<string>;
-  chatMessages: Signal<ChatMessage[]>;
-  isStreaming: Signal<boolean>;
-  llmSelection: ReturnType<typeof useLlmSelection>;
-  agentSelection: AgentSelection;
   onMessageSent?: () => void;
 }
 
-export function ChatForm({ threadId, chatMessages, isStreaming, llmSelection, agentSelection, onMessageSent }: ChatFormProps) {
+export function ChatForm({ onMessageSent }: ChatFormProps) {
+  const { thread, agentSelection, isStreaming } = useChatContext();
+  const llmSelection = useLlmSelection();
+
   const { selectedAlias, selectedModel } = llmSelection;
-  const handleSubmit = createSubmitHandler(chatMessages, isStreaming, selectedAlias, selectedModel, agentSelection.selectedAgentId, onMessageSent);
+  const handleSubmit = createSubmitHandler(
+    thread,
+    isStreaming,
+    selectedAlias,
+    selectedModel,
+    agentSelection.selectedAgentId,
+    onMessageSent,
+  );
 
   return (
     <form className="w-full flex flex-col gap-1" onSubmit={handleSubmit}>
-      <input type="text" hidden id="threadId" name="threadId" value={threadId.value} />
+      <input type="text" hidden id="threadId" name="threadId" value={thread.value.threadId} />
 
       <div className="w-full flex flex-row gap-2">
         <div className="w-full border border-neutral-500/50 rounded-md">

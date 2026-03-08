@@ -3,8 +3,7 @@ import { createAgent } from 'langchain';
 import { checkpointer, prisma } from '../../lib/database';
 import { ZodBodyValidator, ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
-import { InteractionSchema, ServerActionSchema, threadHistoryResponseSchema } from '../../lib/models/chat';
-import { BaseMessage } from 'langchain';
+import { InteractionSchema, ServerActionSchema, threadResponseSchema } from '../../lib/models/chat';
 import crypto from 'node:crypto';
 import ThreadDao from '../../lib/dao/thread.dao.js';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
@@ -164,6 +163,7 @@ router.get('/threads/:threadId', async (req, res): Promise<void> => {
     res.status(404).json({ error: 'Thread not found' });
     return;
   }
+  res.setHeader('Cache-Control', 'no-store');
   res.json(meta);
 });
 
@@ -226,11 +226,21 @@ router.get(
   async (req, res) => {
     const { threadId } = req.params
 
+    const metadata = await ThreadMetadataDao.findByThreadId(threadId as string);
+    
+    if (!metadata) {
+      res.status(404).json({ error: 'Thread not found' });
+      return;
+    }
+
     const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
 
+    res.setHeader('Cache-Control', 'no-store');
     res.json(
-      threadHistoryResponseSchema.parse({
+      threadResponseSchema.parse({
+      ...metadata,
       threadId,
+      agent: metadata.agent ? { id: metadata.agent.agent_id, name: metadata.agent.name } : null,
       history: history
         .filter(({ msg }) => msg.content !== '') // Filter out empty messages (placeholders for thinking)
         .map(({ msg, ts }) => {

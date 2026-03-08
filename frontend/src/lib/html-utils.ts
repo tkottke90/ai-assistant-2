@@ -1,7 +1,7 @@
-import { type Inputs, useCallback } from "preact/hooks";
+import { type Inputs, useCallback, useEffect } from "preact/hooks";
 
 export function registerEvent(
-  element: HTMLElement,
+  element: EventTarget,
   eventName: string,
   event: (e: Event) => void
 ) {
@@ -14,6 +14,28 @@ export function registerEvent(
       element.removeEventListener(eventName, event);
     }
   };
+}
+
+export function useEventListener<
+  TMap = HTMLElementEventMap & WindowEventMap & DocumentEventMap,
+  TEventName extends keyof TMap & string = keyof TMap & string
+>(
+  element: EventTarget | null,
+  eventName: TEventName,
+  event: (e: TMap[TEventName]) => void,
+  inputs: Inputs = []
+) {
+  useEffect(() => {
+    if (!element) return;
+
+    const signal = new AbortController();
+
+    element.addEventListener(eventName, event as EventListener, { signal: signal.signal });
+
+    return () => {
+      signal.abort();
+    };
+  }, inputs);
 }
 
 export function useHtmlElementListeners(

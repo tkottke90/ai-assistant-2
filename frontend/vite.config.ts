@@ -6,6 +6,10 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [preact(), tailwindcss()],
+  worker: {
+    format: 'es',       // 'es' | 'iife' (default: 'iife')
+    plugins: () => [],  // plugins to apply to worker bundle
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -6,7 +6,8 @@ import {
   ServerAction,
   ChatMessageSchema,
   InteractionMessage,
-  threadHistoryResponseSchema
+  threadResponseSchema,
+  ThreadResponse
 } from '../../models/chat.js';
 
 // --- Thread Metadata Types ---
@@ -69,7 +70,7 @@ function newThread(options?: { agent_id?: number; type?: 'chat' | 'agent' }): Pr
     });
 }
 
-function getThread(threadId: string): Promise<ThreadMetadata> {
+function getThread(threadId: string): Promise<ThreadResponse> {
   return fetch(`/api/v1/chat/threads/${threadId}`)
     .then(res => {
       if (res.status === 404) throw new Error('Thread not found');
@@ -77,7 +78,7 @@ function getThread(threadId: string): Promise<ThreadMetadata> {
     })
     .then(data => {
       if ((data as any).error) throw new Error((data as any).error);
-      return data as ThreadMetadata;
+      return data as ThreadResponse;
     });
 }
 
@@ -129,7 +130,7 @@ function getThreadHistory(threadId: string) {
       if (data.error) {
         throw new Error(data.error);
       }
-      return data as z.infer<typeof threadHistoryResponseSchema>;
+      return data as z.infer<typeof threadResponseSchema>;
     });
 }
 
@@ -141,6 +142,7 @@ export {
   ServerAction,
   ChatMessageSchema,
   InteractionMessage,
+  ThreadResponse,
   getThreadHistory,
   getThread,
   listThreads,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DateField } from '../types/util';
 
 export enum ActionSeverity {
   INFO = 0,
@@ -51,7 +52,21 @@ export type InteractionMessage = z.infer<typeof InteractionSchema>;
 export type ChatAsset = z.infer<typeof ChatMessageAssetSchema>;
 
 
-export const threadHistoryResponseSchema = z.object({
+export const threadResponseSchema = z.object({
   threadId: z.string(),
+  title: z.string().nullable(),
+  agent_id: z.number().nullable(),
+  archived: z.boolean(),
+  thread_id: z.string(),
+  type: z.enum(['chat', 'agent']),
+
+  created_at: DateField,
+  updated_at: DateField,
+  agent: z.object({
+    id: z.number(),
+    name: z.string(),
+  }).nullable(),
   history: z.array(ChatMessageSchema),
 });
+
+export type ThreadResponse = z.infer<typeof threadResponseSchema>;

@@ -127,7 +127,7 @@ export function BaseLayoutShowBtn() {
   // We return null in the following cases:
   // 1. If there is no dialog reference available.
   // 2. If the user is not on a mobile device, since the sidebar is always visible on larger screens.
-  if (!dialog.value || !isMobile.value) return null;
+  if (!dialog || !dialog.value || !isMobile.value) return null;
 
   return (
     <Button variant="ghost" onClick={() => {

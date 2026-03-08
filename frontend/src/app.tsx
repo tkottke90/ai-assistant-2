@@ -3,6 +3,9 @@ import { Toaster } from 'sonner';
 import { ChatPage } from './routes/chat/index.tsx';
 import { AgentsPage } from './routes/agents/index.tsx';
 import { ArchivePage } from './routes/archive/index.tsx';
+import { useCallback } from 'preact/hooks';
+import { useSignal } from '@preact/signals';
+import { AppContextProvider } from './app-context.tsx';
 
 function NotFound() {
   return (
@@ -14,19 +17,30 @@ function NotFound() {
 }
 
 function App() {
+  const threads = useSignal([]);
+  const router = useSignal(new EventTarget());
+
+  const onRouteChange = useCallback((newLocation: string) => {
+    router.value.dispatchEvent(new CustomEvent('route-updated', { detail: newLocation }));
+  }, []);
 
   return (
     <LocationProvider>
       <ErrorBoundary>
         <main class="w-full h-full">
-          <Router>
-            <Route path="/" component={ChatPage} />
-            <Route path="/chat" component={ChatPage} />
-            <Route path="/chat/:threadId" component={ChatPage} />
-            <Route path="/agents" component={AgentsPage} />
-            <Route path="/archive" component={ArchivePage} />
-            <Route path="*" component={NotFound} />
-          </Router>
+          <AppContextProvider value={{
+            threads,
+            routeUpdate: router.value
+          }}>
+            <Router onRouteChange={onRouteChange}>
+              <Route path="/" component={ChatPage} />
+              <Route path="/chat" component={ChatPage} />
+              <Route path="/chat/:threadId" component={ChatPage} />
+              <Route path="/agents" component={AgentsPage} />
+              <Route path="/archive" component={ArchivePage} />
+              <Route path="*" component={NotFound} />
+            </Router>
+          </AppContextProvider>
         </main>
         <Toaster position="bottom-right" richColors />
       </ErrorBoundary>

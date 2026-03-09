@@ -4,6 +4,8 @@ import { summarizeThread, updateThread, deleteThread } from "@tkottke90/ai-assis
 import { Sparkles, Archive, Trash2 } from "lucide-react";
 import { useLocation } from "preact-iso";
 import { useChatContext } from "./chat-context";
+import { fireWorkerEvent } from "@/lib/workerClient";
+import { REFRESH_THREADS_EVT } from "@/lib/chat";
 
 export async function summarizeAndUpdateTitle(
   threadId: string,
@@ -19,11 +21,10 @@ export async function summarizeAndUpdateTitle(
 
 export async function archiveThreadById(
   threadId: string,
-  onSuccess: () => void,
 ): Promise<void> {
   try {
     await updateThread(threadId, { archived: true });
-    onSuccess();
+    fireWorkerEvent({ type: REFRESH_THREADS_EVT });
   } catch (err) {
     console.error("Failed to archive thread:", err);
   }
@@ -35,17 +36,14 @@ export async function deleteThreadById(
 ): Promise<void> {
   try {
     await deleteThread(threadId);
+    fireWorkerEvent({ type: REFRESH_THREADS_EVT });
     onSuccess();
   } catch (err) {
     console.error("Failed to delete thread:", err);
   }
 }
 
-interface ThreadHeaderProps {
-  onRefreshThreads: () => void;
-}
-
-export function ThreadHeader({ onRefreshThreads }: ThreadHeaderProps) {
+export function ThreadHeader() {
   const { thread } = useChatContext();
   const summarizing = useSignal(false);
 
@@ -53,22 +51,11 @@ export function ThreadHeader({ onRefreshThreads }: ThreadHeaderProps) {
 
   const handleSummarize = async () => {
     if (!thread.value) return;
-
-    // Set the state to show loading/summarizing status in the UI
     summarizing.value = true;
-
-    // Call the summarize endpoint
     await summarizeAndUpdateTitle(thread.value.threadId, (title) => {
-
-      // Update the thread signal with the new title
-      thread.value = {
-        ...thread.value,
-        title: title ?? ''
-      };
-      onRefreshThreads();
+      thread.value = { ...thread.value, title: title ?? '' };
+      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
     });
-
-    // Reset the summarizing state
     summarizing.value = false;
   };
 
@@ -92,9 +79,7 @@ export function ThreadHeader({ onRefreshThreads }: ThreadHeaderProps) {
         </Button>
         {!thread.value.archived && (
           <Button
-            onClick={() => archiveThreadById(thread.value.threadId, () => {
-              onRefreshThreads();
-            })}
+            onClick={() => archiveThreadById(thread.value.threadId)}
             title="Archive thread"
             className="p-1 rounded hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
             variant="ghost"
@@ -107,12 +92,7 @@ export function ThreadHeader({ onRefreshThreads }: ThreadHeaderProps) {
           variant="ghost"
           size="icon"
           className="p-1 text-neutral-400 hover:text-red-500 dark:hover:text-red-400"
-          onConfirm={() => deleteThreadById(thread.value.threadId, () => {
-            onRefreshThreads();
-            
-            // Route home because the thread was deleted
-            route('/');
-          })}
+          onConfirm={() => deleteThreadById(thread.value.threadId, () => route('/'))}
           title="Delete thread"
         >
           <Trash2 size={14} />

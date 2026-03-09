@@ -14,6 +14,8 @@ import {
 import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { AgentChips } from "./agent-chips";
 import { useChatContext } from "./chat-context";
+import { fireWorkerEvent } from "@/lib/workerClient";
+import { REFRESH_THREADS_EVT } from "@/lib/chat";
 
 export function createSubmitHandler(
   thread: Signal<ThreadResponse>,
@@ -21,7 +23,6 @@ export function createSubmitHandler(
   selectedAlias: Signal<string>,
   selectedModel: Signal<string>,
   selectedAgentId: Signal<number | null>,
-  onMessageSent?: () => void,
 ) {
   return async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -91,16 +92,12 @@ export function createSubmitHandler(
       };
     } finally {
       isStreaming.value = false;
-      onMessageSent?.();
+      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
     }
   };
 }
 
-interface ChatFormProps {
-  onMessageSent?: () => void;
-}
-
-export function ChatForm({ onMessageSent }: ChatFormProps) {
+export function ChatForm() {
   const { thread, agentSelection, isStreaming } = useChatContext();
   const llmSelection = useLlmSelection();
 
@@ -111,7 +108,6 @@ export function ChatForm({ onMessageSent }: ChatFormProps) {
     selectedAlias,
     selectedModel,
     agentSelection.selectedAgentId,
-    onMessageSent,
   );
 
   return (

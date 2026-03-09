@@ -45,6 +45,15 @@ worker.onmessage = (event: MessageEvent<OutboundMessage>) => {
   emitter.dispatchEvent(new CustomEvent(event.data.type, { detail: event.data }));
 };
 
+/**
+ * Fire-and-forget: post a message to the worker without subscribing to a response.
+ * Use this when the component does not own the response state (pub/sub publishers).
+ * Use `useWorkerEvent` instead when the component both triggers and consumes the response.
+ */
+export function fireWorkerEvent(message: InboundMessage): void {
+  worker.postMessage(message);
+}
+
 export function useWorkerEvent<
   TEventName extends InboundMessage['type'],
   TResponse extends OutboundMessage['type'] = `${TEventName}:response`,

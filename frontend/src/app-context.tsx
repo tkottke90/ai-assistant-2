@@ -13,7 +13,6 @@ const {
 } = createContextWithHook<{
   threads: Signal<ThreadMetadata[]>;
   routeUpdate: EventTarget;
-  threadRefresh: Signal<number>;
 }>();
 
 export { AppContextProvider, useAppContext };

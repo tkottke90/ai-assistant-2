@@ -6,7 +6,8 @@ import { useLocation } from "preact-iso";
 import { Plus, MessageSquare, Archive, Bot } from "lucide-preact";
 import { Button } from "./ui/button";
 import { formatRelativeDate } from "@/lib/date-utils";
-import { useAppContext } from "@/app-context";
+import { useWorkerEvent, fireWorkerEvent } from "@/lib/workerClient";
+import { REFRESH_THREADS_EVT } from "@/lib/chat";
 
 /**
  * Format a thread's display label. Use title if available, otherwise fall back to a date string.
@@ -103,35 +104,29 @@ function ThreadRow({ thread, active, onArchive }: ThreadRowProps) {
 // --- Main Component ---
 
 export function ThreadList() {
-  const { threadRefresh: refreshSignal } = useAppContext();
   const threads = useSignal<ThreadMetadata[]>([]);
   const agentThreads = useSignal<AgentThread[]>([]);
   const loading = useSignal(true);
   const { url: currentPath, route: navigate } = useLocation();
 
-  const loadThreads = () => {
-    loading.value = true;
-    listThreads()
-      .then((result: ThreadsResponse) => {
-        threads.value = result.threads;
-        agentThreads.value = result.agentThreads;
-      })
-      .catch((err: Error) => {
-        console.error("Failed to load threads:", err);
-      })
-      .finally(() => {
-        loading.value = false;
-      });
-  };
+  const sendRefresh = useWorkerEvent(
+    REFRESH_THREADS_EVT,
+    (e) => {
+      threads.value = e.detail.data.threads;
+      agentThreads.value = e.detail.data.agentThreads;
+      loading.value = false;
+    },
+  );
 
+  // Initial load on mount
   useEffect(() => {
-    loadThreads();
-  }, [refreshSignal.value]);
+    sendRefresh({});
+  }, []);
 
   const handleNewChat = async () => {
     try {
       const { thread_id } = await newThread();
-      refreshSignal.value += 1;
+      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
       navigate(`/chat/${thread_id}`);
     } catch (err) {
       console.error("Failed to create new thread:", err);
@@ -141,7 +136,7 @@ export function ThreadList() {
   const handleArchive = async (threadId: string) => {
     try {
       await updateThread(threadId, { archived: true });
-      loadThreads();
+      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
     } catch (err) {
       console.error("Failed to archive thread:", err);
     }

@@ -1,5 +1,5 @@
 import { Dialog, useDialog } from "@/components/dialog";
-import BaseLayout, { BaseLayoutShowBtn, useAppContext } from "@/components/layouts/base.layout";
+import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
 import { LlmSelector } from "@/components/llm-selector";
 import { Button, buttonVariants, ConfirmButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { AgentDrawer } from "./drawer";
 import { AgentTitle } from "./title";
 import { useLocation } from "preact-iso";
+import { fireWorkerEvent } from "@/lib/workerClient";
+import { REFRESH_THREADS_EVT } from "@/lib/chat";
 
 // Pure utility functions for pagination navigation
 function canGoToNextPage(currentPage: number, totalPages: number): boolean {
@@ -125,7 +127,6 @@ export async function openAgentThread(
 
 function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange: () => void }) {
   const { route: navigate } = useLocation();
-  const { threadRefresh } = useAppContext();
 
   // When there are no agents, we can show a friendly message encouraging the user to create their first agent
   if (agents.length === 0) {
@@ -156,7 +157,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                     stopAgent({ id: agent.agent_id })
                       .then(() => {
                         onChange();
-                        threadRefresh.value += 1;
+                        fireWorkerEvent({ type: REFRESH_THREADS_EVT });
                         toast.success('Agent stopped successfully', {  });
                       });
                   } else {
@@ -164,7 +165,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                     startAgent({ id: agent.agent_id })
                       .then(() => {
                         onChange();
-                        threadRefresh.value += 1;
+                        fireWorkerEvent({ type: REFRESH_THREADS_EVT });
                         toast.success('Agent started successfully');
                       });
                   }

@@ -15,9 +15,9 @@ import { selectedAgentName } from "./agent-chips";
 import { ChatForm } from "./chat-form";
 import chatHistory from "./chat-history";
 import { ChatMessageDisplay } from "./messages";
-import { useWorkerEvent } from "@/lib/workerClient";
+import { useWorkerEvent, fireWorkerEvent } from "@/lib/workerClient";
 import { ThreadHeader } from "./thread-header";
-import { GET_THREAD_EVT } from "@/lib/chat";
+import { GET_THREAD_EVT, REFRESH_THREADS_EVT } from "@/lib/chat";
 import { type RouterEventMap, useAppContext } from '@/app-context';
 import { useEventListener } from "@/lib/html-utils";
 import { ChatContextProvider, useChatContext } from "./chat-context";
@@ -91,10 +91,9 @@ function PendingActionCard({ action, onResolved }: {
   );
 }
 
-function PendingActionsPanel({ agentId, threadId, onResolved }: {
+function PendingActionsPanel({ agentId, threadId }: {
   agentId: number;
   threadId: string;
-  onResolved: () => void;
 }) {
   const actions = useSignal<AgentAction[]>([]);
   const { isStreaming } = useChatContext();
@@ -125,7 +124,7 @@ function PendingActionsPanel({ agentId, threadId, onResolved }: {
           action={action}
           onResolved={() => {
             actions.value = actions.value.filter(a => a.id !== action.id);
-            onResolved();
+            fireWorkerEvent({ type: REFRESH_THREADS_EVT });
           }}
         />
       ))}
@@ -216,7 +215,6 @@ export function ChatPage() {
 
 function ChatPageContent() {
   const { agentSelection, isStreaming, thread } = useChatContext();
-  const { threadRefresh } = useAppContext();
 
   const agentName = useComputed(() =>
     selectedAgentName(agentSelection.activeAgents.value, agentSelection.selectedAgentId.value)
@@ -235,8 +233,6 @@ function ChatPageContent() {
   const activeThreadId = thread.value.threadId;
   const showPendingPanel = !isStreaming.value && selectedAgentId !== null && !!activeThreadId;
 
-  const handleRefreshThreads = () => { threadRefresh.value += 1; };
-
   return (
     <>
       <header className="flex gap-2 items-center w-full">
@@ -251,9 +247,7 @@ function ChatPageContent() {
         )}
       </header>
 
-      <ThreadHeader
-        onRefreshThreads={handleRefreshThreads}
-      />
+      <ThreadHeader />
 
       <main className="w-full grow overflow-y-auto pr-4" ref={scrollRef}>
         <ChatList />
@@ -263,12 +257,11 @@ function ChatPageContent() {
         <PendingActionsPanel
           agentId={selectedAgentId!}
           threadId={activeThreadId}
-          onResolved={handleRefreshThreads}
         />
       )}
 
       <footer className="w-full">
-        <ChatForm onMessageSent={handleRefreshThreads} />
+        <ChatForm />
       </footer>
     </>
   );

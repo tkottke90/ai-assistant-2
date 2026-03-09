@@ -77,3 +77,117 @@ export function AgentsPage() {
 <button onClick={() => deleteItem(id)}>Delete</button>
 ```
 
+## Web Worker Pub/Sub Pattern
+
+For cross-component state updates that need to reach components outside the current render tree (e.g. a sidebar rendered in a portal, or unrelated pages), use the **Web Worker as a pub/sub bus** rather than threading signals or callbacks through context.
+
+### When to use this pattern
+
+Use this pattern when:
+- A user action in component A should trigger a data reload in component B with no shared ancestor
+- The subscriber lives inside a `createPortal` (portals can lose React/Preact context)
+- The update is a broadcast ("anyone who cares about X, reload it") rather than targeted prop passing
+
+Do **not** use this pattern for:
+- Parent→child communication (use props)
+- Sibling communication with a shared parent (use a signal or context)
+- Local UI state that doesn't involve the server
+
+### Architecture
+
+```
+Publisher                     Worker                        Subscriber
+──────────                    ──────                        ──────────
+fireWorkerEvent(msg)  ──►  handles msg, fetches API  ──►  useWorkerEvent callback
+                                                           updates local signal
+```
+
+The worker is a **singleton module** (`src/worker.ts?worker`), initialized once when `workerClient.ts` is first imported. It lives for the entire browser session, independent of route or component lifecycle.
+
+### Adding a new pub/sub event
+
+**1. Define types** in `src/lib/<domain>.ts`:
+```ts
+export const MY_EVT = 'my:event' as const;
+
+export interface MyEventMessage {
+  type: typeof MY_EVT;
+  // ...any request payload fields
+}
+
+export type MyEventResponse = inferResponseEvents<typeof MY_EVT, MyResponseData>;
+```
+
+**2. Register in `src/lib/messages.ts`**:
+```ts
+export type InboundMessage = ... | MyEventMessage;
+export type OutboundMessage = ... | MyEventResponse;
+```
+
+**3. Add a handler in `src/lib/<domain>.ts`**:
+```ts
+export async function myEventHandler(): Promise<MyEventResponse> {
+  try {
+    const data = await callApi();
+    return { type: 'my:event:response', data };
+  } catch (error) {
+    return { type: 'my:event:error', error: String(error) };
+  }
+}
+```
+
+**4. Wire the case in `src/worker.ts`**:
+```ts
+case MY_EVT: {
+  myEventHandler().then(emit);
+  break;
+}
+```
+
+**5. Publish** from any component using `fireWorkerEvent` (fire-and-forget):
+```ts
+import { fireWorkerEvent } from '@/lib/workerClient';
+import { MY_EVT } from '@/lib/<domain>';
+
+fireWorkerEvent({ type: MY_EVT });
+```
+
+**6. Subscribe** in the component that owns the data using `useWorkerEvent`:
+```ts
+import { useWorkerEvent } from '@/lib/workerClient';
+import { MY_EVT } from '@/lib/<domain>';
+
+const sendMyEvent = useWorkerEvent(MY_EVT, (e) => {
+  myData.value = e.detail.data;
+});
+
+// Trigger initial load
+useEffect(() => { sendMyEvent({}); }, []);
+```
+
+### `fireWorkerEvent` vs `useWorkerEvent`
+
+| | `fireWorkerEvent` | `useWorkerEvent` |
+|---|---|---|
+| **Who uses it** | Publishers (trigger a reload) | Subscribers (own the response state) |
+| **Hook required** | No — plain function, safe in portals | Yes — must be called inside a component |
+| **Debounce** | None | Built-in (ignores if already loading) |
+| **Returns** | `void` | `sendMessage` function |
+
+### Real example: thread list refresh
+
+```
+ChatForm (submit)  ──► fireWorkerEvent({ type: 'refresh:threads' })
+ThreadHeader       ──► fireWorkerEvent({ type: 'refresh:threads' })
+AgentsPage         ──► fireWorkerEvent({ type: 'refresh:threads' })
+                              │
+                         worker.ts fetches /api/v1/chat/threads
+                              │
+                    emits 'refresh:threads:response'
+                              │
+                         ThreadList (useWorkerEvent)
+                         updates threads.value & agentThreads.value
+```
+
+`ThreadList` is the single subscriber — it holds the authoritative local copy of the thread list. Any component that mutates thread state fires the event; `ThreadList` handles the reload regardless of where it is rendered in the DOM tree.
+

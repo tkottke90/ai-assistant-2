@@ -1,6 +1,6 @@
 import type { WorkerMessage } from './lib/messages';
 import { createListAgentActionsMessage } from './lib/agents';
-import { GET_THREAD_EVT, getThread } from './lib/chat';
+import { GET_THREAD_EVT, REFRESH_THREADS_EVT, getThread, refreshThreads } from './lib/chat';
 
 function emit(message: WorkerMessage) {
   self.postMessage(message);
@@ -19,6 +19,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case GET_THREAD_EVT: {
       getThread(e.data.threadId).then(emit);
+      break;
+    }
+
+    case REFRESH_THREADS_EVT: {
+      refreshThreads().then(emit);
       break;
     }
     

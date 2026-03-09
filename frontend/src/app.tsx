@@ -19,7 +19,6 @@ function NotFound() {
 function App() {
   const threads = useSignal([]);
   const router = useSignal(new EventTarget());
-  const threadRefresh = useSignal(0);
 
   const onRouteChange = useCallback((newLocation: string) => {
     router.value.dispatchEvent(new CustomEvent('route-updated', { detail: newLocation }));
@@ -32,7 +31,6 @@ function App() {
           <AppContextProvider value={{
             threads,
             routeUpdate: router.value,
-            threadRefresh,
           }}>
             <Router onRouteChange={onRouteChange}>
               <Route path="/" component={ChatPage} />

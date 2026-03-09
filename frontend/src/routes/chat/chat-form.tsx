@@ -1,21 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { LlmSelector } from "@/components/llm-selector";
 import type { Signal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { SendHorizonal } from "lucide-preact";
 import { toast } from "sonner";
-import type { ChatMessage, ThreadResponse } from "@tkottke90/ai-assistant-client";
+import type { ActiveAgent, ChatMessage, ServerAction, ThreadResponse } from "@tkottke90/ai-assistant-client";
 import {
   buildUserMessage,
   buildAssistantMessage,
-  parseMessagesChunk,
-  isDoneEvent,
   appendToMessage,
+  patchMessage,
 } from "./chat-utils";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { AgentChips } from "./agent-chips";
 import { useChatContext } from "./chat-context";
-import { fireWorkerEvent } from "@/lib/workerClient";
-import { REFRESH_THREADS_EVT } from "@/lib/chat";
+import { fireWorkerEvent, useWorkerEventListener } from "@/lib/workerClient";
+import { REFRESH_THREADS_EVT, STREAM_CHAT_EVT } from "@/lib/chat";
 
 export function createSubmitHandler(
   thread: Signal<ThreadResponse>,
@@ -23,8 +23,10 @@ export function createSubmitHandler(
   selectedAlias: Signal<string>,
   selectedModel: Signal<string>,
   selectedAgentId: Signal<number | null>,
+  activeAgents: Signal<ActiveAgent[]>,
+  activeAssistantId: Signal<string | null>,
 ) {
-  return async function handleSubmit(e: SubmitEvent) {
+  return function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
 
     const form = e.currentTarget as HTMLFormElement;
@@ -36,9 +38,11 @@ export function createSubmitHandler(
 
     form.reset();
 
+    const agentName = activeAgents.value.find(a => a.agent_id === selectedAgentId.value)?.name;
     const userMessage = buildUserMessage(message);
-    const assistantMessage = buildAssistantMessage();
-    const assistantId = assistantMessage.id;
+    const assistantMessage = buildAssistantMessage(agentName);
+
+    activeAssistantId.value = assistantMessage.id;
 
     thread.value = {
       ...thread.value,
@@ -46,68 +50,126 @@ export function createSubmitHandler(
     };
     isStreaming.value = true;
 
-    try {
-      const response = await fetch('/api/v1/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          threadId,
-          alias: selectedAlias.value || undefined,
-          model: selectedModel.value || undefined,
-          agentId: selectedAgentId.value ?? undefined,
-        }),
-      });
-
-      if (!response.body) throw new Error('No response body');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const raw = decoder.decode(value);
-        const lines = raw.split('\n\n');
-
-        for (const line of lines) {
-          if (isDoneEvent(line)) break;
-
-          const content = parseMessagesChunk(line);
-          if (content) {
-            thread.value = {
-              ...thread.value,
-              history: appendToMessage(thread.value.history as ChatMessage[], assistantId, content),
-            };
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Chat stream error:', err);
-      toast.error('Failed to get a response. Please try again.');
-      thread.value = {
-        ...thread.value,
-        history: (thread.value.history ?? []).filter((msg: ChatMessage) => msg.id !== assistantId),
-      };
-    } finally {
-      isStreaming.value = false;
-      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
-    }
+    fireWorkerEvent({
+      type: STREAM_CHAT_EVT,
+      message,
+      threadId,
+      alias: selectedAlias.value || undefined,
+      model: selectedModel.value || undefined,
+      agentId: selectedAgentId.value ?? undefined,
+    });
   };
 }
 
 export function ChatForm() {
   const { thread, agentSelection, isStreaming } = useChatContext();
   const llmSelection = useLlmSelection();
-
   const { selectedAlias, selectedModel } = llmSelection;
+
+  // Tracks the id of the currently-streaming assistant InteractionMessage
+  const activeAssistantId = useSignal<string | null>(null);
+
+  // ── Stream event handlers ────────────────────────────────────────────────
+
+  useWorkerEventListener('chat:stream:text_delta', (e) => {
+    const id = activeAssistantId.value;
+    if (!id) return;
+    thread.value = {
+      ...thread.value,
+      history: appendToMessage(thread.value.history as ChatMessage[], id, e.detail.content),
+    };
+  });
+
+  useWorkerEventListener('chat:stream:thinking', (e) => {
+    const id = activeAssistantId.value;
+    if (!id) return;
+    thread.value = {
+      ...thread.value,
+      history: (thread.value.history as ChatMessage[]).map(msg => {
+        if (msg.id !== id || msg.type !== 'chat_message') return msg;
+        const existing = (msg.metadata?.thinking as string) ?? '';
+        return { ...msg, metadata: { ...msg.metadata, thinking: existing + e.detail.content } };
+      }),
+    };
+  });
+
+  useWorkerEventListener('chat:stream:agent_name', (e) => {
+    const id = activeAssistantId.value;
+    if (!id) return;
+    thread.value = {
+      ...thread.value,
+      history: patchMessage(thread.value.history as ChatMessage[], id, { name: e.detail.name }),
+    };
+  });
+
+  useWorkerEventListener('chat:stream:tool_call_start', (e) => {
+    const stub: ServerAction = {
+      id: e.detail.id,
+      type: 'server_action',
+      role: 'tool',
+      content: '',
+      created_at: new Date().toISOString(),
+      metadata: { tool_name: e.detail.name },
+      severity: 0,
+    };
+    thread.value = {
+      ...thread.value,
+      history: [...(thread.value.history as ChatMessage[]), stub],
+    };
+  });
+
+  useWorkerEventListener('chat:stream:tool_call_complete', (e) => {
+    thread.value = {
+      ...thread.value,
+      history: (thread.value.history as ChatMessage[]).map(msg =>
+        msg.id === e.detail.id && msg.type === 'server_action'
+          ? { ...msg, metadata: { ...msg.metadata, tool_args: e.detail.args } }
+          : msg
+      ),
+    };
+  });
+
+  useWorkerEventListener('chat:stream:tool_result', (e) => {
+    thread.value = {
+      ...thread.value,
+      history: (thread.value.history as ChatMessage[]).map(msg =>
+        msg.id === e.detail.toolCallId && msg.type === 'server_action'
+          ? { ...msg, content: e.detail.content, metadata: { ...msg.metadata, tool_summary: e.detail.summary } }
+          : msg
+      ),
+    };
+  });
+
+  useWorkerEventListener('chat:stream:done', () => {
+    activeAssistantId.value = null;
+    isStreaming.value = false;
+    fireWorkerEvent({ type: REFRESH_THREADS_EVT });
+  });
+
+  useWorkerEventListener('chat:stream:error', (e) => {
+    console.error('Chat stream error:', e.detail.error);
+    toast.error('Failed to get a response. Please try again.');
+    const id = activeAssistantId.value;
+    if (id) {
+      thread.value = {
+        ...thread.value,
+        history: (thread.value.history ?? []).filter((msg: ChatMessage) => msg.id !== id),
+      };
+    }
+    activeAssistantId.value = null;
+    isStreaming.value = false;
+  });
+
+  // ── Submit handler ───────────────────────────────────────────────────────
+
   const handleSubmit = createSubmitHandler(
     thread,
     isStreaming,
     selectedAlias,
     selectedModel,
     agentSelection.selectedAgentId,
+    agentSelection.activeAgents,
+    activeAssistantId,
   );
 
   return (

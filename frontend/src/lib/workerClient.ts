@@ -54,9 +54,29 @@ export function fireWorkerEvent(message: InboundMessage): void {
   worker.postMessage(message);
 }
 
+/**
+ * Subscribe directly to an outbound worker event by its type.
+ * Use this for streaming events that don't follow the request/response pattern
+ * (e.g. `chat:stream:text_delta`, `chat:stream:done`, etc.).
+ */
+export function useWorkerEventListener<K extends OutboundMessage['type']>(
+  type: K,
+  callback: (ev: CustomEvent<Extract<OutboundMessage, { type: K }>>) => void,
+): void {
+  useEffect(() => {
+    const controller = new AbortController();
+    emitter.addEventListener(
+      type as K,
+      callback as (ev: CustomEvent<WorkerEventMap[K]>) => void,
+      { signal: controller.signal },
+    );
+    return () => controller.abort();
+  }, []);
+}
+
 export function useWorkerEvent<
   TEventName extends InboundMessage['type'],
-  TResponse extends OutboundMessage['type'] = `${TEventName}:response`,
+  TResponse extends OutboundMessage['type'] = Extract<OutboundMessage['type'], `${TEventName}:response`>,
   TError extends OutboundMessage['type'] = `${TEventName}:error` extends OutboundMessage['type'] ? `${TEventName}:error` : never
 >(
   event: TEventName,

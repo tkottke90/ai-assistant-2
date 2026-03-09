@@ -12,37 +12,21 @@ export function buildUserMessage(content: string): InteractionMessage {
   };
 }
 
-export function buildAssistantMessage(): InteractionMessage {
+/**
+ * @param name Optional agent name used for the avatar. Defaults to 'assistant'
+ *             until `chat:stream:agent_name` arrives from the worker.
+ */
+export function buildAssistantMessage(name?: string): InteractionMessage {
   return {
     id: crypto.randomUUID(),
     type: 'chat_message',
     role: 'assistant',
+    name,
     content: '',
     created_at: new Date().toISOString(),
     metadata: {},
     assets: [],
   };
-}
-
-export interface SSEChunk {
-  mode: string;
-  chunk: Array<{ kwargs?: { content?: string } }>;
-}
-
-export function parseMessagesChunk(line: string): string | null {
-  if (!line.startsWith('data: ')) return null;
-
-  try {
-    const data: SSEChunk = JSON.parse(line.slice(6));
-    if (data.mode !== 'messages') return null;
-    return data.chunk[0]?.kwargs?.content ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function isDoneEvent(line: string): boolean {
-  return line.startsWith('done: ');
 }
 
 export function appendToMessage(
@@ -53,5 +37,16 @@ export function appendToMessage(
   return messages.map(msg => {
     if (msg.id !== id || msg.type !== 'chat_message') return msg;
     return { ...msg, content: msg.content + content };
+  });
+}
+
+export function patchMessage(
+  messages: ChatMessage[],
+  id: string,
+  patch: Partial<InteractionMessage>,
+): ChatMessage[] {
+  return messages.map(msg => {
+    if (msg.id !== id || msg.type !== 'chat_message') return msg;
+    return { ...msg, ...patch, metadata: { ...msg.metadata, ...patch.metadata } };
   });
 }

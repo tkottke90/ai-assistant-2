@@ -124,7 +124,7 @@ const { threads } = useAppContext();
 
 The frontend consumes the backend through `@tkottke90/ai-assistant-client`, a typed client library shared via a local npm package reference (`backend/src/lib/client/`).
 
-**Chat streaming** uses Server-Sent Events (`text/event-stream`). The `POST /api/v1/chat` handler streams chunks as `data: <JSON>\n\n` and signals completion with `done: [DONE]\n\n`.
+**Chat streaming** uses HTTP chunked streaming over a `POST /api/v1/chat` request consumed via the `fetch()` `ReadableStream` API. The handler streams chunks as `data: <JSON>\n\n` and signals completion with `done: [DONE]\n\n`.
 
 ---
 

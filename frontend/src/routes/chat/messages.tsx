@@ -2,6 +2,7 @@ import { MarkdownDisplay } from '@/components/markdown';
 import { Button } from '@/components/ui/button';
 import { formatChatTimestamp } from '@/lib/date-utils';
 import type { ChatMessage, ServerAction, InteractionMessage } from '@tkottke90/ai-assistant-client';
+import { useChatContext } from './chat-context';
 
 
 const severityStyles = {
@@ -51,6 +52,12 @@ function ActionMessage({ message }: {message: ServerAction}) {
 }
 
 function InteractionMessage({ message }: {message: InteractionMessage}) {
+  const { isStreaming } = useChatContext();
+  const thinking = message.metadata?.thinking as string | undefined;
+  // Thinking is "active" (show pulse) when we are streaming and the agent hasn't
+  // started producing its final response yet.
+  const thinkingActive = isStreaming.value && !message.content;
+
   return (
     <div 
       className="group grid grid-rows-[auto_1fr_auto] grid-cols-[auto_1fr] data-[role=human]:grid-cols-[1fr_auto] gap-2 md:text-base"
@@ -93,6 +100,23 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
               />
             ))}
           </div>
+        )}
+        { thinking && (
+          <details className="mb-3 text-sm" open={thinkingActive}>
+            <summary className="cursor-pointer select-none text-current/50 hover:text-current/70 transition-colors flex items-center gap-2">
+              <span>Thinking...</span>
+              { thinkingActive && (
+                <span className="inline-flex items-center gap-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current/50 animate-bounce [animation-delay:-0.32s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current/50 animate-bounce [animation-delay:-0.16s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current/50 animate-bounce" />
+                </span>
+              )}
+            </summary>
+            <p className="mt-2 text-xs text-current/60 whitespace-pre-wrap leading-relaxed">
+              {thinking}
+            </p>
+          </details>
         )}
         <MarkdownDisplay className="peer">{message.content}</MarkdownDisplay>
         <div className="hidden peer-empty:flex group-data-[role=human]:peer-empty:hidden items-center gap-1 py-1">

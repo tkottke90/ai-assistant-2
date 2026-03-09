@@ -148,7 +148,7 @@ All DAOs use the shared `prisma` client instance exported from `lib/database.ts`
 
 ## Cross-Component Communication
 
-**Chat streaming**: `POST /api/v1/chat` responds with Server-Sent Events (`text/event-stream`). Each chunk is `data: <JSON>\n\n`; completion is signalled with `done: [DONE]\n\n`.
+**Chat streaming**: `POST /api/v1/chat` uses HTTP chunked streaming (consumed via `fetch()` `ReadableStream`, not `EventSource`). Each chunk is `data: <JSON>\n\n`; completion is signalled with `done: [DONE]\n\n`.
 
 **API versioning**: All versioned routes are under `/api/v1`. New routes go in `controllers/v1/`.
 

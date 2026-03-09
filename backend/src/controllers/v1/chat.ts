@@ -7,6 +7,8 @@ import { InteractionSchema, ServerActionSchema, threadResponseSchema } from '../
 import crypto from 'node:crypto';
 import ThreadDao from '../../lib/dao/thread.dao.js';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
+import { discoverTools } from '../../lib/tools/search';
+import { createBuiltinTools } from '../../lib/tools/builtin/tools';
 
 export const router = Router();
 
@@ -21,8 +23,8 @@ const ChatRequestSchema = z.object({
 router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
   const { message, threadId, alias, model, agentId } = req.body;
 
-  // Set headers for Server-Sent Events streaming
-  res.setHeader('Content-Type', 'text/event-stream');
+  // Set headers for HTTP chunked streaming
+  res.setHeader('Content-Type', 'application/octet-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
@@ -50,7 +52,7 @@ router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
       agent = createAgent({
         model: llm,
         checkpointer,
-        name: 'chat-agent'
+        name: 'chat-agent',
       });
     }
 
@@ -67,8 +69,6 @@ router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
     }
 
     const ckpt = await checkpointer.get({ configurable: { thread_id: threadId } })
-
-    const lastMsgs = (ckpt?.channel_values as any)?.messages.slice(-2) || [];
 
     // Signal completion
     req.logger.debug('Full response sent');

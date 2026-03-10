@@ -6,6 +6,8 @@ import { ArchivePage } from './routes/archive/index.tsx';
 import { useCallback } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { AppContextProvider } from './app-context.tsx';
+import { EvaluationsPage } from './routes/evaluations/index.tsx';
+import { EvaluationDetailsPage } from './routes/evaluations/details/index.tsx';
 
 function NotFound() {
   return (
@@ -38,6 +40,8 @@ function App() {
               <Route path="/chat/:threadId" component={ChatPage} />
               <Route path="/agents" component={AgentsPage} />
               <Route path="/archive" component={ArchivePage} />
+              <Route path="/evaluations" component={EvaluationsPage} />
+              <Route path="/evaluations/:evaluationId" component={EvaluationDetailsPage} />
               <Route path="*" component={NotFound} />
             </Router>
           </AppContextProvider>

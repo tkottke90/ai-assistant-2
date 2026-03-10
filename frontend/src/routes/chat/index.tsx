@@ -204,6 +204,12 @@ export function ChatPage() {
 
   return (
     <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
+      <header className="flex gap-2 items-center w-full">
+        <span className="flex gap-2 items-center">
+          <BaseLayoutShowBtn />
+          <h2 className="inline">Chat</h2>
+        </span>
+      </header>
       <ChatContextProvider value={{ thread, agentSelection, isStreaming }}>
         <ChatPageContent />
       </ChatContextProvider>
@@ -215,10 +221,6 @@ export function ChatPage() {
 
 function ChatPageContent() {
   const { agentSelection, isStreaming, thread } = useChatContext();
-
-  const agentName = useComputed(() =>
-    selectedAgentName(agentSelection.activeAgents.value, agentSelection.selectedAgentId.value)
-  );
 
   const scrollRef = useRef<HTMLElement>(null);
 
@@ -235,18 +237,6 @@ function ChatPageContent() {
 
   return (
     <>
-      <header className="flex gap-2 items-center w-full">
-        <span className="flex gap-2 items-center">
-          <BaseLayoutShowBtn />
-          <h2 className="inline">Chat</h2>
-        </span>
-        {agentName.value && (
-          <span className="text-sm text-muted-foreground">
-            with <span className="font-medium">{agentName.value}</span>
-          </span>
-        )}
-      </header>
-
       <ThreadHeader />
 
       <main className="w-full grow overflow-y-auto pr-4" ref={scrollRef}>

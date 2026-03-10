@@ -2,27 +2,12 @@ import { Fragment } from "preact/jsx-runtime";
 import { Button } from "../ui/button";
 import { Sidebar } from "lucide-preact";
 import { createContextWithHook } from "@/lib/utils";
-import { useEffect, useRef } from "preact/hooks";
 import { Signal, useSignal } from "@preact/signals";
 import { type ComponentProps } from "preact/compat";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Drawer } from "../drawer";
 import { ThreadList } from "../thread-list";
 
-const slideIn: Keyframe[] = [
-  { transform: "translateX(-100%)", opacity: 0 },
-  { transform: "translateX(0) !important" }
-]
-
-const slideOutKeyframes: Keyframe[] = [
-  { transform: 'translateX(0)' },
-  { transform: 'translateX(-100%)', opacity: 0}
-];
-
-const animationOptions: KeyframeAnimationOptions = {
-  duration: 300,
-  easing: 'ease-out',
-};
 
 const {
   Provider: SidebarContext,
@@ -49,54 +34,6 @@ function SidebarContents() {
 export function AppSidebar() {
   const isMobile = useIsMobile();
   const { dialog } = useAppContext();
-  const dialogRef = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const abortController = new AbortController();
-
-    if (!dialogRef.current) return;
-
-    // Register the dialog listener
-    dialog.value.addEventListener("toggle", () => {
-      
-      if (!dialogRef.current) return;
-
-      // When the dialog is open, we close it
-      if (dialogRef.current.open) {
-        const animation = dialogRef.current.animate(slideOutKeyframes, animationOptions);
-        
-        animation.addEventListener("finish", () => {
-          dialogRef?.current?.close();
-        });
-        
-      } else { // When the dialog is closed, we open it
-        dialogRef.current.showModal();
-
-        dialogRef.current.animate(slideIn, animationOptions);
-      }
-    }, { signal: abortController.signal })
-
-    dialogRef.current.addEventListener('cancel', async (event) => {
-      event.preventDefault();
-      dialog.value.dispatchEvent(new CustomEvent("toggle"));
-    }, { signal: abortController.signal });
-
-    dialogRef.current.addEventListener('click', (event) => {
-      const target = event.target as HTMLDialogElement;
-
-      if (!target) return;
-
-      const rect = target.getBoundingClientRect();
-      const minX = rect.left + target.clientLeft;
-      var minY = rect.top + target.clientTop;
-      if ((event.clientX < minX || event.clientX >= minX + target.clientWidth) ||
-          (event.clientY < minY || event.clientY >= minY + target.clientHeight)) {
-        target.close();
-      }
-    }, { signal: abortController.signal });
-
-    return () => abortController.abort();
-  }, [dialogRef, dialog]);
 
   return (
     <Fragment>
@@ -108,7 +45,7 @@ export function AppSidebar() {
         <SidebarContents />
       </aside>
       {
-        isMobile &&
+        isMobile.value &&
         <Drawer direction="left" showTrigger={false} eventTrigger={dialog} title="AI Assistant">
           <SidebarContents />
         </Drawer>
@@ -121,10 +58,7 @@ export function BaseLayoutShowBtn() {
   const { dialog } = useAppContext();
   const isMobile = useIsMobile();
 
-  // We return null in the following cases:
-  // 1. If there is no dialog reference available.
-  // 2. If the user is not on a mobile device, since the sidebar is always visible on larger screens.
-  if (!dialog || !dialog.value || !isMobile.value) return null;
+  if (!isMobile.value || !dialog?.value) return null;
 
   return (
     <Button variant="ghost" onClick={() => {

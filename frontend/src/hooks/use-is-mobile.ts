@@ -2,7 +2,7 @@ import { useComputed, useSignal } from "@preact/signals"
 import { useEffect } from "preact/hooks"
 
 export function useIsMobile() {
-  const currentSize = useSignal(0)
+  const currentSize = useSignal(window.innerWidth)
   const isMobile = useComputed(() => currentSize.value < 1024)
 
   useEffect(() => {

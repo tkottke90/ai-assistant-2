@@ -7,7 +7,7 @@ export function EvaluationsPage() {
 
 
   return (
-    <BaseLayout>
+    <BaseLayout className="flex flex-col">
        <header className="flex gap-2 items-center w-full justify-between">
         <span className="flex gap-2 items-center">
           <BaseLayoutShowBtn />
@@ -18,13 +18,7 @@ export function EvaluationsPage() {
             title="Create New Eval"
             trigger={<button className={cn(buttonVariants({ variant: 'default', size: 'default', className: '' }))}>Create Data Set</button>}
           >
-            <h2>Create New Evaluation</h2>
-          </Dialog>
-          <Dialog
-            title="Create New Eval"
-            trigger={<button className={cn(buttonVariants({ variant: 'default', size: 'default', className: '' }))}>Create Evaluation</button>}
-          >
-            <h2>Create New Evaluation</h2>
+            <h2>Create New Prompt</h2>
           </Dialog>
         </span>
       </header>

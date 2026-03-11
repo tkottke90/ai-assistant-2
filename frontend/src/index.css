@@ -83,10 +83,12 @@
 
 :root {
   --radius: 0.625rem;
-  --background: var(--color-neutral-200);
+  --background: var(--color-zinc-300);
+  --background-elevated: var(--color-neutral-100);
   --background-elevated-dialog: var(--color-neutral-50);
 
   --foreground: var(--color-neutral-800);
+
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
@@ -118,9 +120,19 @@
   --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-neutral-900);
+    --background-elevated: var(--color-neutral-700);
+    --background-elevated-dialog: var(--color-neutral-600);
+
+    --foreground: var(--color-neutral-200);
+  }
+}
+
 
 html, body, #app {
-  @apply h-full w-full overflow-hidden;
+  @apply h-full w-full overflow-hidden bg-background text-foreground;
   font-size: 14px;
 }
 
@@ -133,7 +145,7 @@ html, body, #app {
     @apply bg-neutral-300 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200;
   }
 
-  h1,h2,h3,h4,h5,h6 {
+  h1,h2,h3 {
     @apply scroll-m-20 my-2;
   }
 

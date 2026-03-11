@@ -215,3 +215,4 @@ __marimo__/
 # Local development config directory (used when AI_ASSISTANT_CONFIG_DIR=./config)
 /config/
 .ai/
+.DS_Store

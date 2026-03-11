@@ -1,10 +1,3 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { useLlmSelection } from "@/hooks/use-llm-selection";
 import type { BaseProps } from "@/lib/utility-types";
 

@@ -74,6 +74,16 @@ export type McpStatus = z.infer<typeof McpStatusSchema>;
 
 // ─── API methods ──────────────────────────────────────────────────────────────
 
+/** List all tools in the registry (no agent context; assigned=false, tier=1 for all) */
+export const listTools = createClientMethod(
+  '/api/v1/tools',
+  { method: 'get', inputSchema: z.object({}) },
+  async (response) => {
+    if (!response.ok) throw new Error('Failed to fetch tools');
+    return z.array(AgentToolViewSchema).parse(await response.json());
+  }
+);
+
 /** View all tools with resolved assignment status for an agent (single query) */
 export const viewAgentTools = createClientMethod(
   '/api/v1/tools/agent/:agentId/view',

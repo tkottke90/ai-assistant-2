@@ -1,7 +1,9 @@
+import { AgentToolList } from "@/components/agent-tool-list";
 import { Collapsable } from "@/components/collapsable-section";
 import { LlmSelector } from "@/components/llm-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { useLocalToolSelection } from "@/hooks/use-local-tool-selection";
 import type { BaseProps } from "@/lib/utility-types";
 import { Signal, useSignal } from "@preact/signals";
 
@@ -94,10 +96,15 @@ export function LLMTab({ scoringInProgress }: BaseProps<{ scoringInProgress: Sig
 }
 
 export function ToolTab() {
+  const { tools, loading, onAdd, onRemove, onTierChange } = useLocalToolSelection();
 
-
-  return (<div>
-      <p>Tool Access</p>
-    </div>
-  )
+  return (
+    <AgentToolList
+      tools={tools.value}
+      loading={loading}
+      onAdd={onAdd}
+      onRemove={onRemove}
+      onTierChange={onTierChange}
+    />
+  );
 }

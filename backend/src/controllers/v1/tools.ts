@@ -157,6 +157,23 @@ router.post('/actions/:id/execute', ZodParamValidator(ActionIdParamSchema), asyn
   res.json({ description: action.description, results });
 });
 
+// ─── Tool list ───────────────────────────────────────────────────────────────
+
+router.get('/', async (req, res) => {
+  const tools = await ToolDao.listTools();
+  res.json(tools.map((tool) => ({
+    tool_id: tool.tool_id,
+    id: tool.id,
+    name: tool.name,
+    description: tool.description,
+    source: tool.source,
+    mcp_server: tool.mcp_server ? { config_id: tool.mcp_server.config_id } : null,
+    assigned: false,
+    tier: 1,
+    locked_tier: tool.locked_tier,
+  })));
+});
+
 // ─── Tool manifest ────────────────────────────────────────────────────────────
 
 const ToolIdParamSchema = z.object({ id: z.string().min(1) });

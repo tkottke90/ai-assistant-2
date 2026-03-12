@@ -107,6 +107,7 @@ model Tool {
 
   mcp_server  McpServer?  @relation(fields: [mcp_server_id], references: [server_id])
   agent_tools AgentTool[]
+  evaluation_tools EvaluationTool[]
 
   @@index([source])
   @@index([mcp_server_id])
@@ -212,17 +213,24 @@ model Evaluation {
 
   created_at    DateTime @default(now())
   updated_at    DateTime @default(now()) @updatedAt
+
+  evaluation_tools EvaluationTool[]
+  results         EvaluationResults[]
 }
 
 model EvaluationTool {
   evaluation_tool_id Int      @id @default(autoincrement())
   evaluation_id      Int
   tool_id            Int
+  tool_name          String   // Denormalized for reference if the tool is deleted
 
   tier       Int      @default(1)
 
   created_at         DateTime @default(now())
   updated_at         DateTime @default(now()) @updatedAt
+
+  evaluation Evaluation @relation(fields: [evaluation_id], references: [evaluation_id], onDelete: Cascade)
+  tool       Tool      @relation(fields: [tool_id], references: [tool_id])
 }
 
 model EvaluationResults {
@@ -235,4 +243,6 @@ model EvaluationResults {
   created_at           DateTime @default(now())
   updated_at           DateTime @default(now()) @updatedAt
   completed_at         DateTime?
+
+  evaluation Evaluation @relation(fields: [evaluation_id], references: [evaluation_id], onDelete: Cascade)
 }

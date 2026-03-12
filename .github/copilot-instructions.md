@@ -47,13 +47,27 @@ cd frontend && npm run build  # tsc -b && vite build → dist/
 
 ```bash
 cd backend
-npx prisma migrate dev        # Run pending migrations
 npx prisma generate           # Regenerate Prisma client after schema changes
 ```
 
 The generated Prisma client is output to `backend/src/lib/prisma/` (not `node_modules`).
 
-> **⚠️ FTS Tables Warning**: The SQLite full-text search tables (`memory_fts`, `memory_fts_config`, `memory_fts_data`, `memory_fts_docsize`, `memory_fts_idx`) are created by a raw SQL migration and are **not represented in `schema.prisma`**. Prisma does not know about them and will warn that it is about to drop them every time you run `prisma migrate dev`. **Always review migration warnings before confirming** — if you see these FTS tables listed for deletion, that is expected and safe to confirm, but never allow a migration to drop them in production without explicit intent to remove the memory search feature.
+#### Adding a new migration
+
+Because the FTS tables are not tracked in `schema.prisma`, running `prisma migrate dev` directly will generate a migration that drops them. Always use the following process instead:
+
+1. Modify `backend/prisma/schema.prisma`
+2. Generate the migration file **without applying it**:
+   ```bash
+   npx prisma migrate dev --name <migration-name> --create-only
+   ```
+3. Open the generated migration file and **remove any `DROP TABLE` statements for FTS tables** (`memory_fts`, `memory_fts_config`, `memory_fts_data`, `memory_fts_docsize`, `memory_fts_idx`)
+4. Apply the cleaned migration:
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+> **⚠️ FTS Tables Warning**: The SQLite full-text search tables (`memory_fts`, `memory_fts_config`, `memory_fts_data`, `memory_fts_docsize`, `memory_fts_idx`) are created by a raw SQL migration and are **not represented in `schema.prisma`**. Prisma will include `DROP TABLE` statements for them in any auto-generated migration. The `--create-only` workflow above exists specifically to let you remove those drops before applying.
 
 ## Configuration System (Critical Pattern)
 

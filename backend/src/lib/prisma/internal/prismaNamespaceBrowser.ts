@@ -61,7 +61,10 @@ export const ModelName = {
   AgentAction: 'AgentAction',
   checkpoints: 'checkpoints',
   writes: 'writes',
-  ThreadMetadata: 'ThreadMetadata'
+  ThreadMetadata: 'ThreadMetadata',
+  Evaluation: 'Evaluation',
+  EvaluationTool: 'EvaluationTool',
+  EvaluationResults: 'EvaluationResults'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -227,6 +230,45 @@ export const ThreadMetadataScalarFieldEnum = {
 } as const
 
 export type ThreadMetadataScalarFieldEnum = (typeof ThreadMetadataScalarFieldEnum)[keyof typeof ThreadMetadataScalarFieldEnum]
+
+
+export const EvaluationScalarFieldEnum = {
+  evaluation_id: 'evaluation_id',
+  name: 'name',
+  description: 'description',
+  prompt: 'prompt',
+  llm_config: 'llm_config',
+  test_cases: 'test_cases',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type EvaluationScalarFieldEnum = (typeof EvaluationScalarFieldEnum)[keyof typeof EvaluationScalarFieldEnum]
+
+
+export const EvaluationToolScalarFieldEnum = {
+  evaluation_tool_id: 'evaluation_tool_id',
+  evaluation_id: 'evaluation_id',
+  tool_id: 'tool_id',
+  tier: 'tier',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type EvaluationToolScalarFieldEnum = (typeof EvaluationToolScalarFieldEnum)[keyof typeof EvaluationToolScalarFieldEnum]
+
+
+export const EvaluationResultsScalarFieldEnum = {
+  evaluation_result_id: 'evaluation_result_id',
+  evaluation_id: 'evaluation_id',
+  status: 'status',
+  results: 'results',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
+  completed_at: 'completed_at'
+} as const
+
+export type EvaluationResultsScalarFieldEnum = (typeof EvaluationResultsScalarFieldEnum)[keyof typeof EvaluationResultsScalarFieldEnum]
 
 
 export const SortOrder = {

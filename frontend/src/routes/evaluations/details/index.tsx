@@ -22,7 +22,7 @@ export function EvaluationDetailsPage() {
       </header>
       <main className="grow gap-4
         flex flex-col overflow-auto pr-4
-        lg:grid lg:grid-cols-[2fr_1fr] lg:grid-rows-[auto_auto_1fr]
+        lg:grid lg:grid-cols-[1fr_450px] lg:grid-rows-[auto_auto_1fr]
 
         *:border *:rounded-md *:bg-elevated *:p-2 *:shadow-lg
         ">
@@ -32,7 +32,7 @@ export function EvaluationDetailsPage() {
             id="name"
             className="text-xl lg:text-sm border-none w-full bg-neutral-600 rounded p-2"
           />
-
+          <br />
           <label htmlFor="description">Description</label>
           <textarea
             id="description"

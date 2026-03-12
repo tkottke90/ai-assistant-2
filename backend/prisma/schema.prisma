@@ -198,3 +198,41 @@ model ThreadMetadata {
   @@index([type])
   @@index([archived])
 }
+
+model Evaluation {
+  evaluation_id Int      @id @default(autoincrement())
+
+  name          String
+  description   String
+  prompt        String
+
+  llm_config    Json
+
+  test_cases    Json
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+}
+
+model EvaluationTool {
+  evaluation_tool_id Int      @id @default(autoincrement())
+  evaluation_id      Int
+  tool_id            Int
+
+  tier       Int      @default(1)
+
+  created_at         DateTime @default(now())
+  updated_at         DateTime @default(now()) @updatedAt
+}
+
+model EvaluationResults {
+  evaluation_result_id Int      @id @default(autoincrement())
+  evaluation_id        Int
+
+  status               String   @default("Pending")
+  results              Json
+
+  created_at           DateTime @default(now())
+  updated_at           DateTime @default(now()) @updatedAt
+  completed_at         DateTime?
+}

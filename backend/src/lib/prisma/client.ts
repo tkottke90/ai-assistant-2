@@ -94,3 +94,18 @@ export type writes = Prisma.writesModel
  * 
  */
 export type ThreadMetadata = Prisma.ThreadMetadataModel
+/**
+ * Model Evaluation
+ * 
+ */
+export type Evaluation = Prisma.EvaluationModel
+/**
+ * Model EvaluationTool
+ * 
+ */
+export type EvaluationTool = Prisma.EvaluationToolModel
+/**
+ * Model EvaluationResults
+ * 
+ */
+export type EvaluationResults = Prisma.EvaluationResultsModel

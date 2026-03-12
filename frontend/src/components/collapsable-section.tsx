@@ -30,9 +30,7 @@ export function Collapsable({ children, className, title, startedOpen, mobileOnl
         />}
       </header>
       <br />
-      <main>
-        {children}
-      </main>
+      {children}
     </section>
   )
 }

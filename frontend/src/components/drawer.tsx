@@ -63,6 +63,18 @@ export function Drawer({ className, children, trigger, title, onOpen, eventTrigg
           openModal(dialogRef.current, onOpen);
         }
       }, { signal: abortController.signal })
+
+      eventTrigger.value.addEventListener('open', () => {
+        if (!dialogRef.current?.open) {
+          openModal(dialogRef.current, onOpen);
+        }
+      }, { signal: abortController.signal })
+
+      eventTrigger.value.addEventListener('close', () => {
+        if (dialogRef.current?.open) {
+          animateExit(dialogRef.current, direction);
+        }
+      }, { signal: abortController.signal })
     }
 
     dialogRef.current.addEventListener('click', (event) => {

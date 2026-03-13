@@ -16,6 +16,8 @@ export function EvaluationDetailsPage() {
     updateEvalForm,
     activeResult,
     setActiveResult,
+    selectedResult,
+    setSelectedResult,
     results,
     saving,
     executing,
@@ -103,6 +105,8 @@ export function EvaluationDetailsPage() {
           evalForm={evalForm}
           updateEvalForm={updateEvalForm}
           activeResult={activeResult}
+          selectedResult={selectedResult}
+          onSelectedResult={setSelectedResult}
           results={results}
           onSetActiveResult={setActiveResult}
           onScoreCase={scoreCase}

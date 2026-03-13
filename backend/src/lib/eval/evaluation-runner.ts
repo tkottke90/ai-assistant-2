@@ -4,6 +4,7 @@ import type { Logger } from 'winston';
 import EvaluationDao from '../dao/evaluation.dao.js';
 import type { LLMManager } from '../llm/index.js';
 import type { LlmEvalConfig, TestCaseResult } from '../models/evaluation.js';
+import { createMemoryTools } from '../tools/builtin/memory-tools.js';
 import type { ToolManager } from '../tools/manager.js';
 
 /**
@@ -59,10 +60,13 @@ export async function runEvaluation(
       .map((et) => toolManager.getActiveTool(et.tool.id))
       .filter((t): t is NonNullable<typeof t> => t !== undefined);
 
+    // Memory tools are always available in evaluations (mirrors agent behaviour)
+    const memoryTools = createMemoryTools(evaluationId);
+
     // Build a fresh stateless agent (no checkpointer)
     const agent = createAgent({
       model: llm,
-      tools: resolvedTools,
+      tools: [...resolvedTools, ...memoryTools as any[]],
       systemPrompt: new SystemMessage(evaluation.prompt),
     });
 
@@ -78,10 +82,35 @@ export async function runEvaluation(
         );
 
         const messages = response.messages ?? [];
-        const lastAi = [...messages].reverse().find((m: any) => m._getType?.() === 'ai' || m.type === 'ai');
-        const actualOutput = typeof lastAi?.content === 'string'
-          ? lastAi.content
-          : JSON.stringify(lastAi?.content ?? '');
+
+        let actualOutput: string | null;
+        let resultStatus: TestCaseResult['status'] = 'Pending';
+        let resultNote: string | undefined;
+
+        if (testCase.type === 'tool') {
+          const lastAiWithTools: any = [...messages].reverse().find(
+            (m: any) => (m._getType?.() === 'ai' || m.type === 'ai') && m.tool_calls?.length > 0,
+          );
+          if (lastAiWithTools?.tool_calls?.length) {
+            actualOutput = lastAiWithTools.tool_calls
+              .map((tc: any) => {
+                const args = Object.entries(tc.args ?? {})
+                  .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+                  .join(', ');
+                return `${tc.name}(${args})`;
+              })
+              .join('\n');
+          } else {
+            actualOutput = null;
+            resultStatus = 'Fail';
+            resultNote = 'No tool calls recorded';
+          }
+        } else {
+          const lastAi = [...messages].reverse().find((m: any) => m._getType?.() === 'ai' || m.type === 'ai');
+          actualOutput = typeof lastAi?.content === 'string'
+            ? lastAi.content
+            : JSON.stringify(lastAi?.content ?? '');
+        }
 
         updatedResults.push({
           test_case_id: testCase.id,
@@ -89,7 +118,8 @@ export async function runEvaluation(
           expected_output: testCase.expected_output,
           type: testCase.type,
           actual_output: actualOutput,
-          status: 'Pending',
+          status: resultStatus,
+          ...(resultNote !== undefined ? { note: resultNote } : {}),
         });
       } catch (testErr: any) {
         logger.warn(`Test case failed`, { evaluationId, resultId, testCaseId: testCase.id, error: testErr?.message });

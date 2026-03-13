@@ -77,7 +77,15 @@ export function useEvaluation(evaluationId: number) {
     selectedTools: [],
   });
 
+  /**
+   * The result currently being tracked by the system
+   */
   const activeResult = useSignal<EvaluationResult | null>(null);
+
+  /**
+   * Allows for the selection of a result for further analysis
+   */
+  const selectedResult = useSignal<EvaluationResult | null>(null);
   const results = useSignal<EvaluationResult[]>([]);
   const loading = useSignal(true);
   const saving = useSignal(false);
@@ -217,6 +225,8 @@ export function useEvaluation(evaluationId: number) {
     },
     activeResult,
     setActiveResult: (result: EvaluationResult) => { activeResult.value = result; },
+    selectedResult,
+    setSelectedResult: (result: EvaluationResult | null) => { selectedResult.value = result; },
     results,
     loading,
     saving,

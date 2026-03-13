@@ -266,6 +266,7 @@ export type ToolWhereInput = {
   updated_at?: Prisma.DateTimeFilter<"Tool"> | Date | string
   mcp_server?: Prisma.XOR<Prisma.McpServerNullableScalarRelationFilter, Prisma.McpServerWhereInput> | null
   agent_tools?: Prisma.AgentToolListRelationFilter
+  evaluation_tools?: Prisma.EvaluationToolListRelationFilter
 }
 
 export type ToolOrderByWithRelationInput = {
@@ -282,6 +283,7 @@ export type ToolOrderByWithRelationInput = {
   updated_at?: Prisma.SortOrder
   mcp_server?: Prisma.McpServerOrderByWithRelationInput
   agent_tools?: Prisma.AgentToolOrderByRelationAggregateInput
+  evaluation_tools?: Prisma.EvaluationToolOrderByRelationAggregateInput
 }
 
 export type ToolWhereUniqueInput = Prisma.AtLeast<{
@@ -301,6 +303,7 @@ export type ToolWhereUniqueInput = Prisma.AtLeast<{
   updated_at?: Prisma.DateTimeFilter<"Tool"> | Date | string
   mcp_server?: Prisma.XOR<Prisma.McpServerNullableScalarRelationFilter, Prisma.McpServerWhereInput> | null
   agent_tools?: Prisma.AgentToolListRelationFilter
+  evaluation_tools?: Prisma.EvaluationToolListRelationFilter
 }, "tool_id" | "id">
 
 export type ToolOrderByWithAggregationInput = {
@@ -351,6 +354,7 @@ export type ToolCreateInput = {
   updated_at?: Date | string
   mcp_server?: Prisma.McpServerCreateNestedOneWithoutToolsInput
   agent_tools?: Prisma.AgentToolCreateNestedManyWithoutToolInput
+  evaluation_tools?: Prisma.EvaluationToolCreateNestedManyWithoutToolInput
 }
 
 export type ToolUncheckedCreateInput = {
@@ -366,6 +370,7 @@ export type ToolUncheckedCreateInput = {
   created_at?: Date | string
   updated_at?: Date | string
   agent_tools?: Prisma.AgentToolUncheckedCreateNestedManyWithoutToolInput
+  evaluation_tools?: Prisma.EvaluationToolUncheckedCreateNestedManyWithoutToolInput
 }
 
 export type ToolUpdateInput = {
@@ -380,6 +385,7 @@ export type ToolUpdateInput = {
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   mcp_server?: Prisma.McpServerUpdateOneWithoutToolsNestedInput
   agent_tools?: Prisma.AgentToolUpdateManyWithoutToolNestedInput
+  evaluation_tools?: Prisma.EvaluationToolUpdateManyWithoutToolNestedInput
 }
 
 export type ToolUncheckedUpdateInput = {
@@ -395,6 +401,7 @@ export type ToolUncheckedUpdateInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   agent_tools?: Prisma.AgentToolUncheckedUpdateManyWithoutToolNestedInput
+  evaluation_tools?: Prisma.EvaluationToolUncheckedUpdateManyWithoutToolNestedInput
 }
 
 export type ToolCreateManyInput = {
@@ -566,6 +573,20 @@ export type ToolUpdateOneRequiredWithoutAgent_toolsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ToolUpdateToOneWithWhereWithoutAgent_toolsInput, Prisma.ToolUpdateWithoutAgent_toolsInput>, Prisma.ToolUncheckedUpdateWithoutAgent_toolsInput>
 }
 
+export type ToolCreateNestedOneWithoutEvaluation_toolsInput = {
+  create?: Prisma.XOR<Prisma.ToolCreateWithoutEvaluation_toolsInput, Prisma.ToolUncheckedCreateWithoutEvaluation_toolsInput>
+  connectOrCreate?: Prisma.ToolCreateOrConnectWithoutEvaluation_toolsInput
+  connect?: Prisma.ToolWhereUniqueInput
+}
+
+export type ToolUpdateOneRequiredWithoutEvaluation_toolsNestedInput = {
+  create?: Prisma.XOR<Prisma.ToolCreateWithoutEvaluation_toolsInput, Prisma.ToolUncheckedCreateWithoutEvaluation_toolsInput>
+  connectOrCreate?: Prisma.ToolCreateOrConnectWithoutEvaluation_toolsInput
+  upsert?: Prisma.ToolUpsertWithoutEvaluation_toolsInput
+  connect?: Prisma.ToolWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ToolUpdateToOneWithWhereWithoutEvaluation_toolsInput, Prisma.ToolUpdateWithoutEvaluation_toolsInput>, Prisma.ToolUncheckedUpdateWithoutEvaluation_toolsInput>
+}
+
 export type ToolCreateWithoutMcp_serverInput = {
   id: string
   name: string
@@ -577,6 +598,7 @@ export type ToolCreateWithoutMcp_serverInput = {
   created_at?: Date | string
   updated_at?: Date | string
   agent_tools?: Prisma.AgentToolCreateNestedManyWithoutToolInput
+  evaluation_tools?: Prisma.EvaluationToolCreateNestedManyWithoutToolInput
 }
 
 export type ToolUncheckedCreateWithoutMcp_serverInput = {
@@ -591,6 +613,7 @@ export type ToolUncheckedCreateWithoutMcp_serverInput = {
   created_at?: Date | string
   updated_at?: Date | string
   agent_tools?: Prisma.AgentToolUncheckedCreateNestedManyWithoutToolInput
+  evaluation_tools?: Prisma.EvaluationToolUncheckedCreateNestedManyWithoutToolInput
 }
 
 export type ToolCreateOrConnectWithoutMcp_serverInput = {
@@ -646,6 +669,7 @@ export type ToolCreateWithoutAgent_toolsInput = {
   created_at?: Date | string
   updated_at?: Date | string
   mcp_server?: Prisma.McpServerCreateNestedOneWithoutToolsInput
+  evaluation_tools?: Prisma.EvaluationToolCreateNestedManyWithoutToolInput
 }
 
 export type ToolUncheckedCreateWithoutAgent_toolsInput = {
@@ -660,6 +684,7 @@ export type ToolUncheckedCreateWithoutAgent_toolsInput = {
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
   updated_at?: Date | string
+  evaluation_tools?: Prisma.EvaluationToolUncheckedCreateNestedManyWithoutToolInput
 }
 
 export type ToolCreateOrConnectWithoutAgent_toolsInput = {
@@ -689,6 +714,7 @@ export type ToolUpdateWithoutAgent_toolsInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   mcp_server?: Prisma.McpServerUpdateOneWithoutToolsNestedInput
+  evaluation_tools?: Prisma.EvaluationToolUpdateManyWithoutToolNestedInput
 }
 
 export type ToolUncheckedUpdateWithoutAgent_toolsInput = {
@@ -703,6 +729,81 @@ export type ToolUncheckedUpdateWithoutAgent_toolsInput = {
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evaluation_tools?: Prisma.EvaluationToolUncheckedUpdateManyWithoutToolNestedInput
+}
+
+export type ToolCreateWithoutEvaluation_toolsInput = {
+  id: string
+  name: string
+  description: string
+  source: string
+  locked_tier?: number | null
+  input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+  mcp_server?: Prisma.McpServerCreateNestedOneWithoutToolsInput
+  agent_tools?: Prisma.AgentToolCreateNestedManyWithoutToolInput
+}
+
+export type ToolUncheckedCreateWithoutEvaluation_toolsInput = {
+  tool_id?: number
+  id: string
+  name: string
+  description: string
+  source: string
+  mcp_server_id?: number | null
+  locked_tier?: number | null
+  input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+  agent_tools?: Prisma.AgentToolUncheckedCreateNestedManyWithoutToolInput
+}
+
+export type ToolCreateOrConnectWithoutEvaluation_toolsInput = {
+  where: Prisma.ToolWhereUniqueInput
+  create: Prisma.XOR<Prisma.ToolCreateWithoutEvaluation_toolsInput, Prisma.ToolUncheckedCreateWithoutEvaluation_toolsInput>
+}
+
+export type ToolUpsertWithoutEvaluation_toolsInput = {
+  update: Prisma.XOR<Prisma.ToolUpdateWithoutEvaluation_toolsInput, Prisma.ToolUncheckedUpdateWithoutEvaluation_toolsInput>
+  create: Prisma.XOR<Prisma.ToolCreateWithoutEvaluation_toolsInput, Prisma.ToolUncheckedCreateWithoutEvaluation_toolsInput>
+  where?: Prisma.ToolWhereInput
+}
+
+export type ToolUpdateToOneWithWhereWithoutEvaluation_toolsInput = {
+  where?: Prisma.ToolWhereInput
+  data: Prisma.XOR<Prisma.ToolUpdateWithoutEvaluation_toolsInput, Prisma.ToolUncheckedUpdateWithoutEvaluation_toolsInput>
+}
+
+export type ToolUpdateWithoutEvaluation_toolsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  mcp_server?: Prisma.McpServerUpdateOneWithoutToolsNestedInput
+  agent_tools?: Prisma.AgentToolUpdateManyWithoutToolNestedInput
+}
+
+export type ToolUncheckedUpdateWithoutEvaluation_toolsInput = {
+  tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  mcp_server_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  agent_tools?: Prisma.AgentToolUncheckedUpdateManyWithoutToolNestedInput
 }
 
 export type ToolCreateManyMcp_serverInput = {
@@ -729,6 +830,7 @@ export type ToolUpdateWithoutMcp_serverInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   agent_tools?: Prisma.AgentToolUpdateManyWithoutToolNestedInput
+  evaluation_tools?: Prisma.EvaluationToolUpdateManyWithoutToolNestedInput
 }
 
 export type ToolUncheckedUpdateWithoutMcp_serverInput = {
@@ -743,6 +845,7 @@ export type ToolUncheckedUpdateWithoutMcp_serverInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   agent_tools?: Prisma.AgentToolUncheckedUpdateManyWithoutToolNestedInput
+  evaluation_tools?: Prisma.EvaluationToolUncheckedUpdateManyWithoutToolNestedInput
 }
 
 export type ToolUncheckedUpdateManyWithoutMcp_serverInput = {
@@ -765,10 +868,12 @@ export type ToolUncheckedUpdateManyWithoutMcp_serverInput = {
 
 export type ToolCountOutputType = {
   agent_tools: number
+  evaluation_tools: number
 }
 
 export type ToolCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   agent_tools?: boolean | ToolCountOutputTypeCountAgent_toolsArgs
+  evaluation_tools?: boolean | ToolCountOutputTypeCountEvaluation_toolsArgs
 }
 
 /**
@@ -788,6 +893,13 @@ export type ToolCountOutputTypeCountAgent_toolsArgs<ExtArgs extends runtime.Type
   where?: Prisma.AgentToolWhereInput
 }
 
+/**
+ * ToolCountOutputType without action
+ */
+export type ToolCountOutputTypeCountEvaluation_toolsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EvaluationToolWhereInput
+}
+
 
 export type ToolSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   tool_id?: boolean
@@ -803,6 +915,7 @@ export type ToolSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   updated_at?: boolean
   mcp_server?: boolean | Prisma.Tool$mcp_serverArgs<ExtArgs>
   agent_tools?: boolean | Prisma.Tool$agent_toolsArgs<ExtArgs>
+  evaluation_tools?: boolean | Prisma.Tool$evaluation_toolsArgs<ExtArgs>
   _count?: boolean | Prisma.ToolCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tool"]>
 
@@ -854,6 +967,7 @@ export type ToolOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = run
 export type ToolInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   mcp_server?: boolean | Prisma.Tool$mcp_serverArgs<ExtArgs>
   agent_tools?: boolean | Prisma.Tool$agent_toolsArgs<ExtArgs>
+  evaluation_tools?: boolean | Prisma.Tool$evaluation_toolsArgs<ExtArgs>
   _count?: boolean | Prisma.ToolCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ToolIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -868,6 +982,7 @@ export type $ToolPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   objects: {
     mcp_server: Prisma.$McpServerPayload<ExtArgs> | null
     agent_tools: Prisma.$AgentToolPayload<ExtArgs>[]
+    evaluation_tools: Prisma.$EvaluationToolPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     tool_id: number
@@ -1277,6 +1392,7 @@ export interface Prisma__ToolClient<T, Null = never, ExtArgs extends runtime.Typ
   readonly [Symbol.toStringTag]: "PrismaPromise"
   mcp_server<T extends Prisma.Tool$mcp_serverArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tool$mcp_serverArgs<ExtArgs>>): Prisma.Prisma__McpServerClient<runtime.Types.Result.GetResult<Prisma.$McpServerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   agent_tools<T extends Prisma.Tool$agent_toolsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tool$agent_toolsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AgentToolPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  evaluation_tools<T extends Prisma.Tool$evaluation_toolsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tool$evaluation_toolsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvaluationToolPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1751,6 +1867,30 @@ export type Tool$agent_toolsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.AgentToolScalarFieldEnum | Prisma.AgentToolScalarFieldEnum[]
+}
+
+/**
+ * Tool.evaluation_tools
+ */
+export type Tool$evaluation_toolsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EvaluationTool
+   */
+  select?: Prisma.EvaluationToolSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EvaluationTool
+   */
+  omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
+  where?: Prisma.EvaluationToolWhereInput
+  orderBy?: Prisma.EvaluationToolOrderByWithRelationInput | Prisma.EvaluationToolOrderByWithRelationInput[]
+  cursor?: Prisma.EvaluationToolWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EvaluationToolScalarFieldEnum | Prisma.EvaluationToolScalarFieldEnum[]
 }
 
 /**

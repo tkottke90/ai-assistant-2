@@ -18,4 +18,5 @@ export const getServerInfo = createClientMethod('/api', { method: 'get' }, async
 export { HttpError } from './error';
 export * from './lib/agents';
 export * from './lib/chat';
+export * from './lib/evaluations';
 export * from './lib/tools';

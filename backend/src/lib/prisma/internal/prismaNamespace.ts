@@ -1659,6 +1659,7 @@ export const EvaluationToolScalarFieldEnum = {
   evaluation_tool_id: 'evaluation_tool_id',
   evaluation_id: 'evaluation_id',
   tool_id: 'tool_id',
+  tool_name: 'tool_name',
   tier: 'tier',
   created_at: 'created_at',
   updated_at: 'updated_at'

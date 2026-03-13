@@ -27,10 +27,11 @@ export function applyLocalSelection(
  * Provides a read-only view of the tool registry populated from the backend,
  * with local-only add/remove/tier-change mutations (no API writes).
  * Intended for contexts like evaluations where tool selection is stored locally.
+ * Pass `initialSelection` to seed the selection from saved data.
  */
-export function useLocalToolSelection() {
+export function useLocalToolSelection(initialSelection?: SelectedTool[]) {
   const allTools = useApi(useCallback(() => listTools({}), []));
-  const selectedTools = useSignal<SelectedTool[]>([]);
+  const selectedTools = useSignal<SelectedTool[]>(initialSelection ?? []);
 
   useEffect(() => { allTools.execute(); }, []);
 

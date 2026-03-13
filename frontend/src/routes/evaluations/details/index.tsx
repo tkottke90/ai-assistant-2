@@ -2,22 +2,59 @@ import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout"
 import { Button } from "@/components/ui/button";
 import { EvaluationOptions } from "./options";
 import { TestCases } from "./test-cases";
-import { useSignal } from "@preact/signals";
+import { useEvaluation } from "@/hooks/use-evaluation";
+import { useRoute } from "preact-iso";
+import { useComputed } from "@preact/signals";
+import { Collapsable } from "@/components/collapsable-section";
 
 export function EvaluationDetailsPage() {
-  const scoringInProgress = useSignal(true);
+  const route = useRoute();
+  const evaluationId = parseInt(route.params?.evaluationId ?? '0', 10);
+
+  const {
+    evalForm,
+    updateEvalForm,
+    activeResult,
+    setActiveResult,
+    results,
+    saving,
+    executing,
+    save,
+    execute,
+    complete,
+    scoreCase,
+  } = useEvaluation(evaluationId);
+
+  const scoringInProgress = useComputed(() => activeResult.value?.status === 'Running');
+  const canExecute = useComputed(
+    () => !executing.value && (!activeResult.value || activeResult.value.status !== 'Running'),
+  );
 
   return (
     <BaseLayout className="flex flex-col gap-4">
       <header className="flex gap-2 items-center w-full justify-between">
         <span className="flex gap-2 items-center">
           <BaseLayoutShowBtn />
-          <h2 className="inline">Prompt Details</h2>
+          <h2 className="inline">{evalForm.value.name || 'Evaluation Details'}</h2>
         </span>
         <span className="inline-flex gap-2">
-          <Button variant="outline">Create Agent</Button>
-          <Button disabled={scoringInProgress.value} variant="constructive">Execute</Button>
-          <Button variant="constructive">Save</Button>
+          <Button
+            variant="outline"
+            disabled={!scoringInProgress.value || !activeResult.value}
+            onClick={complete}
+          >
+            Complete
+          </Button>
+          <Button
+            disabled={!canExecute.value}
+            variant="constructive"
+            onClick={execute}
+          >
+            {executing.value ? 'Running…' : 'Execute'}
+          </Button>
+          <Button variant="constructive" disabled={saving.value} onClick={save}>
+            {saving.value ? 'Saving…' : 'Save'}
+          </Button>
         </span>
       </header>
       <main className="grow gap-4
@@ -30,23 +67,46 @@ export function EvaluationDetailsPage() {
           <label htmlFor="name">Name</label>
           <input
             id="name"
+            key={`name-${evaluationId}`}
+            defaultValue={evalForm.value.name}
+            onChange={(e) => updateEvalForm({ name: (e.target as HTMLInputElement).value })}
             className="text-xl lg:text-sm border-none w-full bg-neutral-600 rounded p-2"
           />
           <br />
           <label htmlFor="description">Description</label>
           <textarea
             id="description"
+            key={`desc-${evaluationId}`}
+            defaultValue={evalForm.value.description}
+            onChange={(e) => updateEvalForm({ description: (e.target as HTMLTextAreaElement).value })}
             className="text-lg lg:text-sm border-none w-full bg-neutral-600 rounded p-2 min-h-10 h-10"
-          ></textarea>
+          />
         </section>
-        <section className="h-fit">
-          <h4>Prompt</h4>
+
+        <Collapsable title="Prompt" startedOpen={true}>
           <textarea
+            key={`prompt-${evaluationId}`}
+            defaultValue={evalForm.value.prompt}
+            onChange={(e) => updateEvalForm({ prompt: (e.target as HTMLTextAreaElement).value })}
             className="text-xl lg:text-sm border-none w-full bg-neutral-600 rounded p-2 min-h-10 h-10"
-          ></textarea>
-        </section>
-        <EvaluationOptions scoringInProgress={scoringInProgress} />
-        <TestCases scoringInProgress={scoringInProgress} />
+          />
+        </Collapsable>
+
+        <EvaluationOptions
+          scoringInProgress={scoringInProgress}
+          evalForm={evalForm}
+          updateEvalForm={updateEvalForm}
+        />
+        
+        <TestCases
+          scoringInProgress={scoringInProgress}
+          evalForm={evalForm}
+          updateEvalForm={updateEvalForm}
+          activeResult={activeResult}
+          results={results}
+          onSetActiveResult={setActiveResult}
+          onScoreCase={scoreCase}
+        />
       </main>
     </BaseLayout>
   );

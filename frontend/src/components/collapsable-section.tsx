@@ -14,7 +14,8 @@ export function Collapsable({ children, className, title, startedOpen, mobileOnl
   return (
     <section
       className={cn(
-        'overflow-hidden transition-all duration-300 min-h-12 max-h-12 data-col data-[collapse=false]:max-h-250 lg:max-h-250 group',
+        'overflow-hidden transition-all duration-300 min-h-12 max-h-12 data-col data-[collapse=false]:max-h-250 group',
+        mobileOnly ? 'lg:max-h-250' : '',
         className
       )}
       data-collapse={collapsed.value}

@@ -44,6 +44,7 @@ export type EvaluationToolMinAggregateOutputType = {
   evaluation_tool_id: number | null
   evaluation_id: number | null
   tool_id: number | null
+  tool_name: string | null
   tier: number | null
   created_at: Date | null
   updated_at: Date | null
@@ -53,6 +54,7 @@ export type EvaluationToolMaxAggregateOutputType = {
   evaluation_tool_id: number | null
   evaluation_id: number | null
   tool_id: number | null
+  tool_name: string | null
   tier: number | null
   created_at: Date | null
   updated_at: Date | null
@@ -62,6 +64,7 @@ export type EvaluationToolCountAggregateOutputType = {
   evaluation_tool_id: number
   evaluation_id: number
   tool_id: number
+  tool_name: number
   tier: number
   created_at: number
   updated_at: number
@@ -87,6 +90,7 @@ export type EvaluationToolMinAggregateInputType = {
   evaluation_tool_id?: true
   evaluation_id?: true
   tool_id?: true
+  tool_name?: true
   tier?: true
   created_at?: true
   updated_at?: true
@@ -96,6 +100,7 @@ export type EvaluationToolMaxAggregateInputType = {
   evaluation_tool_id?: true
   evaluation_id?: true
   tool_id?: true
+  tool_name?: true
   tier?: true
   created_at?: true
   updated_at?: true
@@ -105,6 +110,7 @@ export type EvaluationToolCountAggregateInputType = {
   evaluation_tool_id?: true
   evaluation_id?: true
   tool_id?: true
+  tool_name?: true
   tier?: true
   created_at?: true
   updated_at?: true
@@ -201,6 +207,7 @@ export type EvaluationToolGroupByOutputType = {
   evaluation_tool_id: number
   evaluation_id: number
   tool_id: number
+  tool_name: string
   tier: number
   created_at: Date
   updated_at: Date
@@ -233,18 +240,24 @@ export type EvaluationToolWhereInput = {
   evaluation_tool_id?: Prisma.IntFilter<"EvaluationTool"> | number
   evaluation_id?: Prisma.IntFilter<"EvaluationTool"> | number
   tool_id?: Prisma.IntFilter<"EvaluationTool"> | number
+  tool_name?: Prisma.StringFilter<"EvaluationTool"> | string
   tier?: Prisma.IntFilter<"EvaluationTool"> | number
   created_at?: Prisma.DateTimeFilter<"EvaluationTool"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationTool"> | Date | string
+  evaluation?: Prisma.XOR<Prisma.EvaluationScalarRelationFilter, Prisma.EvaluationWhereInput>
+  tool?: Prisma.XOR<Prisma.ToolScalarRelationFilter, Prisma.ToolWhereInput>
 }
 
 export type EvaluationToolOrderByWithRelationInput = {
   evaluation_tool_id?: Prisma.SortOrder
   evaluation_id?: Prisma.SortOrder
   tool_id?: Prisma.SortOrder
+  tool_name?: Prisma.SortOrder
   tier?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
+  evaluation?: Prisma.EvaluationOrderByWithRelationInput
+  tool?: Prisma.ToolOrderByWithRelationInput
 }
 
 export type EvaluationToolWhereUniqueInput = Prisma.AtLeast<{
@@ -254,15 +267,19 @@ export type EvaluationToolWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.EvaluationToolWhereInput | Prisma.EvaluationToolWhereInput[]
   evaluation_id?: Prisma.IntFilter<"EvaluationTool"> | number
   tool_id?: Prisma.IntFilter<"EvaluationTool"> | number
+  tool_name?: Prisma.StringFilter<"EvaluationTool"> | string
   tier?: Prisma.IntFilter<"EvaluationTool"> | number
   created_at?: Prisma.DateTimeFilter<"EvaluationTool"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationTool"> | Date | string
+  evaluation?: Prisma.XOR<Prisma.EvaluationScalarRelationFilter, Prisma.EvaluationWhereInput>
+  tool?: Prisma.XOR<Prisma.ToolScalarRelationFilter, Prisma.ToolWhereInput>
 }, "evaluation_tool_id">
 
 export type EvaluationToolOrderByWithAggregationInput = {
   evaluation_tool_id?: Prisma.SortOrder
   evaluation_id?: Prisma.SortOrder
   tool_id?: Prisma.SortOrder
+  tool_name?: Prisma.SortOrder
   tier?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
@@ -280,40 +297,45 @@ export type EvaluationToolScalarWhereWithAggregatesInput = {
   evaluation_tool_id?: Prisma.IntWithAggregatesFilter<"EvaluationTool"> | number
   evaluation_id?: Prisma.IntWithAggregatesFilter<"EvaluationTool"> | number
   tool_id?: Prisma.IntWithAggregatesFilter<"EvaluationTool"> | number
+  tool_name?: Prisma.StringWithAggregatesFilter<"EvaluationTool"> | string
   tier?: Prisma.IntWithAggregatesFilter<"EvaluationTool"> | number
   created_at?: Prisma.DateTimeWithAggregatesFilter<"EvaluationTool"> | Date | string
   updated_at?: Prisma.DateTimeWithAggregatesFilter<"EvaluationTool"> | Date | string
 }
 
 export type EvaluationToolCreateInput = {
-  evaluation_id: number
-  tool_id: number
+  tool_name: string
   tier?: number
   created_at?: Date | string
   updated_at?: Date | string
+  evaluation: Prisma.EvaluationCreateNestedOneWithoutEvaluation_toolsInput
+  tool: Prisma.ToolCreateNestedOneWithoutEvaluation_toolsInput
 }
 
 export type EvaluationToolUncheckedCreateInput = {
   evaluation_tool_id?: number
   evaluation_id: number
   tool_id: number
+  tool_name: string
   tier?: number
   created_at?: Date | string
   updated_at?: Date | string
 }
 
 export type EvaluationToolUpdateInput = {
-  evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
-  tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
   tier?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evaluation?: Prisma.EvaluationUpdateOneRequiredWithoutEvaluation_toolsNestedInput
+  tool?: Prisma.ToolUpdateOneRequiredWithoutEvaluation_toolsNestedInput
 }
 
 export type EvaluationToolUncheckedUpdateInput = {
   evaluation_tool_id?: Prisma.IntFieldUpdateOperationsInput | number
   evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
   tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
   tier?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -323,14 +345,14 @@ export type EvaluationToolCreateManyInput = {
   evaluation_tool_id?: number
   evaluation_id: number
   tool_id: number
+  tool_name: string
   tier?: number
   created_at?: Date | string
   updated_at?: Date | string
 }
 
 export type EvaluationToolUpdateManyMutationInput = {
-  evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
-  tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
   tier?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -340,15 +362,27 @@ export type EvaluationToolUncheckedUpdateManyInput = {
   evaluation_tool_id?: Prisma.IntFieldUpdateOperationsInput | number
   evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
   tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
   tier?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EvaluationToolListRelationFilter = {
+  every?: Prisma.EvaluationToolWhereInput
+  some?: Prisma.EvaluationToolWhereInput
+  none?: Prisma.EvaluationToolWhereInput
+}
+
+export type EvaluationToolOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type EvaluationToolCountOrderByAggregateInput = {
   evaluation_tool_id?: Prisma.SortOrder
   evaluation_id?: Prisma.SortOrder
   tool_id?: Prisma.SortOrder
+  tool_name?: Prisma.SortOrder
   tier?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
@@ -365,6 +399,7 @@ export type EvaluationToolMaxOrderByAggregateInput = {
   evaluation_tool_id?: Prisma.SortOrder
   evaluation_id?: Prisma.SortOrder
   tool_id?: Prisma.SortOrder
+  tool_name?: Prisma.SortOrder
   tier?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
@@ -374,6 +409,7 @@ export type EvaluationToolMinOrderByAggregateInput = {
   evaluation_tool_id?: Prisma.SortOrder
   evaluation_id?: Prisma.SortOrder
   tool_id?: Prisma.SortOrder
+  tool_name?: Prisma.SortOrder
   tier?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
@@ -386,53 +422,330 @@ export type EvaluationToolSumOrderByAggregateInput = {
   tier?: Prisma.SortOrder
 }
 
+export type EvaluationToolCreateNestedManyWithoutToolInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutToolInput, Prisma.EvaluationToolUncheckedCreateWithoutToolInput> | Prisma.EvaluationToolCreateWithoutToolInput[] | Prisma.EvaluationToolUncheckedCreateWithoutToolInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutToolInput | Prisma.EvaluationToolCreateOrConnectWithoutToolInput[]
+  createMany?: Prisma.EvaluationToolCreateManyToolInputEnvelope
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+}
+
+export type EvaluationToolUncheckedCreateNestedManyWithoutToolInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutToolInput, Prisma.EvaluationToolUncheckedCreateWithoutToolInput> | Prisma.EvaluationToolCreateWithoutToolInput[] | Prisma.EvaluationToolUncheckedCreateWithoutToolInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutToolInput | Prisma.EvaluationToolCreateOrConnectWithoutToolInput[]
+  createMany?: Prisma.EvaluationToolCreateManyToolInputEnvelope
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+}
+
+export type EvaluationToolUpdateManyWithoutToolNestedInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutToolInput, Prisma.EvaluationToolUncheckedCreateWithoutToolInput> | Prisma.EvaluationToolCreateWithoutToolInput[] | Prisma.EvaluationToolUncheckedCreateWithoutToolInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutToolInput | Prisma.EvaluationToolCreateOrConnectWithoutToolInput[]
+  upsert?: Prisma.EvaluationToolUpsertWithWhereUniqueWithoutToolInput | Prisma.EvaluationToolUpsertWithWhereUniqueWithoutToolInput[]
+  createMany?: Prisma.EvaluationToolCreateManyToolInputEnvelope
+  set?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  disconnect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  delete?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  update?: Prisma.EvaluationToolUpdateWithWhereUniqueWithoutToolInput | Prisma.EvaluationToolUpdateWithWhereUniqueWithoutToolInput[]
+  updateMany?: Prisma.EvaluationToolUpdateManyWithWhereWithoutToolInput | Prisma.EvaluationToolUpdateManyWithWhereWithoutToolInput[]
+  deleteMany?: Prisma.EvaluationToolScalarWhereInput | Prisma.EvaluationToolScalarWhereInput[]
+}
+
+export type EvaluationToolUncheckedUpdateManyWithoutToolNestedInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutToolInput, Prisma.EvaluationToolUncheckedCreateWithoutToolInput> | Prisma.EvaluationToolCreateWithoutToolInput[] | Prisma.EvaluationToolUncheckedCreateWithoutToolInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutToolInput | Prisma.EvaluationToolCreateOrConnectWithoutToolInput[]
+  upsert?: Prisma.EvaluationToolUpsertWithWhereUniqueWithoutToolInput | Prisma.EvaluationToolUpsertWithWhereUniqueWithoutToolInput[]
+  createMany?: Prisma.EvaluationToolCreateManyToolInputEnvelope
+  set?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  disconnect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  delete?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  update?: Prisma.EvaluationToolUpdateWithWhereUniqueWithoutToolInput | Prisma.EvaluationToolUpdateWithWhereUniqueWithoutToolInput[]
+  updateMany?: Prisma.EvaluationToolUpdateManyWithWhereWithoutToolInput | Prisma.EvaluationToolUpdateManyWithWhereWithoutToolInput[]
+  deleteMany?: Prisma.EvaluationToolScalarWhereInput | Prisma.EvaluationToolScalarWhereInput[]
+}
+
+export type EvaluationToolCreateNestedManyWithoutEvaluationInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationToolCreateWithoutEvaluationInput[] | Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationToolCreateManyEvaluationInputEnvelope
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+}
+
+export type EvaluationToolUncheckedCreateNestedManyWithoutEvaluationInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationToolCreateWithoutEvaluationInput[] | Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationToolCreateManyEvaluationInputEnvelope
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+}
+
+export type EvaluationToolUpdateManyWithoutEvaluationNestedInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationToolCreateWithoutEvaluationInput[] | Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput[]
+  upsert?: Prisma.EvaluationToolUpsertWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationToolUpsertWithWhereUniqueWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationToolCreateManyEvaluationInputEnvelope
+  set?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  disconnect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  delete?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  update?: Prisma.EvaluationToolUpdateWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationToolUpdateWithWhereUniqueWithoutEvaluationInput[]
+  updateMany?: Prisma.EvaluationToolUpdateManyWithWhereWithoutEvaluationInput | Prisma.EvaluationToolUpdateManyWithWhereWithoutEvaluationInput[]
+  deleteMany?: Prisma.EvaluationToolScalarWhereInput | Prisma.EvaluationToolScalarWhereInput[]
+}
+
+export type EvaluationToolUncheckedUpdateManyWithoutEvaluationNestedInput = {
+  create?: Prisma.XOR<Prisma.EvaluationToolCreateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationToolCreateWithoutEvaluationInput[] | Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationToolCreateOrConnectWithoutEvaluationInput[]
+  upsert?: Prisma.EvaluationToolUpsertWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationToolUpsertWithWhereUniqueWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationToolCreateManyEvaluationInputEnvelope
+  set?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  disconnect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  delete?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  connect?: Prisma.EvaluationToolWhereUniqueInput | Prisma.EvaluationToolWhereUniqueInput[]
+  update?: Prisma.EvaluationToolUpdateWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationToolUpdateWithWhereUniqueWithoutEvaluationInput[]
+  updateMany?: Prisma.EvaluationToolUpdateManyWithWhereWithoutEvaluationInput | Prisma.EvaluationToolUpdateManyWithWhereWithoutEvaluationInput[]
+  deleteMany?: Prisma.EvaluationToolScalarWhereInput | Prisma.EvaluationToolScalarWhereInput[]
+}
+
+export type EvaluationToolCreateWithoutToolInput = {
+  tool_name: string
+  tier?: number
+  created_at?: Date | string
+  updated_at?: Date | string
+  evaluation: Prisma.EvaluationCreateNestedOneWithoutEvaluation_toolsInput
+}
+
+export type EvaluationToolUncheckedCreateWithoutToolInput = {
+  evaluation_tool_id?: number
+  evaluation_id: number
+  tool_name: string
+  tier?: number
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type EvaluationToolCreateOrConnectWithoutToolInput = {
+  where: Prisma.EvaluationToolWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvaluationToolCreateWithoutToolInput, Prisma.EvaluationToolUncheckedCreateWithoutToolInput>
+}
+
+export type EvaluationToolCreateManyToolInputEnvelope = {
+  data: Prisma.EvaluationToolCreateManyToolInput | Prisma.EvaluationToolCreateManyToolInput[]
+}
+
+export type EvaluationToolUpsertWithWhereUniqueWithoutToolInput = {
+  where: Prisma.EvaluationToolWhereUniqueInput
+  update: Prisma.XOR<Prisma.EvaluationToolUpdateWithoutToolInput, Prisma.EvaluationToolUncheckedUpdateWithoutToolInput>
+  create: Prisma.XOR<Prisma.EvaluationToolCreateWithoutToolInput, Prisma.EvaluationToolUncheckedCreateWithoutToolInput>
+}
+
+export type EvaluationToolUpdateWithWhereUniqueWithoutToolInput = {
+  where: Prisma.EvaluationToolWhereUniqueInput
+  data: Prisma.XOR<Prisma.EvaluationToolUpdateWithoutToolInput, Prisma.EvaluationToolUncheckedUpdateWithoutToolInput>
+}
+
+export type EvaluationToolUpdateManyWithWhereWithoutToolInput = {
+  where: Prisma.EvaluationToolScalarWhereInput
+  data: Prisma.XOR<Prisma.EvaluationToolUpdateManyMutationInput, Prisma.EvaluationToolUncheckedUpdateManyWithoutToolInput>
+}
+
+export type EvaluationToolScalarWhereInput = {
+  AND?: Prisma.EvaluationToolScalarWhereInput | Prisma.EvaluationToolScalarWhereInput[]
+  OR?: Prisma.EvaluationToolScalarWhereInput[]
+  NOT?: Prisma.EvaluationToolScalarWhereInput | Prisma.EvaluationToolScalarWhereInput[]
+  evaluation_tool_id?: Prisma.IntFilter<"EvaluationTool"> | number
+  evaluation_id?: Prisma.IntFilter<"EvaluationTool"> | number
+  tool_id?: Prisma.IntFilter<"EvaluationTool"> | number
+  tool_name?: Prisma.StringFilter<"EvaluationTool"> | string
+  tier?: Prisma.IntFilter<"EvaluationTool"> | number
+  created_at?: Prisma.DateTimeFilter<"EvaluationTool"> | Date | string
+  updated_at?: Prisma.DateTimeFilter<"EvaluationTool"> | Date | string
+}
+
+export type EvaluationToolCreateWithoutEvaluationInput = {
+  tool_name: string
+  tier?: number
+  created_at?: Date | string
+  updated_at?: Date | string
+  tool: Prisma.ToolCreateNestedOneWithoutEvaluation_toolsInput
+}
+
+export type EvaluationToolUncheckedCreateWithoutEvaluationInput = {
+  evaluation_tool_id?: number
+  tool_id: number
+  tool_name: string
+  tier?: number
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type EvaluationToolCreateOrConnectWithoutEvaluationInput = {
+  where: Prisma.EvaluationToolWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvaluationToolCreateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput>
+}
+
+export type EvaluationToolCreateManyEvaluationInputEnvelope = {
+  data: Prisma.EvaluationToolCreateManyEvaluationInput | Prisma.EvaluationToolCreateManyEvaluationInput[]
+}
+
+export type EvaluationToolUpsertWithWhereUniqueWithoutEvaluationInput = {
+  where: Prisma.EvaluationToolWhereUniqueInput
+  update: Prisma.XOR<Prisma.EvaluationToolUpdateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedUpdateWithoutEvaluationInput>
+  create: Prisma.XOR<Prisma.EvaluationToolCreateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedCreateWithoutEvaluationInput>
+}
+
+export type EvaluationToolUpdateWithWhereUniqueWithoutEvaluationInput = {
+  where: Prisma.EvaluationToolWhereUniqueInput
+  data: Prisma.XOR<Prisma.EvaluationToolUpdateWithoutEvaluationInput, Prisma.EvaluationToolUncheckedUpdateWithoutEvaluationInput>
+}
+
+export type EvaluationToolUpdateManyWithWhereWithoutEvaluationInput = {
+  where: Prisma.EvaluationToolScalarWhereInput
+  data: Prisma.XOR<Prisma.EvaluationToolUpdateManyMutationInput, Prisma.EvaluationToolUncheckedUpdateManyWithoutEvaluationInput>
+}
+
+export type EvaluationToolCreateManyToolInput = {
+  evaluation_tool_id?: number
+  evaluation_id: number
+  tool_name: string
+  tier?: number
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type EvaluationToolUpdateWithoutToolInput = {
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evaluation?: Prisma.EvaluationUpdateOneRequiredWithoutEvaluation_toolsNestedInput
+}
+
+export type EvaluationToolUncheckedUpdateWithoutToolInput = {
+  evaluation_tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EvaluationToolUncheckedUpdateManyWithoutToolInput = {
+  evaluation_tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EvaluationToolCreateManyEvaluationInput = {
+  evaluation_tool_id?: number
+  tool_id: number
+  tool_name: string
+  tier?: number
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type EvaluationToolUpdateWithoutEvaluationInput = {
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tool?: Prisma.ToolUpdateOneRequiredWithoutEvaluation_toolsNestedInput
+}
+
+export type EvaluationToolUncheckedUpdateWithoutEvaluationInput = {
+  evaluation_tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EvaluationToolUncheckedUpdateManyWithoutEvaluationInput = {
+  evaluation_tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_id?: Prisma.IntFieldUpdateOperationsInput | number
+  tool_name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 
 export type EvaluationToolSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   evaluation_tool_id?: boolean
   evaluation_id?: boolean
   tool_id?: boolean
+  tool_name?: boolean
   tier?: boolean
   created_at?: boolean
   updated_at?: boolean
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+  tool?: boolean | Prisma.ToolDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evaluationTool"]>
 
 export type EvaluationToolSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   evaluation_tool_id?: boolean
   evaluation_id?: boolean
   tool_id?: boolean
+  tool_name?: boolean
   tier?: boolean
   created_at?: boolean
   updated_at?: boolean
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+  tool?: boolean | Prisma.ToolDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evaluationTool"]>
 
 export type EvaluationToolSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   evaluation_tool_id?: boolean
   evaluation_id?: boolean
   tool_id?: boolean
+  tool_name?: boolean
   tier?: boolean
   created_at?: boolean
   updated_at?: boolean
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+  tool?: boolean | Prisma.ToolDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evaluationTool"]>
 
 export type EvaluationToolSelectScalar = {
   evaluation_tool_id?: boolean
   evaluation_id?: boolean
   tool_id?: boolean
+  tool_name?: boolean
   tier?: boolean
   created_at?: boolean
   updated_at?: boolean
 }
 
-export type EvaluationToolOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"evaluation_tool_id" | "evaluation_id" | "tool_id" | "tier" | "created_at" | "updated_at", ExtArgs["result"]["evaluationTool"]>
+export type EvaluationToolOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"evaluation_tool_id" | "evaluation_id" | "tool_id" | "tool_name" | "tier" | "created_at" | "updated_at", ExtArgs["result"]["evaluationTool"]>
+export type EvaluationToolInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+  tool?: boolean | Prisma.ToolDefaultArgs<ExtArgs>
+}
+export type EvaluationToolIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+  tool?: boolean | Prisma.ToolDefaultArgs<ExtArgs>
+}
+export type EvaluationToolIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+  tool?: boolean | Prisma.ToolDefaultArgs<ExtArgs>
+}
 
 export type $EvaluationToolPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EvaluationTool"
-  objects: {}
+  objects: {
+    evaluation: Prisma.$EvaluationPayload<ExtArgs>
+    tool: Prisma.$ToolPayload<ExtArgs>
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     evaluation_tool_id: number
     evaluation_id: number
     tool_id: number
+    tool_name: string
     tier: number
     created_at: Date
     updated_at: Date
@@ -830,6 +1143,8 @@ readonly fields: EvaluationToolFieldRefs;
  */
 export interface Prisma__EvaluationToolClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  evaluation<T extends Prisma.EvaluationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EvaluationDefaultArgs<ExtArgs>>): Prisma.Prisma__EvaluationClient<runtime.Types.Result.GetResult<Prisma.$EvaluationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  tool<T extends Prisma.ToolDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ToolDefaultArgs<ExtArgs>>): Prisma.Prisma__ToolClient<runtime.Types.Result.GetResult<Prisma.$ToolPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -862,6 +1177,7 @@ export interface EvaluationToolFieldRefs {
   readonly evaluation_tool_id: Prisma.FieldRef<"EvaluationTool", 'Int'>
   readonly evaluation_id: Prisma.FieldRef<"EvaluationTool", 'Int'>
   readonly tool_id: Prisma.FieldRef<"EvaluationTool", 'Int'>
+  readonly tool_name: Prisma.FieldRef<"EvaluationTool", 'String'>
   readonly tier: Prisma.FieldRef<"EvaluationTool", 'Int'>
   readonly created_at: Prisma.FieldRef<"EvaluationTool", 'DateTime'>
   readonly updated_at: Prisma.FieldRef<"EvaluationTool", 'DateTime'>
@@ -882,6 +1198,10 @@ export type EvaluationToolFindUniqueArgs<ExtArgs extends runtime.Types.Extension
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationTool to fetch.
    */
   where: Prisma.EvaluationToolWhereUniqueInput
@@ -900,6 +1220,10 @@ export type EvaluationToolFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Ex
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationTool to fetch.
    */
   where: Prisma.EvaluationToolWhereUniqueInput
@@ -917,6 +1241,10 @@ export type EvaluationToolFindFirstArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the EvaluationTool
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
   /**
    * Filter, which EvaluationTool to fetch.
    */
@@ -966,6 +1294,10 @@ export type EvaluationToolFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Ext
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationTool to fetch.
    */
   where?: Prisma.EvaluationToolWhereInput
@@ -1014,6 +1346,10 @@ export type EvaluationToolFindManyArgs<ExtArgs extends runtime.Types.Extensions.
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationTools to fetch.
    */
   where?: Prisma.EvaluationToolWhereInput
@@ -1057,6 +1393,10 @@ export type EvaluationToolCreateArgs<ExtArgs extends runtime.Types.Extensions.In
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
+  /**
    * The data needed to create a EvaluationTool.
    */
   data: Prisma.XOR<Prisma.EvaluationToolCreateInput, Prisma.EvaluationToolUncheckedCreateInput>
@@ -1088,6 +1428,10 @@ export type EvaluationToolCreateManyAndReturnArgs<ExtArgs extends runtime.Types.
    * The data used to create many EvaluationTools.
    */
   data: Prisma.EvaluationToolCreateManyInput | Prisma.EvaluationToolCreateManyInput[]
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1102,6 +1446,10 @@ export type EvaluationToolUpdateArgs<ExtArgs extends runtime.Types.Extensions.In
    * Omit specific fields from the EvaluationTool
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
   /**
    * The data needed to update a EvaluationTool.
    */
@@ -1154,6 +1502,10 @@ export type EvaluationToolUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.
    * Limit how many EvaluationTools to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1168,6 +1520,10 @@ export type EvaluationToolUpsertArgs<ExtArgs extends runtime.Types.Extensions.In
    * Omit specific fields from the EvaluationTool
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
   /**
    * The filter to search for the EvaluationTool to update in case it exists.
    */
@@ -1194,6 +1550,10 @@ export type EvaluationToolDeleteArgs<ExtArgs extends runtime.Types.Extensions.In
    * Omit specific fields from the EvaluationTool
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
   /**
    * Filter which EvaluationTool to delete.
    */
@@ -1226,4 +1586,8 @@ export type EvaluationToolDefaultArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the EvaluationTool
    */
   omit?: Prisma.EvaluationToolOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationToolInclude<ExtArgs> | null
 }

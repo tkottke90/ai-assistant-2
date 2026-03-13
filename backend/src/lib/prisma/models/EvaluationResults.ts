@@ -232,6 +232,7 @@ export type EvaluationResultsWhereInput = {
   created_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   completed_at?: Prisma.DateTimeNullableFilter<"EvaluationResults"> | Date | string | null
+  evaluation?: Prisma.XOR<Prisma.EvaluationScalarRelationFilter, Prisma.EvaluationWhereInput>
 }
 
 export type EvaluationResultsOrderByWithRelationInput = {
@@ -242,6 +243,7 @@ export type EvaluationResultsOrderByWithRelationInput = {
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   completed_at?: Prisma.SortOrderInput | Prisma.SortOrder
+  evaluation?: Prisma.EvaluationOrderByWithRelationInput
 }
 
 export type EvaluationResultsWhereUniqueInput = Prisma.AtLeast<{
@@ -255,6 +257,7 @@ export type EvaluationResultsWhereUniqueInput = Prisma.AtLeast<{
   created_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   completed_at?: Prisma.DateTimeNullableFilter<"EvaluationResults"> | Date | string | null
+  evaluation?: Prisma.XOR<Prisma.EvaluationScalarRelationFilter, Prisma.EvaluationWhereInput>
 }, "evaluation_result_id">
 
 export type EvaluationResultsOrderByWithAggregationInput = {
@@ -286,12 +289,12 @@ export type EvaluationResultsScalarWhereWithAggregatesInput = {
 }
 
 export type EvaluationResultsCreateInput = {
-  evaluation_id: number
   status?: string
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
+  evaluation: Prisma.EvaluationCreateNestedOneWithoutResultsInput
 }
 
 export type EvaluationResultsUncheckedCreateInput = {
@@ -305,12 +308,12 @@ export type EvaluationResultsUncheckedCreateInput = {
 }
 
 export type EvaluationResultsUpdateInput = {
-  evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evaluation?: Prisma.EvaluationUpdateOneRequiredWithoutResultsNestedInput
 }
 
 export type EvaluationResultsUncheckedUpdateInput = {
@@ -334,7 +337,6 @@ export type EvaluationResultsCreateManyInput = {
 }
 
 export type EvaluationResultsUpdateManyMutationInput = {
-  evaluation_id?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -350,6 +352,16 @@ export type EvaluationResultsUncheckedUpdateManyInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type EvaluationResultsListRelationFilter = {
+  every?: Prisma.EvaluationResultsWhereInput
+  some?: Prisma.EvaluationResultsWhereInput
+  none?: Prisma.EvaluationResultsWhereInput
+}
+
+export type EvaluationResultsOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type EvaluationResultsCountOrderByAggregateInput = {
@@ -390,8 +402,140 @@ export type EvaluationResultsSumOrderByAggregateInput = {
   evaluation_id?: Prisma.SortOrder
 }
 
+export type EvaluationResultsCreateNestedManyWithoutEvaluationInput = {
+  create?: Prisma.XOR<Prisma.EvaluationResultsCreateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationResultsCreateWithoutEvaluationInput[] | Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationResultsCreateManyEvaluationInputEnvelope
+  connect?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+}
+
+export type EvaluationResultsUncheckedCreateNestedManyWithoutEvaluationInput = {
+  create?: Prisma.XOR<Prisma.EvaluationResultsCreateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationResultsCreateWithoutEvaluationInput[] | Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationResultsCreateManyEvaluationInputEnvelope
+  connect?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+}
+
+export type EvaluationResultsUpdateManyWithoutEvaluationNestedInput = {
+  create?: Prisma.XOR<Prisma.EvaluationResultsCreateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationResultsCreateWithoutEvaluationInput[] | Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput[]
+  upsert?: Prisma.EvaluationResultsUpsertWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationResultsUpsertWithWhereUniqueWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationResultsCreateManyEvaluationInputEnvelope
+  set?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  disconnect?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  delete?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  connect?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  update?: Prisma.EvaluationResultsUpdateWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationResultsUpdateWithWhereUniqueWithoutEvaluationInput[]
+  updateMany?: Prisma.EvaluationResultsUpdateManyWithWhereWithoutEvaluationInput | Prisma.EvaluationResultsUpdateManyWithWhereWithoutEvaluationInput[]
+  deleteMany?: Prisma.EvaluationResultsScalarWhereInput | Prisma.EvaluationResultsScalarWhereInput[]
+}
+
+export type EvaluationResultsUncheckedUpdateManyWithoutEvaluationNestedInput = {
+  create?: Prisma.XOR<Prisma.EvaluationResultsCreateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput> | Prisma.EvaluationResultsCreateWithoutEvaluationInput[] | Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput[]
+  connectOrCreate?: Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput | Prisma.EvaluationResultsCreateOrConnectWithoutEvaluationInput[]
+  upsert?: Prisma.EvaluationResultsUpsertWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationResultsUpsertWithWhereUniqueWithoutEvaluationInput[]
+  createMany?: Prisma.EvaluationResultsCreateManyEvaluationInputEnvelope
+  set?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  disconnect?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  delete?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  connect?: Prisma.EvaluationResultsWhereUniqueInput | Prisma.EvaluationResultsWhereUniqueInput[]
+  update?: Prisma.EvaluationResultsUpdateWithWhereUniqueWithoutEvaluationInput | Prisma.EvaluationResultsUpdateWithWhereUniqueWithoutEvaluationInput[]
+  updateMany?: Prisma.EvaluationResultsUpdateManyWithWhereWithoutEvaluationInput | Prisma.EvaluationResultsUpdateManyWithWhereWithoutEvaluationInput[]
+  deleteMany?: Prisma.EvaluationResultsScalarWhereInput | Prisma.EvaluationResultsScalarWhereInput[]
+}
+
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
+}
+
+export type EvaluationResultsCreateWithoutEvaluationInput = {
+  status?: string
+  results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+  completed_at?: Date | string | null
+}
+
+export type EvaluationResultsUncheckedCreateWithoutEvaluationInput = {
+  evaluation_result_id?: number
+  status?: string
+  results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+  completed_at?: Date | string | null
+}
+
+export type EvaluationResultsCreateOrConnectWithoutEvaluationInput = {
+  where: Prisma.EvaluationResultsWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvaluationResultsCreateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput>
+}
+
+export type EvaluationResultsCreateManyEvaluationInputEnvelope = {
+  data: Prisma.EvaluationResultsCreateManyEvaluationInput | Prisma.EvaluationResultsCreateManyEvaluationInput[]
+}
+
+export type EvaluationResultsUpsertWithWhereUniqueWithoutEvaluationInput = {
+  where: Prisma.EvaluationResultsWhereUniqueInput
+  update: Prisma.XOR<Prisma.EvaluationResultsUpdateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedUpdateWithoutEvaluationInput>
+  create: Prisma.XOR<Prisma.EvaluationResultsCreateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedCreateWithoutEvaluationInput>
+}
+
+export type EvaluationResultsUpdateWithWhereUniqueWithoutEvaluationInput = {
+  where: Prisma.EvaluationResultsWhereUniqueInput
+  data: Prisma.XOR<Prisma.EvaluationResultsUpdateWithoutEvaluationInput, Prisma.EvaluationResultsUncheckedUpdateWithoutEvaluationInput>
+}
+
+export type EvaluationResultsUpdateManyWithWhereWithoutEvaluationInput = {
+  where: Prisma.EvaluationResultsScalarWhereInput
+  data: Prisma.XOR<Prisma.EvaluationResultsUpdateManyMutationInput, Prisma.EvaluationResultsUncheckedUpdateManyWithoutEvaluationInput>
+}
+
+export type EvaluationResultsScalarWhereInput = {
+  AND?: Prisma.EvaluationResultsScalarWhereInput | Prisma.EvaluationResultsScalarWhereInput[]
+  OR?: Prisma.EvaluationResultsScalarWhereInput[]
+  NOT?: Prisma.EvaluationResultsScalarWhereInput | Prisma.EvaluationResultsScalarWhereInput[]
+  evaluation_result_id?: Prisma.IntFilter<"EvaluationResults"> | number
+  evaluation_id?: Prisma.IntFilter<"EvaluationResults"> | number
+  status?: Prisma.StringFilter<"EvaluationResults"> | string
+  results?: Prisma.JsonFilter<"EvaluationResults">
+  created_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
+  updated_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
+  completed_at?: Prisma.DateTimeNullableFilter<"EvaluationResults"> | Date | string | null
+}
+
+export type EvaluationResultsCreateManyEvaluationInput = {
+  evaluation_result_id?: number
+  status?: string
+  results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Date | string
+  updated_at?: Date | string
+  completed_at?: Date | string | null
+}
+
+export type EvaluationResultsUpdateWithoutEvaluationInput = {
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type EvaluationResultsUncheckedUpdateWithoutEvaluationInput = {
+  evaluation_result_id?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type EvaluationResultsUncheckedUpdateManyWithoutEvaluationInput = {
+  evaluation_result_id?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -404,6 +548,7 @@ export type EvaluationResultsSelect<ExtArgs extends runtime.Types.Extensions.Int
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evaluationResults"]>
 
 export type EvaluationResultsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -414,6 +559,7 @@ export type EvaluationResultsSelectCreateManyAndReturn<ExtArgs extends runtime.T
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evaluationResults"]>
 
 export type EvaluationResultsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -424,6 +570,7 @@ export type EvaluationResultsSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evaluationResults"]>
 
 export type EvaluationResultsSelectScalar = {
@@ -437,10 +584,21 @@ export type EvaluationResultsSelectScalar = {
 }
 
 export type EvaluationResultsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"evaluation_result_id" | "evaluation_id" | "status" | "results" | "created_at" | "updated_at" | "completed_at", ExtArgs["result"]["evaluationResults"]>
+export type EvaluationResultsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+}
+export type EvaluationResultsIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+}
+export type EvaluationResultsIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
+}
 
 export type $EvaluationResultsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EvaluationResults"
-  objects: {}
+  objects: {
+    evaluation: Prisma.$EvaluationPayload<ExtArgs>
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     evaluation_result_id: number
     evaluation_id: number
@@ -843,6 +1001,7 @@ readonly fields: EvaluationResultsFieldRefs;
  */
 export interface Prisma__EvaluationResultsClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  evaluation<T extends Prisma.EvaluationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EvaluationDefaultArgs<ExtArgs>>): Prisma.Prisma__EvaluationClient<runtime.Types.Result.GetResult<Prisma.$EvaluationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -896,6 +1055,10 @@ export type EvaluationResultsFindUniqueArgs<ExtArgs extends runtime.Types.Extens
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationResults to fetch.
    */
   where: Prisma.EvaluationResultsWhereUniqueInput
@@ -914,6 +1077,10 @@ export type EvaluationResultsFindUniqueOrThrowArgs<ExtArgs extends runtime.Types
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationResults to fetch.
    */
   where: Prisma.EvaluationResultsWhereUniqueInput
@@ -931,6 +1098,10 @@ export type EvaluationResultsFindFirstArgs<ExtArgs extends runtime.Types.Extensi
    * Omit specific fields from the EvaluationResults
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
   /**
    * Filter, which EvaluationResults to fetch.
    */
@@ -980,6 +1151,10 @@ export type EvaluationResultsFindFirstOrThrowArgs<ExtArgs extends runtime.Types.
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationResults to fetch.
    */
   where?: Prisma.EvaluationResultsWhereInput
@@ -1028,6 +1203,10 @@ export type EvaluationResultsFindManyArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
+  /**
    * Filter, which EvaluationResults to fetch.
    */
   where?: Prisma.EvaluationResultsWhereInput
@@ -1071,6 +1250,10 @@ export type EvaluationResultsCreateArgs<ExtArgs extends runtime.Types.Extensions
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
+  /**
    * The data needed to create a EvaluationResults.
    */
   data: Prisma.XOR<Prisma.EvaluationResultsCreateInput, Prisma.EvaluationResultsUncheckedCreateInput>
@@ -1102,6 +1285,10 @@ export type EvaluationResultsCreateManyAndReturnArgs<ExtArgs extends runtime.Typ
    * The data used to create many EvaluationResults.
    */
   data: Prisma.EvaluationResultsCreateManyInput | Prisma.EvaluationResultsCreateManyInput[]
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1116,6 +1303,10 @@ export type EvaluationResultsUpdateArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the EvaluationResults
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
   /**
    * The data needed to update a EvaluationResults.
    */
@@ -1168,6 +1359,10 @@ export type EvaluationResultsUpdateManyAndReturnArgs<ExtArgs extends runtime.Typ
    * Limit how many EvaluationResults to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1182,6 +1377,10 @@ export type EvaluationResultsUpsertArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the EvaluationResults
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
   /**
    * The filter to search for the EvaluationResults to update in case it exists.
    */
@@ -1208,6 +1407,10 @@ export type EvaluationResultsDeleteArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the EvaluationResults
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
   /**
    * Filter which EvaluationResults to delete.
    */
@@ -1240,4 +1443,8 @@ export type EvaluationResultsDefaultArgs<ExtArgs extends runtime.Types.Extension
    * Omit specific fields from the EvaluationResults
    */
   omit?: Prisma.EvaluationResultsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationResultsInclude<ExtArgs> | null
 }

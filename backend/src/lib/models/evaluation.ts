@@ -8,8 +8,8 @@ export const TestCaseSchema = z.object({
 });
 
 export const LlmEvalConfigSchema = z.object({
-  alias: z.string(),
-  model: z.string(),
+  alias: z.string().min(1, 'LLM alias is required'),
+  model: z.string().min(1, 'LLM model is required'),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().positive().optional(),
   topP: z.number().min(0).max(1).optional(),
@@ -50,10 +50,18 @@ export const TestCaseResultSchema = z.object({
   note: z.string().optional(),
 });
 
+export const EvaluationResultToolSchema = z.object({
+  tool_id: z.number(),
+  name: z.string(),
+});
+
 export const EvaluationResultSchema = z.object({
   evaluation_result_id: z.number(),
   evaluation_id: z.number(),
   status: z.enum(['Running', 'Completed', 'Failed']),
+  prompt: z.string(),
+  llm_config: LlmEvalConfigSchema,
+  tools: z.array(EvaluationResultToolSchema),
   results: z.array(TestCaseResultSchema),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),

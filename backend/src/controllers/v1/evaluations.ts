@@ -114,7 +114,14 @@ router.post('/:id/run',
       status: 'Pending' as const,
     }));
 
-    const result = await EvaluationDao.createEvaluationResult(id, initialResults);
+    const evalTools = await EvaluationDao.getEvaluationTools(id);
+    const toolsSnapshot = evalTools.map((et) => ({ tool_id: et.tool_id, name: et.tool_name }));
+
+    const result = await EvaluationDao.createEvaluationResult(id, initialResults, {
+      prompt: evaluation.prompt,
+      llm_config: evaluation.llm_config,
+      tools: toolsSnapshot,
+    });
 
     // Fire and forget — HTTP response returns before execution begins
     runEvaluation(id, result.evaluation_result_id, req.app.llm, req.app.tools, req.logger).catch((err) => {

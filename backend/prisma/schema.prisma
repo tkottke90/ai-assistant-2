@@ -238,6 +238,9 @@ model EvaluationResults {
   evaluation_id        Int
 
   status               String   @default("Pending")
+  prompt               String
+  llm_config           Json
+  tools                Json
   results              Json
 
   created_at           DateTime @default(now())
@@ -245,4 +248,8 @@ model EvaluationResults {
   completed_at         DateTime?
 
   evaluation Evaluation @relation(fields: [evaluation_id], references: [evaluation_id], onDelete: Cascade)
+
+  @@index([evaluation_id])
+  @@index([status])
+  @@index([created_at])
 }

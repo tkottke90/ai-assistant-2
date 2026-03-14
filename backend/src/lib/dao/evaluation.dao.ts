@@ -100,11 +100,15 @@ async function replaceEvaluationTools(
 async function createEvaluationResult(
   evaluationId: number,
   initialResults: TestCaseResult[],
+  snapshot: { prompt: string; llm_config: unknown; tools: { tool_id: number; name: string }[] },
 ) {
   return prisma.evaluationResults.create({
     data: {
       evaluation_id: evaluationId,
       status: 'Running',
+      prompt: snapshot.prompt,
+      llm_config: snapshot.llm_config as any,
+      tools: snapshot.tools as any,
       results: initialResults as any,
     },
   });

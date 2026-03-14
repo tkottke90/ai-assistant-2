@@ -15,7 +15,6 @@ export function EvaluationDetailsPage() {
     evalForm,
     updateEvalForm,
     activeResult,
-    setActiveResult,
     selectedResult,
     setSelectedResult,
     results,
@@ -40,13 +39,6 @@ export function EvaluationDetailsPage() {
           <h2 className="inline">{evalForm.value.name || 'Evaluation Details'}</h2>
         </span>
         <span className="inline-flex gap-2">
-          <Button
-            variant="outline"
-            disabled={!scoringInProgress.value || !activeResult.value}
-            onClick={complete}
-          >
-            Complete
-          </Button>
           <Button
             disabled={!canExecute.value}
             variant="constructive"
@@ -101,15 +93,13 @@ export function EvaluationDetailsPage() {
         />
         
         <TestCases
-          scoringInProgress={scoringInProgress}
           evalForm={evalForm}
           updateEvalForm={updateEvalForm}
-          activeResult={activeResult}
           selectedResult={selectedResult}
           onSelectedResult={setSelectedResult}
           results={results}
-          onSetActiveResult={setActiveResult}
           onScoreCase={scoreCase}
+          onComplete={complete}
         />
       </main>
     </BaseLayout>

@@ -30,3 +30,23 @@ export function formatRelativeDate(date: Date | string): string {
 
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+export function formatDuration(startMs: number, endMs: number): string {
+  const durationParts = { h: 0, m: 0, s: 0 };
+
+  const ms = endMs - startMs;
+  if (ms < 1000) return `${ms}ms`;
+
+  durationParts.s = Math.floor(ms / 1000);
+  durationParts.m = Math.floor(durationParts.s / 60);
+  durationParts.s = durationParts.s % 60;
+  durationParts.h = Math.floor(durationParts.m / 60);
+  durationParts.m = durationParts.m % 60;
+
+  const parts: string[] = [];
+  if (durationParts.h > 0) parts.push(`${durationParts.h}h`);
+  if (durationParts.m > 0) parts.push(`${durationParts.m}m`);
+  if (durationParts.s > 0 || parts.length === 0) parts.push(`${durationParts.s}s`);
+
+  return parts.join(' ');
+}

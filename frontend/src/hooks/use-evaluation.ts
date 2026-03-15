@@ -209,6 +209,9 @@ export function useEvaluation(evaluationId: number) {
     if (activeResult.value?.evaluation_result_id === resultId) {
       activeResult.value = updated;
     }
+    if (selectedResult.value?.evaluation_result_id === resultId) {
+      selectedResult.value = updated;
+    }
     const current = results.value;
     const idx = current.findIndex((r) => r.evaluation_result_id === resultId);
     if (idx >= 0) {

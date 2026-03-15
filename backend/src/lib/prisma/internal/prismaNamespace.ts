@@ -1676,6 +1676,8 @@ export const EvaluationResultsScalarFieldEnum = {
   llm_config: 'llm_config',
   tools: 'tools',
   results: 'results',
+  notes: 'notes',
+  nextPrompt: 'nextPrompt',
   created_at: 'created_at',
   updated_at: 'updated_at',
   completed_at: 'completed_at'

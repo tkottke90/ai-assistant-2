@@ -243,6 +243,9 @@ model EvaluationResults {
   tools                Json
   results              Json
 
+  notes                 String?
+  nextPrompt            String?
+
   created_at           DateTime @default(now())
   updated_at           DateTime @default(now()) @updatedAt
   completed_at         DateTime?

@@ -41,6 +41,8 @@ export type EvaluationResultsMinAggregateOutputType = {
   evaluation_id: number | null
   status: string | null
   prompt: string | null
+  notes: string | null
+  nextPrompt: string | null
   created_at: Date | null
   updated_at: Date | null
   completed_at: Date | null
@@ -51,6 +53,8 @@ export type EvaluationResultsMaxAggregateOutputType = {
   evaluation_id: number | null
   status: string | null
   prompt: string | null
+  notes: string | null
+  nextPrompt: string | null
   created_at: Date | null
   updated_at: Date | null
   completed_at: Date | null
@@ -64,6 +68,8 @@ export type EvaluationResultsCountAggregateOutputType = {
   llm_config: number
   tools: number
   results: number
+  notes: number
+  nextPrompt: number
   created_at: number
   updated_at: number
   completed_at: number
@@ -86,6 +92,8 @@ export type EvaluationResultsMinAggregateInputType = {
   evaluation_id?: true
   status?: true
   prompt?: true
+  notes?: true
+  nextPrompt?: true
   created_at?: true
   updated_at?: true
   completed_at?: true
@@ -96,6 +104,8 @@ export type EvaluationResultsMaxAggregateInputType = {
   evaluation_id?: true
   status?: true
   prompt?: true
+  notes?: true
+  nextPrompt?: true
   created_at?: true
   updated_at?: true
   completed_at?: true
@@ -109,6 +119,8 @@ export type EvaluationResultsCountAggregateInputType = {
   llm_config?: true
   tools?: true
   results?: true
+  notes?: true
+  nextPrompt?: true
   created_at?: true
   updated_at?: true
   completed_at?: true
@@ -209,6 +221,8 @@ export type EvaluationResultsGroupByOutputType = {
   llm_config: runtime.JsonValue
   tools: runtime.JsonValue
   results: runtime.JsonValue
+  notes: string | null
+  nextPrompt: string | null
   created_at: Date
   updated_at: Date
   completed_at: Date | null
@@ -245,6 +259,8 @@ export type EvaluationResultsWhereInput = {
   llm_config?: Prisma.JsonFilter<"EvaluationResults">
   tools?: Prisma.JsonFilter<"EvaluationResults">
   results?: Prisma.JsonFilter<"EvaluationResults">
+  notes?: Prisma.StringNullableFilter<"EvaluationResults"> | string | null
+  nextPrompt?: Prisma.StringNullableFilter<"EvaluationResults"> | string | null
   created_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   completed_at?: Prisma.DateTimeNullableFilter<"EvaluationResults"> | Date | string | null
@@ -259,6 +275,8 @@ export type EvaluationResultsOrderByWithRelationInput = {
   llm_config?: Prisma.SortOrder
   tools?: Prisma.SortOrder
   results?: Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  nextPrompt?: Prisma.SortOrderInput | Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   completed_at?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -276,6 +294,8 @@ export type EvaluationResultsWhereUniqueInput = Prisma.AtLeast<{
   llm_config?: Prisma.JsonFilter<"EvaluationResults">
   tools?: Prisma.JsonFilter<"EvaluationResults">
   results?: Prisma.JsonFilter<"EvaluationResults">
+  notes?: Prisma.StringNullableFilter<"EvaluationResults"> | string | null
+  nextPrompt?: Prisma.StringNullableFilter<"EvaluationResults"> | string | null
   created_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   completed_at?: Prisma.DateTimeNullableFilter<"EvaluationResults"> | Date | string | null
@@ -290,6 +310,8 @@ export type EvaluationResultsOrderByWithAggregationInput = {
   llm_config?: Prisma.SortOrder
   tools?: Prisma.SortOrder
   results?: Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  nextPrompt?: Prisma.SortOrderInput | Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   completed_at?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -311,6 +333,8 @@ export type EvaluationResultsScalarWhereWithAggregatesInput = {
   llm_config?: Prisma.JsonWithAggregatesFilter<"EvaluationResults">
   tools?: Prisma.JsonWithAggregatesFilter<"EvaluationResults">
   results?: Prisma.JsonWithAggregatesFilter<"EvaluationResults">
+  notes?: Prisma.StringNullableWithAggregatesFilter<"EvaluationResults"> | string | null
+  nextPrompt?: Prisma.StringNullableWithAggregatesFilter<"EvaluationResults"> | string | null
   created_at?: Prisma.DateTimeWithAggregatesFilter<"EvaluationResults"> | Date | string
   updated_at?: Prisma.DateTimeWithAggregatesFilter<"EvaluationResults"> | Date | string
   completed_at?: Prisma.DateTimeNullableWithAggregatesFilter<"EvaluationResults"> | Date | string | null
@@ -322,6 +346,8 @@ export type EvaluationResultsCreateInput = {
   llm_config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: string | null
+  nextPrompt?: string | null
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
@@ -336,6 +362,8 @@ export type EvaluationResultsUncheckedCreateInput = {
   llm_config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: string | null
+  nextPrompt?: string | null
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
@@ -347,6 +375,8 @@ export type EvaluationResultsUpdateInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -361,6 +391,8 @@ export type EvaluationResultsUncheckedUpdateInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -374,6 +406,8 @@ export type EvaluationResultsCreateManyInput = {
   llm_config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: string | null
+  nextPrompt?: string | null
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
@@ -385,6 +419,8 @@ export type EvaluationResultsUpdateManyMutationInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -398,6 +434,8 @@ export type EvaluationResultsUncheckedUpdateManyInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -421,6 +459,8 @@ export type EvaluationResultsCountOrderByAggregateInput = {
   llm_config?: Prisma.SortOrder
   tools?: Prisma.SortOrder
   results?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  nextPrompt?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   completed_at?: Prisma.SortOrder
@@ -436,6 +476,8 @@ export type EvaluationResultsMaxOrderByAggregateInput = {
   evaluation_id?: Prisma.SortOrder
   status?: Prisma.SortOrder
   prompt?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  nextPrompt?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   completed_at?: Prisma.SortOrder
@@ -446,6 +488,8 @@ export type EvaluationResultsMinOrderByAggregateInput = {
   evaluation_id?: Prisma.SortOrder
   status?: Prisma.SortOrder
   prompt?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  nextPrompt?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
   completed_at?: Prisma.SortOrder
@@ -508,6 +552,8 @@ export type EvaluationResultsCreateWithoutEvaluationInput = {
   llm_config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: string | null
+  nextPrompt?: string | null
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
@@ -520,6 +566,8 @@ export type EvaluationResultsUncheckedCreateWithoutEvaluationInput = {
   llm_config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: string | null
+  nextPrompt?: string | null
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
@@ -561,6 +609,8 @@ export type EvaluationResultsScalarWhereInput = {
   llm_config?: Prisma.JsonFilter<"EvaluationResults">
   tools?: Prisma.JsonFilter<"EvaluationResults">
   results?: Prisma.JsonFilter<"EvaluationResults">
+  notes?: Prisma.StringNullableFilter<"EvaluationResults"> | string | null
+  nextPrompt?: Prisma.StringNullableFilter<"EvaluationResults"> | string | null
   created_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"EvaluationResults"> | Date | string
   completed_at?: Prisma.DateTimeNullableFilter<"EvaluationResults"> | Date | string | null
@@ -573,6 +623,8 @@ export type EvaluationResultsCreateManyEvaluationInput = {
   llm_config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: string | null
+  nextPrompt?: string | null
   created_at?: Date | string
   updated_at?: Date | string
   completed_at?: Date | string | null
@@ -584,6 +636,8 @@ export type EvaluationResultsUpdateWithoutEvaluationInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -596,6 +650,8 @@ export type EvaluationResultsUncheckedUpdateWithoutEvaluationInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -608,6 +664,8 @@ export type EvaluationResultsUncheckedUpdateManyWithoutEvaluationInput = {
   llm_config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tools?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   results?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextPrompt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completed_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -623,6 +681,8 @@ export type EvaluationResultsSelect<ExtArgs extends runtime.Types.Extensions.Int
   llm_config?: boolean
   tools?: boolean
   results?: boolean
+  notes?: boolean
+  nextPrompt?: boolean
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
@@ -637,6 +697,8 @@ export type EvaluationResultsSelectCreateManyAndReturn<ExtArgs extends runtime.T
   llm_config?: boolean
   tools?: boolean
   results?: boolean
+  notes?: boolean
+  nextPrompt?: boolean
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
@@ -651,6 +713,8 @@ export type EvaluationResultsSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   llm_config?: boolean
   tools?: boolean
   results?: boolean
+  notes?: boolean
+  nextPrompt?: boolean
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
@@ -665,12 +729,14 @@ export type EvaluationResultsSelectScalar = {
   llm_config?: boolean
   tools?: boolean
   results?: boolean
+  notes?: boolean
+  nextPrompt?: boolean
   created_at?: boolean
   updated_at?: boolean
   completed_at?: boolean
 }
 
-export type EvaluationResultsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"evaluation_result_id" | "evaluation_id" | "status" | "prompt" | "llm_config" | "tools" | "results" | "created_at" | "updated_at" | "completed_at", ExtArgs["result"]["evaluationResults"]>
+export type EvaluationResultsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"evaluation_result_id" | "evaluation_id" | "status" | "prompt" | "llm_config" | "tools" | "results" | "notes" | "nextPrompt" | "created_at" | "updated_at" | "completed_at", ExtArgs["result"]["evaluationResults"]>
 export type EvaluationResultsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   evaluation?: boolean | Prisma.EvaluationDefaultArgs<ExtArgs>
 }
@@ -694,6 +760,8 @@ export type $EvaluationResultsPayload<ExtArgs extends runtime.Types.Extensions.I
     llm_config: runtime.JsonValue
     tools: runtime.JsonValue
     results: runtime.JsonValue
+    notes: string | null
+    nextPrompt: string | null
     created_at: Date
     updated_at: Date
     completed_at: Date | null
@@ -1128,6 +1196,8 @@ export interface EvaluationResultsFieldRefs {
   readonly llm_config: Prisma.FieldRef<"EvaluationResults", 'Json'>
   readonly tools: Prisma.FieldRef<"EvaluationResults", 'Json'>
   readonly results: Prisma.FieldRef<"EvaluationResults", 'Json'>
+  readonly notes: Prisma.FieldRef<"EvaluationResults", 'String'>
+  readonly nextPrompt: Prisma.FieldRef<"EvaluationResults", 'String'>
   readonly created_at: Prisma.FieldRef<"EvaluationResults", 'DateTime'>
   readonly updated_at: Prisma.FieldRef<"EvaluationResults", 'DateTime'>
   readonly completed_at: Prisma.FieldRef<"EvaluationResults", 'DateTime'>

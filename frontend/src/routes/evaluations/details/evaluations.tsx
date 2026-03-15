@@ -1,21 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/drawer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { formatRelativeDate } from "@/lib/date-utils";
+import { formatRelativeDate, formatDuration } from "@/lib/date-utils";
 import { useComputed, useSignal, useSignalEffect, type Signal } from "@preact/signals";
 import type { EvaluationResult, TestCaseResult } from "@tkottke90/ai-assistant-client";
 import { CheckCircle2, XCircle } from "lucide-preact";
 
-
-function formatDuration(startMs: number, endMs: number): string {
-  const ms = endMs - startMs;
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const remS = s % 60;
-  return remS > 0 ? `${m}m ${remS}s` : `${m}m`;
-}
 
 function statusBadgeClass(status: string): string {
   if (status === 'Completed') return 'text-xs px-2 py-0.5 rounded font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';

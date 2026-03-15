@@ -129,7 +129,7 @@ function listEvaluationResults(evaluationId: number) {
 
 function updateEvaluationResult(
   resultId: number,
-  data: { status?: string; results?: TestCaseResult[]; completed_at?: Date | null },
+  data: { status?: string; results?: TestCaseResult[]; completed_at?: Date | null; notes?: string | null; nextPrompt?: string | null },
 ) {
   return prisma.evaluationResults.update({
     where: { evaluation_result_id: resultId },
@@ -137,6 +137,8 @@ function updateEvaluationResult(
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.results !== undefined ? { results: data.results as any } : {}),
       ...(data.completed_at !== undefined ? { completed_at: data.completed_at } : {}),
+      ...(data.notes !== undefined ? { notes: data.notes } : {}),
+      ...(data.nextPrompt !== undefined ? { nextPrompt: data.nextPrompt } : {}),
     },
   });
 }

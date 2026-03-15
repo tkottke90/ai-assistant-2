@@ -67,7 +67,7 @@
   --color-elevated: var(--background-elevated);
   --color-dialog: var(--background-elevated-dialog);
 
-  --animate-slide-in: slide-in 0.3s ease-out;
+  --animate-slide-in: slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 
   @keyframes slide-in {
     from {
@@ -78,6 +78,17 @@
       transform: translateX(0);
       opacity: 1;
     }
+  }
+
+  --animate-spin-windup: spin-windup 1.5s ease-out infinite;
+
+  @keyframes spin-windup {
+    0%   { transform: rotate(0deg); }
+    8%   { transform: rotate(-25deg); }   /* wind up */
+    60%  { transform: rotate(385deg); }   /* overshoot */
+    72%  { transform: rotate(350deg); }   /* slight bounce back */
+    80%  { transform: rotate(360deg); }   /* settle */
+    100% { transform: rotate(360deg); }   /* hold — 20% of 1.5s = 300ms delay */
   }
 }
 

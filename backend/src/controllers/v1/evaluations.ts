@@ -1,10 +1,18 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { formatDuration } from '@tkottke90/js-date-utils';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import EvaluationDao from '../../lib/dao/evaluation.dao.js';
-import { EvaluationProperties, UpdateEvaluationResultSchema, ScoreTestCaseSchema } from '../../lib/models/evaluation.js';
+import { EvaluationProperties, UpdateEvaluationResultSchema, SaveReflectionSchema, ScoreTestCaseSchema } from '../../lib/models/evaluation.js';
 import { ZodBodyValidator, ZodIdValidator, ZodParamValidator } from '../../middleware/zod.middleware.js';
 import { NotFoundError, BadRequestError } from '../../lib/errors/http.errors.js';
 import { runEvaluation } from '../../lib/eval/evaluation-runner.js';
+
+const GENERATE_PROMPT_SYSTEM = `You are an expert prompt engineer. You will be given an evaluation report for an AI system prompt. The report contains the original prompt, test inputs with expected vs actual outputs, pass/fail status for each case, and user reflection notes.
+
+Your task is to generate an improved version of the prompt based on the evaluation findings. Analyze the failures and patterns carefully, then produce a single revised prompt that addresses the identified issues.
+
+Return ONLY the new prompt text — no preamble, no explanation, no conversational text.`;
 
 export const router = Router();
 
@@ -174,6 +182,125 @@ router.patch('/:id/results/:resultId',
     const updated = await EvaluationDao.updateEvaluationResult(resultId, {
       status: req.body.status,
       completed_at: req.body.status === 'Completed' ? new Date() : undefined,
+    });
+
+    res.json(updated);
+  },
+);
+
+// ─── Export ──────────────────────────────────────────────────────────────────
+
+type ExportEvaluation = { name: string; description: string };
+type ExportResult = {
+  prompt: string;
+  llm_config: { alias: string; model: string };
+  results: { input: string; expected_output: string; actual_output: string | null; status: string; note?: string }[];
+  created_at: Date;
+  completed_at: Date | null;
+};
+
+type ExportResultWithNotes = ExportResult & { notes?: string | null };
+
+function buildExportMarkdown(evaluation: ExportEvaluation, result: ExportResultWithNotes): string {
+  const passed = result.results.filter((r) => r.status === 'Pass').length;
+  const total = result.results.length;
+  const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
+  const date = result.created_at.toISOString().split('T')[0];
+  const duration = result.completed_at ? formatDuration(result.created_at, result.completed_at) : 'In progress';
+  const reflection = result.notes ?? evaluation.description;
+
+  const tableRows = result.results
+    .map((r, i) => `| ${i + 1} | \`${r.input}\` | \`${r.expected_output}\` | \`${r.actual_output ?? 'N/A'}\` | ${r.status} | ${r.note ?? ''} |`)
+    .join('\n');
+
+  return `# Prompt Evaluation Report: ${evaluation.name}
+
+Below are the details for a prompt evaluation we conducted. Data is collected in a structured XML format.
+
+<date>${date}</date>
+<duration>${duration}</duration>
+<result>${passed}/${total} Passed (${pct}%)</result>
+<llm>${result.llm_config.alias} / ${result.llm_config.model}</llm>
+
+<prompt>
+${result.prompt}
+</prompt>
+
+<test-output>
+| Index | Input | Expected Output | Actual Output | Pass/Fail | Notes |
+|---|---|---|---|---|---|
+${tableRows}
+</test-output>
+
+<user-reflection>
+${reflection}
+</user-reflection>`;
+}
+
+router.get('/:id/results/:resultId/export',
+  ZodParamValidator(ResultParamSchema),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const resultId = Number(req.params.resultId);
+    const [evaluation, result] = await Promise.all([
+      getEvaluationOr404(id),
+      getResultOr404(id, resultId),
+    ]);
+
+    const markdown = buildExportMarkdown(evaluation as any, result as any);
+    const filename = `eval-${id}-result-${resultId}.md`;
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(markdown);
+  },
+);
+
+router.patch('/:id/results/:resultId/reflection',
+  ZodParamValidator(ResultParamSchema),
+  ZodBodyValidator(SaveReflectionSchema),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const resultId = Number(req.params.resultId);
+    await getResultOr404(id, resultId);
+
+    const updated = await EvaluationDao.updateEvaluationResult(resultId, {
+      notes: req.body.notes,
+      nextPrompt: req.body.nextPrompt ?? null,
+    });
+
+    res.json(updated);
+  },
+);
+
+const GeneratePromptBodySchema = z.object({
+  alias: z.string().min(1),
+  model: z.string().min(1),
+});
+
+router.post('/:id/results/:resultId/generate-prompt',
+  ZodParamValidator(ResultParamSchema),
+  ZodBodyValidator(GeneratePromptBodySchema),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const resultId = Number(req.params.resultId);
+    const [evaluation, result] = await Promise.all([
+      getEvaluationOr404(id),
+      getResultOr404(id, resultId),
+    ]);
+
+    const reportMarkdown = buildExportMarkdown(evaluation as any, result as any);
+    const llm = req.app.llm.getClientWithModel(req.body.alias, req.body.model);
+    const response = await llm.invoke([
+      new SystemMessage(GENERATE_PROMPT_SYSTEM),
+      new HumanMessage(reportMarkdown),
+    ]);
+
+    const content = typeof response.content === 'string'
+      ? response.content
+      : JSON.stringify(response.content);
+
+    const updated = await EvaluationDao.updateEvaluationResult(resultId, {
+      nextPrompt: content,
     });
 
     res.json(updated);

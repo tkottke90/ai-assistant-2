@@ -81,6 +81,21 @@ export const scoreTestCase = createClientMethod('/api/v1/evaluations/:id/results
   return EvaluationResultSchema.parse(await response.json());
 });
 
+export const exportEvaluationResult = createClientMethod('/api/v1/evaluations/:id/results/:resultId/export', { method: 'get', inputSchema: z.object({ id: z.number(), resultId: z.number() }) }, async (response) => {
+  if (!response.ok) throw new Error(`Failed to export evaluation result: ${response.statusText}`);
+  return response.text();
+});
+
+export const saveReflection = createClientMethod('/api/v1/evaluations/:id/results/:resultId/reflection', { method: 'patch', inputSchema: z.object({ id: z.number(), resultId: z.number(), notes: z.string(), nextPrompt: z.string().optional() }) }, async (response) => {
+  if (!response.ok) throw new Error(`Failed to save reflection: ${response.statusText}`);
+  return EvaluationResultSchema.parse(await response.json());
+});
+
+export const generateNextPrompt = createClientMethod('/api/v1/evaluations/:id/results/:resultId/generate-prompt', { method: 'post', inputSchema: z.object({ id: z.number(), resultId: z.number(), alias: z.string(), model: z.string() }) }, async (response) => {
+  if (!response.ok) throw new Error(`Failed to generate next prompt: ${response.statusText}`);
+  return EvaluationResultSchema.parse(await response.json());
+});
+
 // ─── Re-exported types ────────────────────────────────────────────────────────
 
-export type { Evaluation, EvaluationResult, EvaluationTool, TestCase, TestCaseResult, LlmEvalConfig } from '../../models/evaluation.js';
+export type { Evaluation, EvaluationResult, EvaluationTool, TestCase, TestCaseResult, LlmEvalConfig, SaveReflection } from '../../models/evaluation.js';

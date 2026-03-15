@@ -17,6 +17,10 @@ interface TestCasesProps {
   onSelectedResult: (result: EvaluationResult | null) => void;
   onScoreCase: (resultId: number, caseId: string, score: { status: 'Pass' | 'Fail'; note?: string }) => Promise<void>;
   onComplete: () => Promise<void>;
+  onSaveReflection: (resultId: number, notes: string, nextPrompt?: string) => Promise<void>;
+  onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
+  onApplyNextPrompt: (prompt: string) => Promise<void>;
+  onExport: (resultId: number) => Promise<void>;
 }
 
 export function TestCases({
@@ -27,6 +31,10 @@ export function TestCases({
   onSelectedResult,
   onScoreCase,
   onComplete,
+  onSaveReflection,
+  onGeneratePrompt,
+  onApplyNextPrompt,
+  onExport,
 }: TestCasesProps) {
   return (
     <Collapsable
@@ -47,7 +55,7 @@ export function TestCases({
           <TestCaseList evalForm={evalForm} updateEvalForm={updateEvalForm} />
         </TabsContent>
         <TabsContent value="evaluations" className="h-full overflow-auto pb-8">
-          <EvaluationsList selectedResult={selectedResult} results={results} setSelectedResult={onSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} />
+          <EvaluationsList selectedResult={selectedResult} results={results} setSelectedResult={onSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={onApplyNextPrompt} onExport={onExport} />
         </TabsContent>
       </Tabs>
     </Collapsable>

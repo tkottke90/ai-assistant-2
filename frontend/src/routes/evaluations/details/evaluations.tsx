@@ -3,8 +3,12 @@ import { Drawer } from "@/components/drawer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatRelativeDate, formatDuration } from "@/lib/date-utils";
 import { useComputed, useSignal, useSignalEffect, type Signal } from "@preact/signals";
+import { useCallback } from "preact/hooks";
 import type { EvaluationResult, TestCaseResult } from "@tkottke90/ai-assistant-client";
-import { CheckCircle2, Sparkle, XCircle } from "lucide-preact";
+import { CheckCircle2, Copy, Download, MessageSquareCodeIcon, SendHorizonal, Sparkle, XCircle } from "lucide-preact";
+import { LlmSelector } from "@/components/llm-selector";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { toast } from "sonner";
 
 
 function statusBadgeClass(status: string): string {
@@ -20,12 +24,20 @@ export function EvaluationsList({
   setSelectedResult,
   onScoreCase,
   onComplete,
+  onSaveReflection,
+  onGeneratePrompt,
+  onApplyNextPrompt,
+  onExport,
 }: {
   selectedResult: Signal<EvaluationResult | null>;
   results: Signal<EvaluationResult[]>;
   setSelectedResult: (result: EvaluationResult | null) => void;
   onScoreCase: (resultId: number, caseId: string, score: { status: 'Pass' | 'Fail'; note?: string }) => Promise<void>;
   onComplete: () => Promise<void>;
+  onSaveReflection: (resultId: number, notes: string, nextPrompt?: string) => Promise<void>;
+  onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
+  onApplyNextPrompt: (prompt: string) => Promise<void>;
+  onExport: (resultId: number) => Promise<void>;
 }) {
   if (results.value.length === 0) {
     return (
@@ -50,17 +62,21 @@ export function EvaluationsList({
           <span className={statusBadgeClass(r.status)}>{r.status}</span>
         </div>
       ))}
-      <EvaluationDrawer selected={selectedResult} setSelected={setSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} />
+      <EvaluationDrawer selected={selectedResult} setSelected={setSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={onApplyNextPrompt} onExport={onExport} />
     </div>
   );
 }
 
 
-export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplete }: {
+export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplete, onSaveReflection, onGeneratePrompt, onApplyNextPrompt, onExport }: {
   selected: Signal<EvaluationResult | null>;
   setSelected: (result: EvaluationResult | null) => void;
   onScoreCase: (resultId: number, caseId: string, score: { status: 'Pass' | 'Fail'; note?: string }) => Promise<void>;
   onComplete: () => Promise<void>;
+  onSaveReflection: (resultId: number, notes: string, nextPrompt?: string) => Promise<void>;
+  onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
+  onApplyNextPrompt: (prompt: string) => Promise<void>;
+  onExport: (resultId: number) => Promise<void>;
 }) {
   const eventTrigger = useSignal(new EventTarget());
 
@@ -121,7 +137,21 @@ export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplet
       </div>
 
       <div className="flex justify-end gap-2">
-        {<Button disabled={isReadonly.value} variant={isReadonly.value ? 'outline' : 'constructive'} onClick={onComplete}>Complete</Button>}
+        <Button disabled={isReadonly.value} variant={isReadonly.value ? 'outline' : 'constructive'} onClick={onComplete}>Complete</Button>
+        <Button
+          disabled={!isReadonly.value}
+          variant={isReadonly.value ? 'outline' : 'ghost'}
+          title="Download Report"
+          onClick={() => selected.value && onExport(selected.value.evaluation_result_id)}
+        >
+          <Download size={16} />
+        </Button>
+        <Button disabled={!isReadonly.value} variant={isReadonly.value ? 'outline' : 'constructive'} title="Copy Report to Clipboard" onClick={() => {}}>
+          <Copy size={16} /> {/* Copy report to clipboard */}
+        </Button>
+        <Button disabled={!isReadonly.value} variant={isReadonly.value ? 'outline' : 'constructive'} title="Open Report in Chat" onClick={() => {}}>
+          <MessageSquareCodeIcon size={16} /> {/* Create a new chat thread and set the first message to the report */}
+        </Button>
       </div>
       <hr className="my-4 opacity-60" />
       <Tabs defaultValue="scoring" className="w-full flex-1 min-h-0 flex flex-col">
@@ -143,7 +173,7 @@ export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplet
           </code></pre>
         </TabsContent>
         <TabsContent value="reflection" className="min-h-0 overflow-y-auto pb-8 px-1">
-          <Reflection />
+          <Reflection selected={selected} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={(p) => onApplyNextPrompt(p).then(() => setSelected(null))} />
         </TabsContent>
       </Tabs>
     </Drawer>
@@ -258,8 +288,36 @@ function ScoringRow({
   );
 }
 
-function Reflection() {
+function Reflection({
+  selected,
+  onSaveReflection,
+  onGeneratePrompt,
+  onApplyNextPrompt,
+}: {
+  selected: Signal<EvaluationResult | null>;
+  onSaveReflection: (resultId: number, notes: string, nextPrompt?: string) => Promise<void>;
+  onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
+  onApplyNextPrompt: (prompt: string) => Promise<void>;
+}) {
+  const selection = useLlmSelection();
+  const result = selected.value;
+  const generating = useSignal(false);
+  const applying = useSignal(false);
+  const generationKey = useSignal(0);
 
+  const handleNotesBlur = useCallback((e: FocusEvent) => {
+    if (!result) return;
+    const notes = (e.target as HTMLTextAreaElement).value;
+    const nextPrompt = result.nextPrompt ?? undefined;
+    onSaveReflection(result.evaluation_result_id, notes, nextPrompt);
+  }, [result, onSaveReflection]);
+
+  const handleNextPromptBlur = useCallback((e: FocusEvent) => {
+    if (!result) return;
+    const nextPrompt = (e.target as HTMLTextAreaElement).value || undefined;
+    const notes = result.notes ?? '';
+    onSaveReflection(result.evaluation_result_id, notes, nextPrompt);
+  }, [result, onSaveReflection]);
 
   return (
     <>
@@ -271,17 +329,65 @@ function Reflection() {
       </p>
       <br />
       <textarea
+        key={`notes-${result?.evaluation_result_id}`}
         className="w-full h-40 border border-zinc-300 dark:border-zinc-600 bg-transparent p-2 text-sm rounded"
         placeholder="Reflection notes..."
+        defaultValue={result?.notes ?? ''}
+        onBlur={handleNotesBlur}
       />
+      <br />
+      <br />
+      <h5>Next Prompt</h5>
+      <div className="flex gap-2">
 
-      <Button variant="iconDefault">
-        <Sparkle size={16} />
-      </Button>
-      <textarea
-        className="w-full h-40 border border-zinc-300 dark:border-zinc-600 bg-transparent p-2 text-sm rounded"
-        placeholder="Next prompt..."
-      />
+        <textarea
+          key={`next-prompt-${result?.evaluation_result_id}-${generationKey.value}`}
+          className="w-full h-40 border border-zinc-300 dark:border-zinc-600 bg-transparent p-2 text-sm rounded "
+          placeholder="Next prompt..."
+          defaultValue={result?.nextPrompt ?? ''}
+          onBlur={handleNextPromptBlur}
+        />
+        <aside className="flex flex-col gap-2">
+          <Button
+            variant="iconDefault"
+            size="icon-lg"
+            title="Generate New Prompt"
+            className="bg-green-500/50 text-white disabled:animate-pulse group"
+            disabled={generating.value || !result}
+            onClick={async () => {
+              if (!result || generating.value) return;
+              generating.value = true;
+              try {
+                await onGeneratePrompt(
+                  result.evaluation_result_id,
+                  selection.selectedAlias.value,
+                  selection.selectedModel.value,
+                );
+                generationKey.value += 1;
+              } finally {
+                generating.value = false;
+              }
+            }}
+          >
+            <Sparkle size={24} className="stroke-current group-disabled:animate-spin-windup " />
+          </Button>
+          <Button variant="iconDefault" title="Apply Next Prompt" className="bg-blue-500/50 text-white disabled:animate-pulse" disabled={applying.value || !result?.nextPrompt} onClick={async () => {
+              if (!result?.nextPrompt || applying.value) return;
+              applying.value = true;
+              try {
+                await onApplyNextPrompt(result.nextPrompt);
+                toast.success('Prompt applied to evaluation');
+              } catch {
+                toast.error('Failed to apply prompt');
+              } finally {
+                applying.value = false;
+              }
+            }}>
+            <SendHorizonal size={16} className="stroke-current" />
+          </Button>
+        </aside>
+      </div>
+      <LlmSelector llmSelection={selection} />
     </>
   )
 }

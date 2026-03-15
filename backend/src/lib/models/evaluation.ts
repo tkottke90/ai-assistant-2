@@ -16,11 +16,18 @@ export const LlmEvalConfigSchema = z.object({
   topK: z.number().int().positive().optional(),
 });
 
+// Draft schema used for create/update — allows empty strings so evaluations
+// can be saved before the LLM config is fully configured.
+const LlmEvalConfigDraftSchema = LlmEvalConfigSchema.extend({
+  alias: z.string(),
+  model: z.string(),
+});
+
 export const EvaluationProperties = z.object({
   name: z.string(),
   description: z.string(),
   prompt: z.string(),
-  llm_config: LlmEvalConfigSchema,
+  llm_config: LlmEvalConfigDraftSchema,
   test_cases: z.array(TestCaseSchema),
 });
 
@@ -63,6 +70,8 @@ export const EvaluationResultSchema = z.object({
   llm_config: LlmEvalConfigSchema,
   tools: z.array(EvaluationResultToolSchema),
   results: z.array(TestCaseResultSchema),
+  notes: z.string().nullable().optional(),
+  nextPrompt: z.string().nullable().optional(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
   completed_at: z.coerce.date().nullable(),
@@ -74,6 +83,11 @@ export const EvaluationListItemSchema = EvaluationSchema.extend({
 
 export const UpdateEvaluationResultSchema = z.object({
   status: z.enum(['Completed']),
+});
+
+export const SaveReflectionSchema = z.object({
+  notes: z.string(),
+  nextPrompt: z.string().optional(),
 });
 
 export const ScoreTestCaseSchema = z.object({
@@ -89,3 +103,4 @@ export type EvaluationTool = z.infer<typeof EvaluationToolSchema>;
 export type TestCaseResult = z.infer<typeof TestCaseResultSchema>;
 export type EvaluationResult = z.infer<typeof EvaluationResultSchema>;
 export type EvaluationListItem = z.infer<typeof EvaluationListItemSchema>;
+export type SaveReflection = z.infer<typeof SaveReflectionSchema>;

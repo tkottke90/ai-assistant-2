@@ -6,6 +6,7 @@ import { useEvaluation } from "@/hooks/use-evaluation";
 import { useRoute } from "preact-iso";
 import { useComputed } from "@preact/signals";
 import { Collapsable } from "@/components/collapsable-section";
+import { exportEvaluationResult } from "@tkottke90/ai-assistant-client";
 
 export function EvaluationDetailsPage() {
   const route = useRoute();
@@ -24,12 +25,26 @@ export function EvaluationDetailsPage() {
     execute,
     complete,
     scoreCase,
+    saveReflection,
+    generatePromptForResult,
+    applyNextPrompt,
   } = useEvaluation(evaluationId);
 
   const scoringInProgress = useComputed(() => activeResult.value?.status === 'Running');
   const canExecute = useComputed(
     () => !executing.value && (!activeResult.value || activeResult.value.status !== 'Running'),
   );
+
+  const exportResult = async (resultId: number) => {
+    const markdown = await exportEvaluationResult({ id: evaluationId, resultId });
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eval-${evaluationId}-result-${resultId}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <BaseLayout className="flex flex-col gap-4">
@@ -100,6 +115,10 @@ export function EvaluationDetailsPage() {
           results={results}
           onScoreCase={scoreCase}
           onComplete={complete}
+          onSaveReflection={saveReflection}
+          onGeneratePrompt={generatePromptForResult}
+          onApplyNextPrompt={applyNextPrompt}
+          onExport={exportResult}
         />
       </main>
     </BaseLayout>

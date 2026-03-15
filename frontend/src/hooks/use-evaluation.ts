@@ -8,6 +8,8 @@ import {
   listEvaluationResults,
   completeEvaluationResult,
   scoreTestCase,
+  saveReflection as saveReflectionClient,
+  generateNextPrompt,
   type Evaluation,
   type EvaluationResult,
   type TestCase,
@@ -221,6 +223,64 @@ export function useEvaluation(evaluationId: number) {
     }
   }, [evaluationId]);
 
+  const saveReflection = useCallback(async (
+    resultId: number,
+    notes: string,
+    nextPrompt?: string,
+  ) => {
+    const updated = await saveReflectionClient({
+      id: evaluationId,
+      resultId,
+      notes,
+      nextPrompt,
+    });
+    if (activeResult.value?.evaluation_result_id === resultId) {
+      activeResult.value = updated;
+    }
+    if (selectedResult.value?.evaluation_result_id === resultId) {
+      selectedResult.value = updated;
+    }
+    const current = results.value;
+    const idx = current.findIndex((r) => r.evaluation_result_id === resultId);
+    if (idx >= 0) {
+      const next = [...current];
+      next[idx] = updated;
+      results.value = next;
+    }
+  }, [evaluationId]);
+
+  const applyNextPrompt = useCallback(async (prompt: string) => {
+    evalForm.value = { ...evalForm.value, prompt };
+    await save();
+  }, [save]);
+
+  const generatePromptForResult = useCallback(async (
+    resultId: number,
+    alias: string,
+    model: string,
+  ): Promise<EvaluationResult> => {
+    const updated = await generateNextPrompt({
+      id: evaluationId,
+      resultId,
+      alias,
+      model,
+    });
+    if (activeResult.value?.evaluation_result_id === resultId) {
+      activeResult.value = updated;
+    }
+    if (selectedResult.value?.evaluation_result_id === resultId) {
+      selectedResult.value = updated;
+    }
+    const current = results.value;
+    const idx = current.findIndex((r) => r.evaluation_result_id === resultId);
+    if (idx >= 0) {
+      const next = [...current];
+      next[idx] = updated;
+      results.value = next;
+    }
+    return updated;
+  }, [evaluationId]);
+
   return {
     evalForm,
     updateEvalForm: (patch: Partial<EvaluationFormState>) => {
@@ -238,5 +298,8 @@ export function useEvaluation(evaluationId: number) {
     execute,
     complete,
     scoreCase,
+    saveReflection,
+    generatePromptForResult,
+    applyNextPrompt,
   };
 }

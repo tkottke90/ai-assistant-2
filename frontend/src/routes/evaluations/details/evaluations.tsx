@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatRelativeDate, formatDuration } from "@/lib/date-utils";
 import { useComputed, useSignal, useSignalEffect, type Signal } from "@preact/signals";
 import type { EvaluationResult, TestCaseResult } from "@tkottke90/ai-assistant-client";
-import { CheckCircle2, XCircle } from "lucide-preact";
+import { CheckCircle2, Sparkle, XCircle } from "lucide-preact";
 
 
 function statusBadgeClass(status: string): string {
@@ -142,8 +142,8 @@ export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplet
             { selected.value?.prompt ?? 'N/A' }
           </code></pre>
         </TabsContent>
-        <TabsContent value="reflection" className="min-h-0 overflow-auto">
-          <p>TBD</p>
+        <TabsContent value="reflection" className="min-h-0 overflow-y-auto pb-8 px-1">
+          <Reflection />
         </TabsContent>
       </Tabs>
     </Drawer>
@@ -256,4 +256,32 @@ function ScoringRow({
       </div>
     </div>
   );
+}
+
+function Reflection() {
+
+
+  return (
+    <>
+      <br />
+      <p>
+        Reflect on the outcome of this evaluation.  
+        Take note of anything you noticed which worked or didn't work.  
+        Suggest changes that would improve the outcomes
+      </p>
+      <br />
+      <textarea
+        className="w-full h-40 border border-zinc-300 dark:border-zinc-600 bg-transparent p-2 text-sm rounded"
+        placeholder="Reflection notes..."
+      />
+
+      <Button variant="iconDefault">
+        <Sparkle size={16} />
+      </Button>
+      <textarea
+        className="w-full h-40 border border-zinc-300 dark:border-zinc-600 bg-transparent p-2 text-sm rounded"
+        placeholder="Next prompt..."
+      />
+    </>
+  )
 }

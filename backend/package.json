@@ -22,6 +22,7 @@
     "@langchain/openai": "^1.2.9",
     "@prisma/adapter-better-sqlite3": "^7.4.1",
     "@prisma/client": "^7.4.1",
+    "@tkottke90/js-date-utils": "^1.0.0",
     "@tkottke90/js-errors": "^1.0.2",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",

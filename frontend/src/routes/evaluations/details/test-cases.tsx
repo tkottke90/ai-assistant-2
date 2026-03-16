@@ -21,6 +21,7 @@ interface TestCasesProps {
   onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
   onApplyNextPrompt: (prompt: string) => Promise<void>;
   onExport: (resultId: number) => Promise<void>;
+  onOpenInChat: (resultId: number) => Promise<void>;
 }
 
 export function TestCases({
@@ -35,6 +36,7 @@ export function TestCases({
   onGeneratePrompt,
   onApplyNextPrompt,
   onExport,
+  onOpenInChat,
 }: TestCasesProps) {
   return (
     <Collapsable
@@ -55,7 +57,7 @@ export function TestCases({
           <TestCaseList evalForm={evalForm} updateEvalForm={updateEvalForm} />
         </TabsContent>
         <TabsContent value="evaluations" className="h-full overflow-auto pb-8">
-          <EvaluationsList selectedResult={selectedResult} results={results} setSelectedResult={onSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={onApplyNextPrompt} onExport={onExport} />
+          <EvaluationsList selectedResult={selectedResult} results={results} setSelectedResult={onSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={onApplyNextPrompt} onExport={onExport} onOpenInChat={onOpenInChat} />
         </TabsContent>
       </Tabs>
     </Collapsable>

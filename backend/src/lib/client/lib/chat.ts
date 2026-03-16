@@ -70,6 +70,21 @@ function newThread(options?: { agent_id?: number; type?: 'chat' | 'agent' }): Pr
     });
 }
 
+function seedThread(data: { message: string; title: string }): Promise<{ thread_id: string }> {
+  return fetch('/api/v1/chat/new-thread-with-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+    .then(res => res.json())
+    .then(result => {
+      if ((result as any).error) {
+        throw new Error((result as any).error);
+      }
+      return result as { thread_id: string };
+    });
+}
+
 function updateThread(
   threadId: string,
   data: Partial<Pick<ThreadMetadata, 'title' | 'archived' | 'agent_id'>>,
@@ -135,6 +150,7 @@ export {
   listThreads,
   listArchivedThreads,
   newThread,
+  seedThread,
   updateThread,
   deleteThread,
   summarizeThread,

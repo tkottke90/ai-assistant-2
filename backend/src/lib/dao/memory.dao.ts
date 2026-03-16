@@ -257,6 +257,44 @@ async function listMemories(
 }
 
 /**
+ * Bulk-delete all memory nodes (and their edges) for a given agent ID.
+ * Intended for evaluation cleanup: call with a negative agent ID (e.g. -evaluationId)
+ * before starting a new evaluation run to ensure a clean slate.
+ * FTS5 index cleanup is handled automatically by the per-row delete trigger.
+ * Returns the number of nodes deleted.
+ */
+async function deleteEvaluationMemories(agentId: number): Promise<number> {
+  const where = {
+    type: { startsWith: 'memory:' as const },
+    properties: {
+      path: '$.agent_id',
+      equals: agentId,
+    },
+  };
+
+  const nodeIds = await prisma.node.findMany({ where, select: { node_id: true } });
+  const ids = nodeIds.map((n) => n.node_id);
+
+  if (ids.length === 0) return 0;
+
+  await prisma.$transaction(async (tx) => {
+    // Delete edges first — FK cascade is not guaranteed at runtime
+    await tx.edge.deleteMany({
+      where: {
+        OR: [
+          { source_id: { in: ids } },
+          { target_id: { in: ids } },
+        ],
+      },
+    });
+
+    await tx.node.deleteMany({ where });
+  });
+
+  return ids.length;
+}
+
+/**
  * Sanitize a user query string for FTS5 MATCH syntax.
  * Wraps each word in double quotes to treat them as literal terms,
  * preventing FTS5 syntax errors from special characters.
@@ -279,4 +317,5 @@ export default {
   linkMemories,
   getLinkedMemories,
   listMemories,
+  deleteEvaluationMemories,
 };

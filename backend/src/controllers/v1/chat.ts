@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createAgent } from 'langchain';
+import { HumanMessage } from '@langchain/core/messages';
 import { checkpointer, prisma } from '../../lib/database';
 import { ZodBodyValidator, ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
@@ -102,6 +103,27 @@ router.post('/new-thread', ZodBodyValidator(NewThreadSchema), async (req, res): 
 
   const thread_id = crypto.randomUUID();
   await ThreadMetadataDao.upsert(thread_id, { agent_id: agent_id ?? null, type });
+  res.json({ thread_id });
+});
+
+const SeedThreadSchema = z.object({
+  message: z.string().min(1),
+  title: z.string().min(1),
+});
+
+router.post('/new-thread-with-message', ZodBodyValidator(SeedThreadSchema), async (req, res): Promise<void> => {
+  const { message, title } = req.body as z.infer<typeof SeedThreadSchema>;
+
+  const thread_id = crypto.randomUUID();
+  await ThreadMetadataDao.upsert(thread_id, { title, type: 'chat' });
+
+  const llm = req.app.llm.getClient();
+  const agent = createAgent({ model: llm, checkpointer, name: 'chat-agent' });
+  await agent.updateState(
+    { configurable: { thread_id } },
+    { messages: [new HumanMessage(message)] },
+  );
+
   res.json({ thread_id });
 });
 

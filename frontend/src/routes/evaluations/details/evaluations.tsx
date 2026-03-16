@@ -28,6 +28,7 @@ export function EvaluationsList({
   onGeneratePrompt,
   onApplyNextPrompt,
   onExport,
+  onOpenInChat,
 }: {
   selectedResult: Signal<EvaluationResult | null>;
   results: Signal<EvaluationResult[]>;
@@ -38,6 +39,7 @@ export function EvaluationsList({
   onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
   onApplyNextPrompt: (prompt: string) => Promise<void>;
   onExport: (resultId: number) => Promise<void>;
+  onOpenInChat: (resultId: number) => Promise<void>;
 }) {
   if (results.value.length === 0) {
     return (
@@ -62,13 +64,13 @@ export function EvaluationsList({
           <span className={statusBadgeClass(r.status)}>{r.status}</span>
         </div>
       ))}
-      <EvaluationDrawer selected={selectedResult} setSelected={setSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={onApplyNextPrompt} onExport={onExport} />
+      <EvaluationDrawer selected={selectedResult} setSelected={setSelectedResult} onScoreCase={onScoreCase} onComplete={onComplete} onSaveReflection={onSaveReflection} onGeneratePrompt={onGeneratePrompt} onApplyNextPrompt={onApplyNextPrompt} onExport={onExport} onOpenInChat={onOpenInChat} />
     </div>
   );
 }
 
 
-export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplete, onSaveReflection, onGeneratePrompt, onApplyNextPrompt, onExport }: {
+export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplete, onSaveReflection, onGeneratePrompt, onApplyNextPrompt, onExport, onOpenInChat }: {
   selected: Signal<EvaluationResult | null>;
   setSelected: (result: EvaluationResult | null) => void;
   onScoreCase: (resultId: number, caseId: string, score: { status: 'Pass' | 'Fail'; note?: string }) => Promise<void>;
@@ -77,8 +79,10 @@ export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplet
   onGeneratePrompt: (resultId: number, alias: string, model: string) => Promise<EvaluationResult>;
   onApplyNextPrompt: (prompt: string) => Promise<void>;
   onExport: (resultId: number) => Promise<void>;
+  onOpenInChat: (resultId: number) => Promise<void>;
 }) {
   const eventTrigger = useSignal(new EventTarget());
+  const openingInChat = useSignal(false);
 
   const isReadonly = useComputed(() => {
     if (!selected.value) return true;
@@ -94,8 +98,6 @@ export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplet
   });
 
   useSignalEffect(() => {
-    console.dir(selected.value);
-
     if (selected.value) {
       eventTrigger.value.dispatchEvent(new CustomEvent('open'));
     } else {
@@ -149,8 +151,21 @@ export function EvaluationDrawer({ selected, setSelected, onScoreCase, onComplet
         <Button disabled={!isReadonly.value} variant={isReadonly.value ? 'outline' : 'constructive'} title="Copy Report to Clipboard" onClick={() => {}}>
           <Copy size={16} /> {/* Copy report to clipboard */}
         </Button>
-        <Button disabled={!isReadonly.value} variant={isReadonly.value ? 'outline' : 'constructive'} title="Open Report in Chat" onClick={() => {}}>
-          <MessageSquareCodeIcon size={16} /> {/* Create a new chat thread and set the first message to the report */}
+        <Button
+          disabled={!isReadonly.value || openingInChat.value}
+          variant={isReadonly.value ? 'outline' : 'constructive'}
+          title="Open Report in Chat"
+          onClick={async () => {
+            if (!selected.value || openingInChat.value) return;
+            openingInChat.value = true;
+            try {
+              await onOpenInChat(selected.value.evaluation_result_id);
+            } finally {
+              openingInChat.value = false;
+            }
+          }}
+        >
+          <MessageSquareCodeIcon size={16} />
         </Button>
       </div>
       <hr className="my-4 opacity-60" />

@@ -11,11 +11,14 @@ import type { StructuredToolInterface, DynamicTool } from '@langchain/core/tools
 export async function generateToolSummary(msg: ToolMessage, llm: BaseChatModel): Promise<string> {
   try {
     const prompt = `You called the tool "${msg.name}". Here is the result:\n\n${msg.content}\n\nSummarize this tool result in one concise sentence suitable for display in a chat UI. Be specific about what was returned. Do not include any preamble, just the summary sentence.`;
+    
     const response = await llm.invoke([new HumanMessage(prompt)]);
+    
     const text = typeof response.content === 'string'
       ? response.content.trim()
       : String(response.content).trim();
-    return text || deterministicSummary(msg);
+    
+      return text || deterministicSummary(msg);
   } catch {
     return deterministicSummary(msg);
   }
@@ -49,13 +52,17 @@ function deterministicSummary(msg: ToolMessage): string {
  * Creates a copy of a ToolMessage with tool_summary added to additional_kwargs.
  */
 function withSummary(msg: ToolMessage, summary: string): ToolMessage {
+  const artifactText = msg.artifact && msg.artifact.length > 0
+    ? msg.artifact[0].resource.text
+    : '';
+
   return new ToolMessage({
-    content: msg.content,
+    content: [artifactText, summary].filter(Boolean).join('\n\n'),
     tool_call_id: msg.tool_call_id,
     name: msg.name,
     id: msg.id,
     status: msg.status,
-    additional_kwargs: { ...msg.additional_kwargs, tool_summary: summary },
+    additional_kwargs: { ...msg.additional_kwargs, artifact: msg.artifact, tool_summary: summary },
     response_metadata: msg.response_metadata,
   });
 }
@@ -91,6 +98,7 @@ export class SummarizingToolNode extends ToolNode {
   constructor(
     tools: (StructuredToolInterface | DynamicTool | RunnableToolLike)[],
     llm: BaseChatModel,
+    readonly isMCP: boolean = false, // for potential future use in MCP-specific logic
   ) {
     super(tools);
     this.llm = llm;
@@ -99,6 +107,7 @@ export class SummarizingToolNode extends ToolNode {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async invoke(input: any, config?: RunnableConfig): Promise<any> {
     const result = await super.invoke(input, config);
+
     return enrichResult(result, this.llm);
   }
 }

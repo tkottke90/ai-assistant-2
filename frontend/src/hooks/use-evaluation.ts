@@ -114,6 +114,9 @@ export function useEvaluation(evaluationId: number) {
     if (activeResult.value?.evaluation_result_id === data.evaluation_result_id) {
       activeResult.value = data;
     }
+    if (selectedResult.value?.evaluation_result_id === data.evaluation_result_id) {
+      selectedResult.value = data;
+    }
   });
 
   // On mount: load evaluation data + fire TRACK_EVAL
@@ -184,6 +187,9 @@ export function useEvaluation(evaluationId: number) {
         status: 'Completed',
       });
       activeResult.value = updated;
+      if (selectedResult.value?.evaluation_result_id === updated.evaluation_result_id) {
+        selectedResult.value = updated;
+      }
       const current = results.value;
       const idx = current.findIndex((r) => r.evaluation_result_id === updated.evaluation_result_id);
       if (idx >= 0) {

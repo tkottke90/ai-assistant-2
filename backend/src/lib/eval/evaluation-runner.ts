@@ -2,6 +2,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { createAgent } from 'langchain';
 import type { Logger } from 'winston';
 import EvaluationDao from '../dao/evaluation.dao.js';
+import MemoryDao from '../dao/memory.dao.js';
 import type { LLMManager } from '../llm/index.js';
 import type { LlmEvalConfig, TestCaseResult } from '../models/evaluation.js';
 import { createMemoryTools } from '../tools/builtin/memory-tools.js';
@@ -60,8 +61,15 @@ export async function runEvaluation(
       .map((et) => toolManager.getActiveTool(et.tool.id))
       .filter((t): t is NonNullable<typeof t> => t !== undefined);
 
+    // Purge any memories from the previous run before starting fresh.
+    // Memories are scoped to -evaluationId (negative IDs are reserved for evaluations).
+    const purgedCount = await MemoryDao.deleteEvaluationMemories(-evaluationId);
+    if (purgedCount > 0) {
+      logger.info(`Purged ${purgedCount} memories from previous evaluation run`, { evaluationId, resultId });
+    }
+
     // Memory tools are always available in evaluations (mirrors agent behaviour)
-    const memoryTools = createMemoryTools(evaluationId);
+    const memoryTools = createMemoryTools(-evaluationId);
 
     // Build a fresh stateless agent (no checkpointer)
     const agent = createAgent({

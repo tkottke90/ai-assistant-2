@@ -3,10 +3,26 @@ import { Button } from "@/components/ui/button";
 import { EvaluationOptions } from "./options";
 import { TestCases } from "./test-cases";
 import { useEvaluation } from "@/hooks/use-evaluation";
-import { useRoute } from "preact-iso";
+import { useRoute, useLocation } from "preact-iso";
 import { useComputed } from "@preact/signals";
 import { Collapsable } from "@/components/collapsable-section";
-import { exportEvaluationResult } from "@tkottke90/ai-assistant-client";
+import { exportEvaluationResult, seedThread } from "@tkottke90/ai-assistant-client";
+import { toast } from "sonner";
+
+async function openResultInChat(
+  evaluationId: number,
+  resultId: number,
+  navigate: (path: string) => void,
+): Promise<void> {
+  try {
+    const markdown = await exportEvaluationResult({ id: evaluationId, resultId });
+    const title = `Evaluation Report - #${evaluationId} - ${resultId}`;
+    const { thread_id } = await seedThread({ message: markdown, title });
+    navigate(`/chat/${thread_id}`);
+  } catch {
+    toast.error('Failed to open report in chat');
+  }
+}
 
 export function EvaluationDetailsPage() {
   const route = useRoute();
@@ -29,6 +45,8 @@ export function EvaluationDetailsPage() {
     generatePromptForResult,
     applyNextPrompt,
   } = useEvaluation(evaluationId);
+
+  const { route: navigate } = useLocation();
 
   const scoringInProgress = useComputed(() => activeResult.value?.status === 'Running');
   const canExecute = useComputed(
@@ -119,6 +137,7 @@ export function EvaluationDetailsPage() {
           onGeneratePrompt={generatePromptForResult}
           onApplyNextPrompt={applyNextPrompt}
           onExport={exportResult}
+          onOpenInChat={(resultId) => openResultInChat(evaluationId, resultId, navigate)}
         />
       </main>
     </BaseLayout>

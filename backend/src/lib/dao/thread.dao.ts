@@ -44,7 +44,30 @@ async function getMessagesFromThread(checkpointer: BaseCheckpointSaver, threadId
   return Array.from(historyMap.values());
 }
 
+function getMessageUsage(message: BaseMessage) {
+  let usage = {
+    prompt: 0,
+    completion: 0,
+    total: 0,
+  };
+
+  const metadata = message.response_metadata as Record<string, any> | undefined;
+
+  if (!metadata) return usage;
+
+  if (!metadata.eval_count) return usage;
+
+  usage = {
+    prompt: metadata?.prompt_eval_count ?? 0,
+    completion: metadata?.eval_count ?? 0,
+    total: (metadata?.prompt_eval_count ?? 0) + (metadata?.eval_count ?? 0),
+  };
+
+  return usage;
+}
+
 export default {
+  getMessageUsage,
   generateThreadId,
   getThread,
   getMessagesFromThread

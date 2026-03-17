@@ -1,8 +1,10 @@
 import { MarkdownDisplay } from '@/components/markdown';
 import { Button } from '@/components/ui/button';
 import { formatChatTimestamp } from '@/lib/date-utils';
-import type { ChatMessage, ServerAction, InteractionMessage } from '@tkottke90/ai-assistant-client';
+import type { ChatMessage, InteractionMessage, ServerAction } from '@tkottke90/ai-assistant-client';
+import { Files } from 'lucide-preact';
 import { useChatContext } from './chat-context';
+import { toast } from 'sonner';
 
 
 const severityStyles = {
@@ -125,7 +127,21 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
           <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce" />
         </div>
       </main>
-      <footer className={`col-span-2 row-start-3 flex group-data-[role=human]:flex-row-reverse`}></footer>
+      <footer className={`col-span-2 row-start-3 flex gap-3 group-data-[role=human]:flex-row-reverse opacity-50 pl-8 group-data-[role=human]:pr-8`}>
+        <span className="group-data-[role=human]:hidden my-auto">
+          { Intl.NumberFormat('en', { notation: 'standard' }).format(message.usage?.total ?? 0) } tokens
+        </span>
+        <span className="p-2 rounded-full active:bg-neutral-500 cursor-pointer">
+          <Files size={20} onClick={() => {
+            navigator.clipboard.writeText(message.content).then(() => {
+              // Optionally, you could add some feedback to the user here, like a toast notification.
+              toast.success('Copied to clipboard');
+            }).catch(err => {
+              console.error('Failed to copy text: ', err);
+            });
+          }} />
+        </span>
+      </footer>
     </div>
   );
 } 

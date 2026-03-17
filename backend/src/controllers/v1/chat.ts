@@ -8,8 +8,6 @@ import { InteractionSchema, ServerActionSchema, threadResponseSchema } from '../
 import crypto from 'node:crypto';
 import ThreadDao from '../../lib/dao/thread.dao.js';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
-import { discoverTools } from '../../lib/tools/search';
-import { createBuiltinTools } from '../../lib/tools/builtin/tools';
 
 export const router = Router();
 
@@ -247,11 +245,12 @@ router.get(
     const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json(
-      threadResponseSchema.parse({
+
+    const response = {
       ...metadata,
       threadId,
       agent: metadata.agent ? { id: metadata.agent.agent_id, name: metadata.agent.name } : null,
+      consumption: 0,
       history: history
         .filter(({ msg }) => msg.content !== '') // Filter out empty messages (placeholders for thinking)
         .map(({ msg, ts }) => {
@@ -265,7 +264,7 @@ router.get(
                 metadata: msg.additional_kwargs,
                 role: msg.type,
                 actions: (msg.response_metadata as Record<string, any>)?.actions || [],
-                severity: (msg.response_metadata as Record<string, any>)?.severity ?? 0,
+                severity: (msg.response_metadata as Record<string, any>)?.severity ?? 0
               })
             case 'ai':
             case 'human':
@@ -279,11 +278,23 @@ router.get(
                 metadata: msg.additional_kwargs,
                 role: msg.type,
                 model: (msg.response_metadata as Record<string, any>)?.model,
+                usage: ThreadDao.getMessageUsage(msg)
               })
             }
           }
         }) 
-    })
+    };
+
+
+    response.consumption = response.history.reduce((sum, msg) => {
+      if (msg.type === 'chat_message') {
+        return sum + (msg.usage?.total ?? 0);
+      }
+      return sum;
+    }, 0);
+
+    res.json(
+      threadResponseSchema.parse(response)
   );
 });
 

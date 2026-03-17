@@ -4,6 +4,9 @@
   - [ ] Support single-file executable
   - [ ] Support Dockerfile deployment
 - [ ] Add Prompt Table and make it editable/viewable in the UI
+- [ ] Token Consumption
+  - [ ] Show consumption by Engine + Model
+
 
 ## API
 
@@ -21,7 +24,7 @@
   - Likely due to the stream handling everything that comes back as a message and not paying attention to the content
 - [X] We cannot delete/archive threads
 - [ ] Copy Code Blocks
-- [ ] Copy Message
+- [X] Copy Message
 - [ ] Abort Stream
 
 

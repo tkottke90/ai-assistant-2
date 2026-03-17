@@ -30,8 +30,12 @@ export const InteractionSchema = MessageBase.extend({
   role: z.string(),
   name: z.string().optional(),
   model: z.string().optional(),
-  usage: z.number().optional(),
   assets: z.array(ChatMessageAssetSchema).optional().default([]),
+  usage: z.object({
+    prompt: z.number().optional().default(0),
+    completion: z.number().optional().default(0),
+    total: z.number().optional().default(0),
+  }).optional()
 });
 
 export const ServerActionSchema = MessageBase.extend({
@@ -66,6 +70,7 @@ export const threadResponseSchema = z.object({
     id: z.number(),
     name: z.string(),
   }).nullable(),
+  consumption: z.number().optional(),
   history: z.array(ChatMessageSchema),
 });
 

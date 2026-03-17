@@ -1,7 +1,7 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { Agent, AgentSchema } from "../models/agent";
 import { Queue } from "../types/queue";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { createAgent } from "langchain";
 import { SystemMessage } from "@langchain/core/messages";
 import { checkpointer } from '../../lib/database';
 import { AgentModel } from "../prisma/models";
@@ -11,7 +11,7 @@ import type { ToolManager } from "../tools/manager";
 import type { StructuredTool } from "@langchain/core/tools";
 import type { StructuredToolInterface, DynamicTool } from "@langchain/core/tools";
 import type { RunnableToolLike } from "@langchain/core/runnables";
-import { SummarizingToolNode } from "./summarizing-tool-node";
+import { createSummarizingMiddleware } from "./summarizing-tool-node";
 import { Command } from "@langchain/langgraph";
 import type { Logger } from "winston";
 
@@ -42,33 +42,30 @@ export class AgentRuntime {
   async getAgent(_shutdownSignal: AbortSignal) {
     const systemPromptText = [
       this.systemPrompt,
-      `The user will refer to you as ${this.name}.`,
+      `<identity>The user will refer to you as ${this.name}.</identity>`,
       MEMORY_SYSTEM_PROMPT
     ].join('\n\n');
 
-    return createReactAgent({
-      llm: this.llm,
+    return createAgent({
+      model: this.llm,
       name: this.name,
-      checkpointSaver: checkpointer,
-      stateModifier: new SystemMessage(systemPromptText),
-      tools: await this.getToolNode(),
+      checkpointer,
+      systemPrompt: new SystemMessage(systemPromptText),
+      tools: await this.getTools() as any,
+      middleware: [createSummarizingMiddleware(this.llm)],
     });
   }
 
-  async getToolNode(): Promise<SummarizingToolNode> {
+  /** Returns the flat tools array for this agent. */
+  async getTools(): Promise<(StructuredToolInterface | DynamicTool | RunnableToolLike)[]> {
     if (this.toolManager) {
       // toolManager.getBuiltinTools() already includes memory tools
       const builtins = this.toolManager.getBuiltinTools(this.id);
       const assigned = await this.toolManager.getToolsForAgent(this.id);
-      return new SummarizingToolNode([...builtins, ...assigned], this.llm);
+      return [...builtins, ...assigned];
     }
     // Fallback: memory tools only (no ToolManager available)
-    return new SummarizingToolNode(createMemoryTools(this.id) as StructuredTool[], this.llm);
-  }
-
-  /** Returns the flat tools array — convenience method for inspecting assigned tools. */
-  async getTools(): Promise<(StructuredToolInterface | DynamicTool | RunnableToolLike)[]> {
-    return (await this.getToolNode()).tools;
+    return createMemoryTools(this.id) as StructuredTool[];
   }
 
   newMessage(message: any) {

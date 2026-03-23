@@ -1,7 +1,7 @@
 import { Router, Request } from 'express';
 import AgentDao from '../../lib/dao/agent.dao.js';
 import MemoryDao from '../../lib/dao/memory.dao.js';
-import { AgentProperties, CreateAgentDTO } from '../../lib/models/agent.js';
+import { AgentProperties, CreateAgentDTO, CreateAgentSchema } from '../../lib/models/agent.js';
 import { ZodBodyValidator, ZodIdValidator, ZodQueryValidator } from '../../middleware/zod.middleware.js';
 import { PaginationQuerySchemaBase, PaginationQuery } from '../../lib/types/pagination.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors/http.errors.js';
@@ -19,7 +19,7 @@ router.post('/',
   try {
     req.logger.info('Creating new agent');
     
-    const agentData: CreateAgentDTO = req.body;
+    const agentData: CreateAgentDTO = CreateAgentSchema.parse(req.body);
     const agent = await AgentDao.createAgent(agentData);
 
     req.logger.debug('Agent created successfully', { ...agent });
@@ -31,6 +31,11 @@ router.post('/',
     );
     
     req.logger.info('Agent registered successfully');
+
+    if (agent.auto_start) {
+      agentManager.startAgent(agent.agent_id);
+      req.logger.info('Agent auto-started successfully');
+    }
 
     res.status(201).json(agent);
   } catch (error) {

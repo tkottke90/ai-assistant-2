@@ -8,18 +8,20 @@ export const AgentProperties = z.object({
   auto_start: z.boolean().default(false),
   system_prompt: z.string(),
   engine: z.string().optional(),
-  model: z.string().optional()
+  model: z.string().optional(),
+  version: z.number().min(1).default(1),
 });
 
 export const AgentSchema = AgentProperties.extend({
   agent_id: z.number(),
   
-  version: z.number().min(1).default(1),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date()
 });
 
-export type CreateAgentDTO = Omit<z.infer<typeof AgentProperties>, 'version'>;
+export const CreateAgentSchema = AgentProperties;
+
+export type CreateAgentDTO = z.infer<typeof CreateAgentSchema>;
 export type UpdateAgentDTO = Partial<CreateAgentDTO> & { version: number };
 export type Agent = z.infer<typeof AgentSchema>;
 

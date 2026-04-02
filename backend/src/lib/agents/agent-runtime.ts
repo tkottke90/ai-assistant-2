@@ -1,19 +1,17 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { Agent, AgentSchema } from "../models/agent";
-import { Queue } from "../types/queue";
-import { createAgent } from "langchain";
 import { SystemMessage } from "@langchain/core/messages";
-import { checkpointer } from '../../lib/database';
-import { AgentModel } from "../prisma/models";
-import { createMemoryTools } from "../tools/builtin/memory-tools";
-import { MEMORY_SYSTEM_PROMPT } from "./memory-prompt";
-import type { ToolManager } from "../tools/manager";
-import type { StructuredTool } from "@langchain/core/tools";
-import type { StructuredToolInterface, DynamicTool } from "@langchain/core/tools";
 import type { RunnableToolLike } from "@langchain/core/runnables";
-import { createSummarizingMiddleware } from "./summarizing-tool-node";
+import type { DynamicTool, StructuredToolInterface } from "@langchain/core/tools";
 import { Command } from "@langchain/langgraph";
+import { createAgent, toolRetryMiddleware } from "langchain";
 import type { Logger } from "winston";
+import { checkpointer } from '../../lib/database';
+import { Agent, AgentSchema } from "../models/agent";
+import { AgentModel } from "../prisma/models";
+import type { ToolManager } from "../tools/manager";
+import { Queue } from "../types/queue";
+import { createRecursiveScratchpadMiddleware } from "./middleware/recursive-2";
+import { createToolSummaryMiddleware } from './middleware/tool-summary';
 
 export class AgentRuntime {
   private queue = new Queue<any>();
@@ -26,8 +24,8 @@ export class AgentRuntime {
   constructor(
     private readonly agent: Agent,
     readonly llm: BaseChatModel,
-    private readonly toolManager?: ToolManager,
-    private readonly logger?: Logger,
+    private readonly toolManager: ToolManager,
+    readonly logger: Logger,
   ) {
     this.name = agent.name;
     this.description = agent.description ?? '';
@@ -39,11 +37,19 @@ export class AgentRuntime {
     return this.agent.agent_id;
   }
 
+  get agentDetails() {
+    return ({
+      name: this.name,
+      llm: this.agent.engine,
+      model: this.agent.model
+    });
+  }
+
   async getAgent(_shutdownSignal: AbortSignal) {
     const systemPromptText = [
       this.systemPrompt,
       `<identity>The user will refer to you as ${this.name}.</identity>`,
-      MEMORY_SYSTEM_PROMPT
+      // MEMORY_SYSTEM_PROMPT
     ].join('\n\n');
 
     return createAgent({
@@ -52,12 +58,21 @@ export class AgentRuntime {
       checkpointer,
       systemPrompt: new SystemMessage(systemPromptText),
       tools: await this.getTools() as any,
-      middleware: [createSummarizingMiddleware(this.llm)],
+      middleware: [
+        toolRetryMiddleware({
+          maxRetries: 3,
+          backoffFactor: 2.0,
+          initialDelayMs: 1000,
+        }),
+        createRecursiveScratchpadMiddleware(this.name, this.llm, this.logger.child({ location: `AgentRuntime.${this.name}.Scratchpad` })),
+        createToolSummaryMiddleware(this.name, this.logger, this.llm),
+      ],
     });
   }
 
   /** Returns the flat tools array for this agent. */
   async getTools(): Promise<(StructuredToolInterface | DynamicTool | RunnableToolLike)[]> {
+
     if (this.toolManager) {
       // toolManager.getBuiltinTools() already includes memory tools
       const builtins = this.toolManager.getBuiltinTools(this.id);
@@ -65,7 +80,8 @@ export class AgentRuntime {
       return [...builtins, ...assigned];
     }
     // Fallback: memory tools only (no ToolManager available)
-    return createMemoryTools(this.id) as StructuredTool[];
+    return [];
+    // return [...createMemoryTools(this.id) as StructuredTool[]];
   }
 
   newMessage(message: any) {
@@ -100,12 +116,12 @@ export class AgentRuntime {
     }
   }
 
-  static fromDatabase(agentData: AgentModel, llm: BaseChatModel, toolManager?: ToolManager, logger?: Logger) {
+  static fromDatabase(agentData: AgentModel, llm: BaseChatModel, toolManager: ToolManager, logger: Logger) {
     return new AgentRuntime(
       AgentSchema.parse(agentData),
       llm,
       toolManager,
-      logger,
+      logger.child({ location: `AgentRuntime:${agentData.name}` }),
     );
   }
 }

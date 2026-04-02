@@ -12,9 +12,11 @@ export default async function initializeAgents(app: express.Application) {
   const agents = await AgentDao.getAllAgents()
   
   for (const agentData of agents) {
-    const llmEngine = app.llm.getClient(agentData.engine);
+    const llmEngine = agentData.engine && agentData.model
+      ? app.llm.getClientWithModel(agentData.engine, agentData.model)
+      : app.llm.getClient(agentData.engine);
     // Pass ToolManager if available (set by setupTools before setupAgentManager)
-    const runtimeLogger = app.logger.child({ location: `Agent:${agentData.name}` });
+    const runtimeLogger = app.logger.child({ location: `Agent.${agentData.name}` });
     const agentRuntime = AgentRuntime.fromDatabase(agentData as any, llmEngine, app.tools, runtimeLogger);
     app.agents.registerAgent(agentRuntime);
 

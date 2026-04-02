@@ -2,6 +2,11 @@ import { HumanMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createMiddleware } from 'langchain';
 import { Command } from '@langchain/langgraph';
+import { Logger } from 'winston';
+
+interface Artifact {
+  text: string;
+}
 
 /**
  * Generates a human-friendly summary of a tool result using the provided LLM.
@@ -51,12 +56,15 @@ function deterministicSummary(msg: ToolMessage): string {
  * Creates a copy of a ToolMessage with tool_summary added to additional_kwargs.
  */
 function withSummary(msg: ToolMessage, summary: string): ToolMessage {
+  // Combine any artifacts into the content so we can show that in the UI
   const artifactText = msg.artifact && msg.artifact.length > 0
-    ? msg.artifact[0].resource.text
+    ? msg.artifact.map((a: Artifact) =>
+        a.text
+      ).join('\n\n')
     : '';
 
   return new ToolMessage({
-    content: [artifactText, summary].filter(Boolean).join('\n\n'),
+    content: [artifactText, msg.content].filter(Boolean).join('\n\n'),
     tool_call_id: msg.tool_call_id,
     name: msg.name,
     id: msg.id,
@@ -71,14 +79,28 @@ function withSummary(msg: ToolMessage, summary: string): ToolMessage {
  * with a `tool_summary` string in `additional_kwargs`. The summary is generated
  * by the provided LLM; falls back to a deterministic string on failure.
  */
-export function createSummarizingMiddleware(llm: BaseChatModel) {
+export function createSummarizingMiddleware(llm: BaseChatModel, logger: Logger) {
   return createMiddleware({
     name: 'summarizing-tool-call',
     wrapToolCall: async (request, handler) => {
+      logger.info('Summarizing Tool Call', { toolName: request.toolCall.name, args: request.toolCall.args });
+
       const result = await handler(request);
-      if (result instanceof Command) return result;
+      if (result instanceof Command) {
+        
+        logger.info('Tool call returned a Command, skipping summarization');
+        
+        debugger;
+
+        return result;
+      }
       const summary = await generateToolSummary(result, llm);
-      return withSummary(result, summary);
+
+      const toolWithSummary = withSummary(result, summary);
+
+      logger.debug('Generated tool summary', { toolName: request.toolCall.name, summary });
+      logger.info('Finished summarizing tool call', { toolName: request.toolCall.name });
+      return toolWithSummary;
     },
   });
 }

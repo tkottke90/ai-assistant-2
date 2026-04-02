@@ -216,3 +216,6 @@ __marimo__/
 /config/
 .ai/
 .DS_Store
+
+# LangGraph API
+.langgraph_api

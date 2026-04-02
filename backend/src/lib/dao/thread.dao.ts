@@ -66,9 +66,32 @@ function getMessageUsage(message: BaseMessage) {
   return usage;
 }
 
+function getGenerationDetails(message: BaseMessage) {
+  const metadata = message.response_metadata as Record<string, any> | undefined;
+
+  if (!metadata) return {};
+
+  if (!metadata.eval_duration || !metadata.eval_count) return {};
+
+  const tokens = metadata.eval_count ?? 0;
+  const duration = (metadata.eval_duration ?? 0) / 1e9; // Convert nanoseconds to seconds
+  const totalDuration = (metadata.total_duration ?? 0) / 1e9; // Use total_duration if available, otherwise fallback to eval_duration
+
+  const tokensPerSecond = duration > 0 ? tokens / duration : 0;
+
+  return {
+    model: metadata.model,
+    tokens,
+    generation_time_sec: Math.round(duration),
+    total_time_sec: Math.round(totalDuration),
+    tokens_per_second: Math.round(tokensPerSecond),
+  }
+}
+
 export default {
   getMessageUsage,
   generateThreadId,
+  getGenerationDetails,
   getThread,
   getMessagesFromThread
 }

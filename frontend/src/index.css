@@ -206,4 +206,8 @@ html, body, #app {
   .prose hr {
     @apply my-4 border-neutral-400/50;
   }
+
+  .prose pre {
+    @apply my-4;
+  }
 }

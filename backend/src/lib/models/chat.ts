@@ -35,7 +35,8 @@ export const InteractionSchema = MessageBase.extend({
     prompt: z.number().optional().default(0),
     completion: z.number().optional().default(0),
     total: z.number().optional().default(0),
-  }).optional()
+  }).optional(),
+  stats: z.record(z.string(), z.any()).optional().default({}),
 });
 
 export const ServerActionSchema = MessageBase.extend({

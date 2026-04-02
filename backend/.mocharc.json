@@ -1,0 +1,6 @@
+{
+  "spec": "src/**/*.{spec,test}.ts",
+  "ignore": "src/**/node_modules/**",
+  "import": "tsx",
+  "timeout": 5000
+}

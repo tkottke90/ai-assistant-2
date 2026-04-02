@@ -38,11 +38,14 @@ router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
       const agentManager = req.app.agents;
       const runtime = agentManager.getAgent(agentId);
 
+      
       if (!runtime || !agentManager.isActive(agentId)) {
         res.write(`data: ${JSON.stringify({ error: 'Agent not found or not active' })}\n\n`);
         res.end();
         return;
       }
+
+      runtime.logger.info('Reviewing Message', runtime.agentDetails);
 
       const abortController = new AbortController();
       res.on('close', () => abortController.abort());
@@ -278,7 +281,10 @@ router.get(
                 metadata: msg.additional_kwargs,
                 role: msg.type,
                 model: (msg.response_metadata as Record<string, any>)?.model,
-                usage: ThreadDao.getMessageUsage(msg)
+                usage: ThreadDao.getMessageUsage(msg),
+                stats: {
+                  ...ThreadDao.getGenerationDetails(msg),
+                }
               })
             }
           }

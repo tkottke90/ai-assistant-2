@@ -26,6 +26,7 @@
 - [ ] Copy Code Blocks
 - [X] Copy Message
 - [ ] Abort Stream
+- [ ] Add copy icon for code blocks
 
 
 ---

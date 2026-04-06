@@ -27,7 +27,11 @@
 - [X] Copy Message
 - [ ] Abort Stream
 - [ ] Add copy icon for code blocks
-
+- [ ] Chat input
+  - [ ] Add dropdown for `@` mentions of other agents
+  - [ ] Add dropdown for `/` commands which pull up "skills" (prebuilt prompts) for specific tasks
+  - [ ] Add dropdown for `#` tags which allow the user to select a tool to use in the message
+    - This should be available in skills as well.
 
 ---
 

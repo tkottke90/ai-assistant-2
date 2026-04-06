@@ -146,6 +146,7 @@ export async function streamChat(
 
   // Buffer tool call args until we see the matching tool_result
   const toolCallAccumulators = new Map<string, { name: string; args: string }>();
+  let lastToolId = '';
 
   // Debounce thinking tokens — flush every 50ms or on phase change
   let thinkingBuffer = '';
@@ -192,10 +193,20 @@ export async function streamChat(
             break;
 
           case 'tool_call_chunk': {
-            const existing = toolCallAccumulators.get(chunk.id);
+            console.log('Received tool call chunk', chunk);
+            
+            if (!chunk.id) {
+              // If the chunk id is empty, we do not know which tool call to assign it too
+              break;
+            }
+
+            const existing = chunk.id
+              ? toolCallAccumulators.get(chunk.id)
+              : toolCallAccumulators.get(lastToolId);
             if (existing) {
               existing.args += chunk.args;
             } else {
+              lastToolId = chunk.id;
               toolCallAccumulators.set(chunk.id, { name: chunk.name, args: chunk.args });
               emit({ type: 'chat:stream:tool_call_start', id: chunk.id, name: chunk.name });
             }
@@ -203,6 +214,8 @@ export async function streamChat(
           }
 
           case 'tool_result': {
+            console.log('Received tool result chunk', chunk);
+
             // Flush accumulated args for this call before emitting the result
             const acc = toolCallAccumulators.get(chunk.toolCallId);
             if (acc) {

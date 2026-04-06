@@ -107,14 +107,22 @@ export function ChatForm() {
       id: e.detail.id,
       type: 'server_action',
       role: 'tool',
-      content: '',
+      content: `Calling tool - ${e.detail.name}`,
       created_at: new Date().toISOString(),
       metadata: { tool_name: e.detail.name },
       severity: 0,
     };
+
+    const history = thread.value.history.slice(0, -1);
+    const pendingMessage = thread.value.history?.at(-1);
+
     thread.value = {
       ...thread.value,
-      history: [...(thread.value.history as ChatMessage[]), stub],
+      history: [
+        ...(history as ChatMessage[]),
+        stub,
+        pendingMessage as ChatMessage,
+      ],
     };
   });
 

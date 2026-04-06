@@ -32,6 +32,7 @@ function ActionMessage({ message }: {message: ServerAction}) {
     <div className={`p-4 rounded-md border min-w-10/12 max-w-3/4 xl:min-w-1/2 mx-auto ${severityStyles[message.severity ?? 0]}`}>
       {summary ? (
         <div className="mb-2">
+          <h4>Tool: {message.metadata.tool_name ?? ''}</h4>
           <p>{summary}</p>
           <details className="mt-1">
             <summary className="cursor-pointer text-xs text-current/60 select-none">Show raw output</summary>

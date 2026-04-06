@@ -9,4 +9,5 @@ export const ConfigSchema = z.object({
   logging: LoggingSchema,
   llm: LlmConfigSchema,
   tools: ToolsConfigSchema,
+  debug: z.boolean().default(false),
 });

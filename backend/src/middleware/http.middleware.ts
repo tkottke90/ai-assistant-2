@@ -17,6 +17,7 @@ export default function HttpEventMiddleware(
   
   res.setHeader('req', requestId);
   req.logger.log('info', `${req.method} ${req.originalUrl}`, { requestId });
+  res.locals.requestId = requestId;
 
   const start = process.hrtime();
 

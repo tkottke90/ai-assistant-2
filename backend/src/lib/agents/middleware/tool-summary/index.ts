@@ -65,23 +65,31 @@ TToolCallRes extends ToolMessage
     logger.info('Summarizing result');
     const summary = await llm.invoke([
       new SystemMessage([
-        'Generate a short and consise summary of the following tool output' ,
+        'Your task is to generate a short and concise summary of the provided tool output' ,
+        '',
+        '## Guidelines',
         'If IDs are present, make sure to include them in the summary for tracking and further reference.',
-        'The summary should be no more than a few sentences, and focus on the key information and results from the tool call.'
+        'The summary should be no more than 2 sentences, and focus on the key information and results from the tool call.',
+        '',
+        '## Output Format',
+        '- The summary should start with "I used [Tool Name] to do [Action]. The result was [Key Result]." ',
+        '- If the tool output includes any IDs, include a second sentence that says "The following IDs were returned: [ID1], [ID2], ...".',
       ].join(' ')),
       new HumanMessage(res.content)
     ], { callbacks: [] });
   
   
+    logger.info('Finished summarizing tool call', { tool: req.toolCall.name });
+
     return new Command({
       update: {
         messages: [
         new ToolMessage({
           ...res,
-          content: summary.content,
+          content: res.content,
           metadata: {
             ...res.metadata,
-            original: res.content,
+            tool_summary: summary.content,
           }
         })
       ],
@@ -89,8 +97,10 @@ TToolCallRes extends ToolMessage
           name: req.tool?.name ?? 'UnknownTool',
           timestamp: new Date().toISOString(),
           args: req.toolCall.args,
-          result: res.content,
-          summary: summary.content,
+          result: summary.content,
+          metadata: {
+            original_result: res.content,
+          },
           artifacts: res.artifact,
         }
       }

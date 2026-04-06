@@ -6,9 +6,7 @@ import { Logger } from "winston";
 import * as z from "zod";
 import RecursivePrompt from "./recursive.prompt";
 import { Scratchpad } from "./recursive/scratchpad";
-import { ChatOllama } from "@langchain/ollama";
 import { BaseSection } from "./recursive/sections";
-
 
 const LOG_PREFIX = (name: string = 'Agent') => `AgentRuntime.${name}.Scratchpad.`;
 
@@ -49,7 +47,7 @@ export async function constructContext(scratchpad: Scratchpad, messages: BaseMes
   while (!searchResults.done) {
     // Load the next batch of candidates to consider for traversal into the context
     const { depth, candidates } = searchResults.value;
-    logger.debug('Scratchpad traversal yielded candidates', { candidates, depth });
+    logger.debug('Scratchpad traversal yielded candidates', { candidates: candidates.map(c => c.name), depth });
 
     if (!candidates || candidates.length === 0) {
       logger.debug('No sections selected for traversal, ending traversal early');
@@ -57,18 +55,14 @@ export async function constructContext(scratchpad: Scratchpad, messages: BaseMes
     }
 
     // Prompt the model to select sections
-    const response = await llm.invoke([
+    const selectedSections = await llm.withStructuredOutput(z.array(z.string())).invoke([
       new SystemMessage(Scratchpad.traversalPrompt),
       new HumanMessage('**Table of Contents:**\n' + candidates.map((c) => `- ${c.name}: ${c.description}`).join("\n")),
       ...messages
     ], { callbacks: [] }); // see note above re: { callbacks: [] }
 
     // Extract the content
-    const contextContent = JSON.parse(response.content as string);
-
-    const selectedSections: string[] = contextContent?.sections;
-
-    logger.debug('Selected sections for traversal', { selectedSections, contextContent });
+    logger.debug('Selected sections for traversal', { selectedSections });
 
     searchResults = search.next(selectedSections);
   }

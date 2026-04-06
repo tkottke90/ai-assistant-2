@@ -4,6 +4,14 @@ import { createMiddleware } from 'langchain';
 import { Command } from '@langchain/langgraph';
 import { Logger } from 'winston';
 
+const TOOL_SUMMARY_FORMAT = `
+{summary}
+
+\`\`\`
+{original}
+\`\`\`
+`;
+
 interface Artifact {
   text: string;
 }
@@ -14,7 +22,11 @@ interface Artifact {
  */
 export async function generateToolSummary(msg: ToolMessage, llm: BaseChatModel): Promise<string> {
   try {
-    const prompt = `You called the tool "${msg.name}". Here is the result:\n\n${msg.content}\n\nSummarize this tool result in one concise sentence suitable for display in a chat UI. Be specific about what was returned. Do not include any preamble, just the summary sentence.`;
+    const prompt = [
+      ''
+
+    ].join('\n');
+    `You called the tool "${msg.name}". Here is the result:\n\n${msg.content}\n\nSummarize this tool result in one concise sentence suitable for display in a chat UI. Be specific about what was returned. Do not include any preamble, just the summary sentence.`;
     
     const response = await llm.invoke([new HumanMessage(prompt)]);
     
@@ -56,6 +68,9 @@ function deterministicSummary(msg: ToolMessage): string {
  * Creates a copy of a ToolMessage with tool_summary added to additional_kwargs.
  */
 function withSummary(msg: ToolMessage, summary: string): ToolMessage {
+  
+  // When dealing with files, the Tools may return artifacts that contain the contents
+  // (such as the Github MCP server).  We need to make sure to make those accessible to the agent
   // Combine any artifacts into the content so we can show that in the UI
   const artifactText = msg.artifact && msg.artifact.length > 0
     ? msg.artifact.map((a: Artifact) =>
@@ -64,7 +79,7 @@ function withSummary(msg: ToolMessage, summary: string): ToolMessage {
     : '';
 
   return new ToolMessage({
-    content: [artifactText, msg.content].filter(Boolean).join('\n\n'),
+    content: [msg.content, artifactText].filter(Boolean).join('\n\n'),
     tool_call_id: msg.tool_call_id,
     name: msg.name,
     id: msg.id,

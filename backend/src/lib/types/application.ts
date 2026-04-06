@@ -53,6 +53,11 @@ declare global {
          */
         getNumber(key: string, defaultValue?: number): number;
 
+        /**
+         * Gets the absolute path of a directory relative to the config directory location,
+         * ensuring that the directory exists by creating it if necessary.  
+         * @param path The relative config directory path
+         */
         getConfigDir(path?: string): string;
 
         /**

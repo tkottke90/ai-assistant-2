@@ -10,4 +10,5 @@ export const {
   thread: Signal<ThreadResponse>;
   agentSelection: AgentSelection;
   isStreaming: Signal<boolean>;
+  activeAssistantId: Signal<string | null>;
 }>();

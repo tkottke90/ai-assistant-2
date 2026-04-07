@@ -1,6 +1,6 @@
-import type { ListAgentActionsMessage, ListAgentActionsResponse } from "./agents";
+import type { ListAgentActionsMessage, ListAgentActionsResponse, RefreshAgentsMessage, RefreshAgentsResponse } from "./agents";
 import type { ResponseMessage } from "./worker-event.types";
-import type { GetThreadMetadata, GetThreadResponse, RefreshThreadsMessage, RefreshThreadsResponse, StreamChatMessage, WorkerStreamEvent } from './chat';
+import type { GetThreadMetadata, GetThreadResponse, RefreshThreadsMessage, RefreshThreadsResponse, ResumeStreamMessage, StreamChatMessage, WorkerStreamEvent, WorkerStreamControlEvent } from './chat';
 import type { TrackEvalMessage, EvalResultUpdateResponse } from './eval-worker';
 
 export interface PingMessage {
@@ -12,7 +12,9 @@ export type PongMessage = ResponseMessage<'ping', null>;
 export type InboundMessage =
   | GetThreadMetadata
   | ListAgentActionsMessage
+  | RefreshAgentsMessage
   | RefreshThreadsMessage
+  | ResumeStreamMessage
   | StreamChatMessage
   | TrackEvalMessage
   | PingMessage;
@@ -20,8 +22,10 @@ export type InboundMessage =
 export type OutboundMessage =
   | GetThreadResponse
   | ListAgentActionsResponse
+  | RefreshAgentsResponse
   | RefreshThreadsResponse
   | WorkerStreamEvent
+  | WorkerStreamControlEvent
   | EvalResultUpdateResponse
   | PongMessage;
 

@@ -4,6 +4,7 @@ import { Logger } from "winston";
 import { Command, ReducedValue, StateSchema } from "@langchain/langgraph";
 import z from "zod";
 import { BaseError } from "@tkottke90/js-errors";
+import { ActionSeverity } from "../../../client";
 
 const LOG_PREFIX = (name: string = 'Agent') => `AgentRuntime.${name}.ToolSummary.`;
 
@@ -110,6 +111,19 @@ TToolCallRes extends ToolMessage
 
     logger.error('Error during tool summarization', { error });
 
-    return res; // return original result on failure to summarize, to avoid blocking the agent's progress due to summarization issues
+    return new Command({
+      update: {
+        messages: [
+          new ToolMessage({
+            ...res,
+            content: res.content,
+            response_metadata: {
+              ...res.response_metadata,
+              severity: ActionSeverity.ERROR
+            }
+          })
+        ]
+      }
+    });
   }
 }

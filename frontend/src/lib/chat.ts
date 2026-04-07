@@ -5,6 +5,7 @@ import {
   type ThreadsResponse,
 } from '@tkottke90/ai-assistant-client';
 import type { inferResponseEvents } from './worker-event.types';
+import { cacheGet, cachePut } from './cache';
 
 // ---------------------------------------------------------------------------
 // Streaming chat event infrastructure
@@ -19,6 +20,8 @@ export interface StreamChatMessage {
   alias?: string;
   model?: string;
   agentId?: number;
+  agentName?: string;
+  assistantId?: string;
 }
 
 /**
@@ -28,7 +31,7 @@ export interface StreamChatMessage {
 export type StreamChunk =
   | { kind: 'text'; content: string }
   | { kind: 'thinking'; content: string }
-  | { kind: 'tool_call_chunk'; id: string; name: string; args: string }
+  | { kind: 'tool_call_start'; id: string; name: string }
   | { kind: 'tool_result'; toolCallId: string; content: string; name: string }
   | { kind: 'agent_name'; name: string }
   | { kind: 'done' }
@@ -44,6 +47,15 @@ export type StreamAgentName       = { type: 'chat:stream:agent_name';       name
 export type StreamDone            = { type: 'chat:stream:done' };
 export type StreamError           = { type: 'chat:stream:error';            error: string };
 
+export type StreamResume          = {
+  type: 'chat:stream:resume';
+  threadId: string;
+  assistantId: string;
+  agentName?: string;
+  events: WorkerStreamEvent[];
+};
+export type StreamResumeNone      = { type: 'chat:stream:resume:none';      threadId: string };
+
 export type WorkerStreamEvent =
   | StreamTextDelta
   | StreamThinking
@@ -53,6 +65,10 @@ export type WorkerStreamEvent =
   | StreamAgentName
   | StreamDone
   | StreamError;
+
+export type WorkerStreamControlEvent =
+  | StreamResume
+  | StreamResumeNone;
 
 /**
  * Classify a single raw stream line into a StreamChunk.
@@ -65,54 +81,43 @@ export function classifyLine(line: string): StreamChunk {
   try {
     const data = JSON.parse(line.slice(6));
 
-    if (data.mode === 'messages') {
-      const firstChunk = data.chunk?.[0];
-      const kwargs = firstChunk?.kwargs;
-      if (!kwargs) return { kind: 'skip' };
+    // Incremental text/thinking delta from the LLM
+    if (data.mode === 'message') {
+      const chunk = data.chunk;
+      if (!chunk) return { kind: 'skip' };
 
-      // Skip ToolMessage chunks — they are handled via mode: updates
-      const constructorId: string[] = firstChunk?.id ?? [];
-      if (constructorId[constructorId.length - 1] === 'ToolMessage') return { kind: 'skip' };
-
-      // Tool call chunk — args stream in as partial JSON fragments
-      if (kwargs.tool_call_chunks?.length > 0) {
-        const tc = kwargs.tool_call_chunks[0];
-        return { kind: 'tool_call_chunk', id: tc.id ?? '', name: tc.name ?? '', args: tc.args ?? '' };
-      }
-
-      // Thinking — reasoning_content present, content empty
-      if (!kwargs.content && kwargs.additional_kwargs?.reasoning_content) {
-        return { kind: 'thinking', content: kwargs.additional_kwargs.reasoning_content };
+      // Thinking — reasoning_content present in response_metadata
+      if (chunk.response_metadata?.reasoning_content) {
+        return { kind: 'thinking', content: chunk.response_metadata.reasoning_content };
       }
 
       // Text delta
-      if (kwargs.content) {
-        return { kind: 'text', content: kwargs.content };
+      if (chunk.content) {
+        return { kind: 'text', content: chunk.content };
       }
 
       return { kind: 'skip' };
     }
 
-    if (data.mode === 'updates') {
-      // Tool result from the tools node
-      const toolMessages = data.chunk?.tools?.messages;
-      if (toolMessages?.length > 0) {
-        const k = toolMessages[0].kwargs ?? {};
-        return {
-          kind: 'tool_result',
-          toolCallId: k.tool_call_id ?? '',
-          content: k.content ?? '',
-          name: k.name ?? '',
-        };
-      }
+    // Agent is about to call a tool
+    if (data.mode === 'tool_calling') {
+      return { kind: 'tool_call_start', id: data.data?.id ?? '', name: data.data?.name ?? '' };
+    }
 
-      // Agent name from the agent node
-      const agentMessages = data.chunk?.agent?.messages;
-      if (agentMessages?.length > 0) {
-        const name = agentMessages[0].kwargs?.name;
-        if (name) return { kind: 'agent_name', name };
-      }
+    // Tool execution has completed; contains the full ServerAction result
+    if (data.mode === 'tool_complete') {
+      return {
+        kind: 'tool_result',
+        toolCallId: data.toolCallId ?? '',
+        content: data.data?.content ?? '',
+        name: data.data?.metadata?.tool_name ?? '',
+      };
+    }
 
+    // Final AI response for this turn; may carry the agent name
+    if (data.mode === 'final_response') {
+      const name = data.data?.name;
+      if (name) return { kind: 'agent_name', name };
       return { kind: 'skip' };
     }
 
@@ -143,10 +148,6 @@ export async function streamChat(
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-
-  // Buffer tool call args until we see the matching tool_result
-  const toolCallAccumulators = new Map<string, { name: string; args: string }>();
-  let lastToolId = '';
 
   // Debounce thinking tokens — flush every 50ms or on phase change
   let thinkingBuffer = '';
@@ -192,36 +193,13 @@ export async function streamChat(
             thinkingFlushTimer = setTimeout(flushThinking, 50);
             break;
 
-          case 'tool_call_chunk': {
-            console.log('Received tool call chunk', chunk);
-            
-            if (!chunk.id) {
-              // If the chunk id is empty, we do not know which tool call to assign it too
-              break;
-            }
-
-            const existing = chunk.id
-              ? toolCallAccumulators.get(chunk.id)
-              : toolCallAccumulators.get(lastToolId);
-            if (existing) {
-              existing.args += chunk.args;
-            } else {
-              lastToolId = chunk.id;
-              toolCallAccumulators.set(chunk.id, { name: chunk.name, args: chunk.args });
-              emit({ type: 'chat:stream:tool_call_start', id: chunk.id, name: chunk.name });
-            }
+          case 'tool_call_start':
+            emit({ type: 'chat:stream:tool_call_start', id: chunk.id, name: chunk.name });
             break;
-          }
 
           case 'tool_result': {
-            console.log('Received tool result chunk', chunk);
-
-            // Flush accumulated args for this call before emitting the result
-            const acc = toolCallAccumulators.get(chunk.toolCallId);
-            if (acc) {
-              emit({ type: 'chat:stream:tool_call_complete', id: chunk.toolCallId, args: acc.args });
-              toolCallAccumulators.delete(chunk.toolCallId);
-            }
+            // The backend emits tool calls atomically — emit complete (no args) then the result
+            emit({ type: 'chat:stream:tool_call_complete', id: chunk.toolCallId, args: '' });
             emit({
               type: 'chat:stream:tool_result',
               toolCallId: chunk.toolCallId,
@@ -248,10 +226,6 @@ export async function streamChat(
   } finally {
     // Flush any remaining thinking content
     flushThinking();
-    // Flush any tool calls whose result never arrived (edge case)
-    for (const [id, acc] of toolCallAccumulators) {
-      emit({ type: 'chat:stream:tool_call_complete', id, args: acc.args });
-    }
     emit({ type: 'chat:stream:done' });
   }
 }
@@ -275,29 +249,61 @@ export interface RefreshThreadsMessage {
 
 export type RefreshThreadsResponse = inferResponseEvents<REFRESH_THREADS_EVT_TYPE, ThreadsResponse>;
 
-export async function refreshThreads(): Promise<RefreshThreadsResponse> {
+export async function refreshThreads(
+  emit: (msg: RefreshThreadsResponse) => void,
+): Promise<void> {
+  try {
+    const cached = await cacheGet<ThreadsResponse>('threads', 'list');
+    if (cached) {
+      emit({ type: 'refresh:threads:response', data: cached });
+    }
+  } catch { /* cache miss is fine */ }
+
   try {
     const data = await listThreads();
-    return { type: 'refresh:threads:response', data };
+    await cachePut('threads', 'list', data);
+    emit({ type: 'refresh:threads:response', data });
   } catch (error) {
-    return {
+    emit({
       type: 'refresh:threads:error',
       error: error instanceof Error ? error.message : String(error),
-    };
+    });
   }
 }
 
 /**
  * @see /backend/src/controllers/v1/chat.ts#L153 for the source of truth on this endpoint's behavior.
  */
-export async function getThread(threadId: string): Promise<GetThreadResponse> {
+export async function getThread(
+  threadId: string,
+  emit: (msg: GetThreadResponse) => void,
+): Promise<void> {
+  try {
+    const cached = await cacheGet<ThreadResponse>('thread-data', threadId);
+    if (cached) {
+      emit({ type: 'get:thread:response', data: cached });
+    }
+  } catch { /* cache miss is fine */ }
+
   try {
     const data = await getThreadHistory(threadId);
-    return { type: 'get:thread:response', data };
+    await cachePut('thread-data', threadId, data);
+    emit({ type: 'get:thread:response', data });
   } catch (error) {
-    return {
+    emit({
       type: 'get:thread:error',
       error: error instanceof Error ? error.message : String(error),
-    };
+    });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Resume stream (reconnect after navigation)
+// ---------------------------------------------------------------------------
+
+export const RESUME_STREAM_EVT = 'chat:stream:resume:check' as const;
+
+export interface ResumeStreamMessage {
+  type: typeof RESUME_STREAM_EVT;
+  threadId: string;
 }

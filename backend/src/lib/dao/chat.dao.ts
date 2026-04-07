@@ -10,6 +10,16 @@ export function createChat(input: ChatMessage) {
   });
 }
 
+/**
+ * Create a new chat message in the thread
+ * @param threadId 
+ * @param input 
+ * @param parentId 
+ */
+export function createChatMessage(threadId: string, input: ChatMessage, parentId?: number) {
+  
+}
+
 export function getChatByThreadId(threadId: string) {
   return prisma.node.findMany({
     where: {

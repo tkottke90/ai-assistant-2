@@ -15,7 +15,11 @@ const severityStyles = {
 }
 
 function getToolSummary(message: ServerAction): string | undefined {
-  return message.metadata?.tool_summary as string | undefined;
+  if (message.metadata?.tool_summary) return message.metadata.tool_summary as string;
+  // Derive a summary for historical messages where tool_summary was not persisted
+  const toolName = message.metadata?.tool_name as string | undefined;
+  if (toolName) return `${toolName}: ${message.content}`.slice(0, 120);
+  return undefined;
 }
 
 function formatRawContent(content: string): string {

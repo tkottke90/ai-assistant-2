@@ -16,6 +16,7 @@ import { AgentTitle } from "./title";
 import { useLocation } from "preact-iso";
 import { fireWorkerEvent } from "@/lib/workerClient";
 import { REFRESH_THREADS_EVT } from "@/lib/chat";
+import { REFRESH_AGENTS_EVT } from "@/lib/agents";
 
 // Pure utility functions for pagination navigation
 function canGoToNextPage(currentPage: number, totalPages: number): boolean {
@@ -158,6 +159,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                       .then(() => {
                         onChange();
                         fireWorkerEvent({ type: REFRESH_THREADS_EVT });
+                        fireWorkerEvent({ type: REFRESH_AGENTS_EVT });
                         toast.success('Agent stopped successfully', {  });
                       });
                   } else {
@@ -166,6 +168,7 @@ function AgentList({ agents, onChange }: { agents: AgentListResponse[], onChange
                       .then(() => {
                         onChange();
                         fireWorkerEvent({ type: REFRESH_THREADS_EVT });
+                        fireWorkerEvent({ type: REFRESH_AGENTS_EVT });
                         toast.success('Agent started successfully');
                       });
                   }

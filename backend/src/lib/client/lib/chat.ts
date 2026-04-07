@@ -10,6 +10,43 @@ import {
   ThreadResponse
 } from '../../models/chat.js';
 
+// --- Chat Stream Event Types ---
+
+export interface ChatStreamMessageChunk {
+  id: string;
+  content: string;
+  name?: string;
+  metadata: Record<string, any>;
+  response_metadata: Record<string, any>;
+}
+
+export interface ChatStreamMessageEvent {
+  mode: 'message';
+  chunk: ChatStreamMessageChunk;
+}
+
+export interface ChatStreamToolCallingEvent {
+  mode: 'tool_calling';
+  data: { name: string; id: string };
+}
+
+export interface ChatStreamToolCompleteEvent {
+  mode: 'tool_complete';
+  toolCallId: string;
+  data: ServerAction;
+}
+
+export interface ChatStreamFinalResponseEvent {
+  mode: 'final_response';
+  data: InteractionMessage;
+}
+
+export type ChatStreamEvent =
+  | ChatStreamMessageEvent
+  | ChatStreamToolCallingEvent
+  | ChatStreamToolCompleteEvent
+  | ChatStreamFinalResponseEvent;
+
 // --- Thread Metadata Types ---
 
 export interface ThreadMetadata {

@@ -65,7 +65,7 @@ export class AgentRuntime {
           initialDelayMs: 1000,
         }),
         // createRecursiveScratchpadMiddleware(this.name, this.llm, this.logger.child({ location: `AgentRuntime.${this.name}.Scratchpad` })),
-        createToolSummaryMiddleware(this.name, this.logger, this.llm),
+        // createToolSummaryMiddleware(this.name, this.logger, this.llm),
       ],
     });
   }

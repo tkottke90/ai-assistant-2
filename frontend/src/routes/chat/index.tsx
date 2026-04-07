@@ -1,26 +1,31 @@
+import { type RouterEventMap, useAppContext } from '@/app-context';
 import BaseLayout, { BaseLayoutShowBtn } from "@/components/layouts/base.layout";
 import { Button } from "@/components/ui/button";
 import { useAgentSelection } from "@/hooks/use-agent-selection";
+import type { StreamResume, WorkerStreamEvent } from "@/lib/chat";
+import { GET_THREAD_EVT, REFRESH_THREADS_EVT, RESUME_STREAM_EVT } from "@/lib/chat";
+import { useEventListener } from "@/lib/html-utils";
+import { fireWorkerEvent, useWorkerEvent, useWorkerEventListener } from "@/lib/workerClient";
 import { useComputed, useSignal, useSignalEffect } from "@preact/signals";
 import {
-  resolveAgentAction,
-  type ThreadResponse,
   type AgentAction,
   type ChatMessage,
+  resolveAgentAction,
+  type ThreadResponse,
 } from '@tkottke90/ai-assistant-client';
 import { useLocation, useRoute } from "preact-iso";
 import { useRef } from "preact/hooks";
 import { toast } from "sonner";
-import { selectedAgentName } from "./agent-chips";
+import { ChatContextProvider, useChatContext } from "./chat-context";
 import { ChatForm } from "./chat-form";
 import chatHistory from "./chat-history";
+import {
+  appendToMessage,
+  buildAssistantMessage,
+  patchMessage,
+} from "./chat-utils";
 import { ChatMessageDisplay } from "./messages";
-import { useWorkerEvent, fireWorkerEvent } from "@/lib/workerClient";
 import { ThreadHeader } from "./thread-header";
-import { GET_THREAD_EVT, REFRESH_THREADS_EVT } from "@/lib/chat";
-import { type RouterEventMap, useAppContext } from '@/app-context';
-import { useEventListener } from "@/lib/html-utils";
-import { ChatContextProvider, useChatContext } from "./chat-context";
 
 // ── Pure utility functions ───────────────────────────────────────────────────
 
@@ -150,6 +155,88 @@ function ChatList() {
 
 // ── Chat Page ─────────────────────────────────────────────────────────────────
 
+import type { Signal } from "@preact/signals";
+
+function replayStreamEvent(
+  thread: Signal<ThreadResponse>,
+  activeAssistantId: Signal<string | null>,
+  isStreaming: Signal<boolean>,
+  event: WorkerStreamEvent,
+  id: string,
+): void {
+  switch (event.type) {
+    case 'chat:stream:text_delta':
+      thread.value = {
+        ...thread.value,
+        history: appendToMessage(thread.value.history as ChatMessage[], id, event.content),
+      };
+      break;
+    case 'chat:stream:thinking':
+      thread.value = {
+        ...thread.value,
+        history: (thread.value.history as ChatMessage[]).map(msg => {
+          if (msg.id !== id || msg.type !== 'chat_message') return msg;
+          const existing = (msg.metadata?.thinking as string) ?? '';
+          return { ...msg, metadata: { ...msg.metadata, thinking: existing + event.content } };
+        }),
+      };
+      break;
+    case 'chat:stream:agent_name':
+      thread.value = {
+        ...thread.value,
+        history: patchMessage(thread.value.history as ChatMessage[], id, { name: event.name }),
+      };
+      break;
+    case 'chat:stream:tool_call_start': {
+      const stub = {
+        id: event.id,
+        type: 'server_action' as const,
+        role: 'tool' as const,
+        content: `Calling tool - ${event.name}`,
+        created_at: new Date().toISOString(),
+        metadata: { tool_name: event.name },
+        severity: 0,
+      };
+      const history = thread.value.history.slice(0, -1);
+      const pendingMessage = thread.value.history?.at(-1);
+      thread.value = {
+        ...thread.value,
+        history: [...(history as ChatMessage[]), stub, pendingMessage as ChatMessage],
+      };
+      break;
+    }
+    case 'chat:stream:tool_call_complete':
+      thread.value = {
+        ...thread.value,
+        history: (thread.value.history as ChatMessage[]).map(msg =>
+          msg.id === event.id && msg.type === 'server_action'
+            ? { ...msg, metadata: { ...msg.metadata, tool_args: event.args } }
+            : msg
+        ),
+      };
+      break;
+    case 'chat:stream:tool_result':
+      thread.value = {
+        ...thread.value,
+        history: (thread.value.history as ChatMessage[]).map(msg =>
+          msg.id === event.toolCallId && msg.type === 'server_action'
+            ? { ...msg, content: event.content, metadata: { ...msg.metadata, tool_summary: event.summary } }
+            : msg
+        ),
+      };
+      break;
+    case 'chat:stream:done':
+      activeAssistantId.value = null;
+      isStreaming.value = false;
+      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
+      break;
+    case 'chat:stream:error':
+      activeAssistantId.value = null;
+      isStreaming.value = false;
+      break;
+  }
+}
+
 export function ChatPage() {
   const route = useRoute();
   const { route: navigate } = useLocation();
@@ -159,6 +246,7 @@ export function ChatPage() {
   const threadId = useSignal(route.params?.threadId || '');
   const thread = useSignal<ThreadResponse>({} as ThreadResponse);
   const isStreaming = useSignal(false);
+  const activeAssistantId = useSignal<string | null>(null);
 
   // Agent selection (manages list of active agents + selected agent ID)
   const agentSelection = useAgentSelection();
@@ -180,6 +268,8 @@ export function ChatPage() {
     const id = threadId.value;
     if (id) {
       fetchThread({ threadId: id });
+      // Check if there's an active stream we can reconnect to
+      fireWorkerEvent({ type: RESUME_STREAM_EVT, threadId: id });
     } else {
       chatHistory.loadOrCreateThread().then(newId => {
         navigate(`/chat/${newId}`, true);
@@ -202,6 +292,30 @@ export function ChatPage() {
     },
   );
 
+  // Handle stream resume — replay snapshot events to rebuild the partial assistant message
+  useWorkerEventListener('chat:stream:resume', (e) => {
+    const detail = e.detail as StreamResume;
+    if (detail.threadId !== threadId.value) return;
+
+    const assistantMsg = buildAssistantMessage(detail.agentName);
+    const id = detail.assistantId || assistantMsg.id;
+    assistantMsg.id = id;
+
+    activeAssistantId.value = id;
+    isStreaming.value = true;
+
+    // Append the empty assistant message to the thread
+    thread.value = {
+      ...thread.value,
+      history: [...(thread.value.history ?? []), assistantMsg],
+    };
+
+    // Replay accumulated events to rebuild assistant message state
+    for (const event of detail.events) {
+      replayStreamEvent(thread, activeAssistantId, isStreaming, event, id);
+    }
+  });
+
   return (
     <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
       <header className="flex gap-2 items-center w-full">
@@ -210,7 +324,7 @@ export function ChatPage() {
           <h2 className="inline">Chat</h2>
         </span>
       </header>
-      <ChatContextProvider value={{ thread, agentSelection, isStreaming }}>
+      <ChatContextProvider value={{ thread, agentSelection, isStreaming, activeAssistantId }}>
         <ChatPageContent />
       </ChatContextProvider>
     </BaseLayout>

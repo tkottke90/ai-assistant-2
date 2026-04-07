@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { LlmSelector } from "@/components/llm-selector";
 import type { Signal } from "@preact/signals";
-import { useSignal } from "@preact/signals";
 import { SendHorizonal } from "lucide-preact";
 import { toast } from "sonner";
 import type { ActiveAgent, ChatMessage, ServerAction, ThreadResponse } from "@tkottke90/ai-assistant-client";
@@ -57,17 +56,16 @@ export function createSubmitHandler(
       alias: selectedAlias.value || undefined,
       model: selectedModel.value || undefined,
       agentId: selectedAgentId.value ?? undefined,
+      agentName,
+      assistantId: assistantMessage.id,
     });
   };
 }
 
 export function ChatForm() {
-  const { thread, agentSelection, isStreaming } = useChatContext();
+  const { thread, agentSelection, isStreaming, activeAssistantId } = useChatContext();
   const llmSelection = useLlmSelection();
   const { selectedAlias, selectedModel } = llmSelection;
-
-  // Tracks the id of the currently-streaming assistant InteractionMessage
-  const activeAssistantId = useSignal<string | null>(null);
 
   // ── Stream event handlers ────────────────────────────────────────────────
 

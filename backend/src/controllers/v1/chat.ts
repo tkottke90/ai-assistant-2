@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createAgent } from 'langchain';
-import { HumanMessage } from '@langchain/core/messages';
+import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { checkpointer, prisma } from '../../lib/database';
 import { ZodBodyValidator, ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
@@ -8,6 +8,7 @@ import { InteractionSchema, ServerActionSchema, threadResponseSchema } from '../
 import crypto from 'node:crypto';
 import ThreadDao from '../../lib/dao/thread.dao.js';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
+import { chatHandler } from './chat/chatMessage';
 
 export const router = Router();
 
@@ -19,69 +20,7 @@ const ChatRequestSchema = z.object({
   agentId: z.number().optional(),
 });
 
-router.post('/', ZodBodyValidator(ChatRequestSchema), async (req, res) => {
-  const { message, threadId, alias, model, agentId } = req.body;
-
-  // Set headers for HTTP chunked streaming
-  res.setHeader('Content-Type', 'application/octet-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  try {
-    const llm = (alias && model)
-      ? req.app.llm.getClientWithModel(alias, model)
-      : req.app.llm.getClient(alias);
-
-    let agent;
-
-    if (agentId != null) {
-      const agentManager = req.app.agents;
-      const runtime = agentManager.getAgent(agentId);
-
-      
-      if (!runtime || !agentManager.isActive(agentId)) {
-        res.write(`data: ${JSON.stringify({ error: 'Agent not found or not active' })}\n\n`);
-        res.end();
-        return;
-      }
-
-      runtime.logger.info('Reviewing Message', runtime.agentDetails);
-
-      const abortController = new AbortController();
-      res.on('close', () => abortController.abort());
-      agent = await runtime.getAgent(abortController.signal);
-    } else {
-      agent = createAgent({
-        model: llm,
-        checkpointer,
-        name: 'chat-agent',
-      });
-    }
-
-    const stream = agent.stream(
-      { messages: [{ role: "user", content: message }] },
-      { streamMode: ["updates", "messages", "custom"], configurable: { thread_id: threadId } }
-    );
-
-    req.logger.debug('Starting streamed response');
-    for await (const [streamMode, chunk] of await stream) {
-      // Send each chunk to the client
-      const data = JSON.stringify({ mode: streamMode, chunk });
-      res.write(`data: ${data}\n\n`);
-    }
-
-    const ckpt = await checkpointer.get({ configurable: { thread_id: threadId } })
-
-    // Signal completion
-    req.logger.debug('Full response sent');
-    res.write('done: [DONE]\n\n');
-    res.end();
-  } catch (error) {
-    req.logger.error('Stream error:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Stream error occurred' })}\n\n`);
-    res.end();
-  }
-});
+router.post('/', ZodBodyValidator(ChatRequestSchema), chatHandler);
 
 // --- Thread Management ---
 
@@ -264,7 +203,10 @@ router.get(
                 id: msg.id,
                 content: msg.content,
                 created_at: ts,
-                metadata: msg.additional_kwargs,
+                metadata: {
+                  ...msg.additional_kwargs,
+                  tool_name: msg.name,
+                },
                 role: msg.type,
                 actions: (msg.response_metadata as Record<string, any>)?.actions || [],
                 severity: (msg.response_metadata as Record<string, any>)?.severity ?? 0

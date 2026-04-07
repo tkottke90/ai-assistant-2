@@ -27,19 +27,19 @@ export type AggregateEdge = {
 }
 
 export type EdgeAvgAggregateOutputType = {
-  node_id: number | null
+  edge_id: number | null
   source_id: number | null
   target_id: number | null
 }
 
 export type EdgeSumAggregateOutputType = {
-  node_id: number | null
+  edge_id: number | null
   source_id: number | null
   target_id: number | null
 }
 
 export type EdgeMinAggregateOutputType = {
-  node_id: number | null
+  edge_id: number | null
   source_id: number | null
   target_id: number | null
   type: string | null
@@ -48,7 +48,7 @@ export type EdgeMinAggregateOutputType = {
 }
 
 export type EdgeMaxAggregateOutputType = {
-  node_id: number | null
+  edge_id: number | null
   source_id: number | null
   target_id: number | null
   type: string | null
@@ -57,7 +57,7 @@ export type EdgeMaxAggregateOutputType = {
 }
 
 export type EdgeCountAggregateOutputType = {
-  node_id: number
+  edge_id: number
   source_id: number
   target_id: number
   type: number
@@ -69,19 +69,19 @@ export type EdgeCountAggregateOutputType = {
 
 
 export type EdgeAvgAggregateInputType = {
-  node_id?: true
+  edge_id?: true
   source_id?: true
   target_id?: true
 }
 
 export type EdgeSumAggregateInputType = {
-  node_id?: true
+  edge_id?: true
   source_id?: true
   target_id?: true
 }
 
 export type EdgeMinAggregateInputType = {
-  node_id?: true
+  edge_id?: true
   source_id?: true
   target_id?: true
   type?: true
@@ -90,7 +90,7 @@ export type EdgeMinAggregateInputType = {
 }
 
 export type EdgeMaxAggregateInputType = {
-  node_id?: true
+  edge_id?: true
   source_id?: true
   target_id?: true
   type?: true
@@ -99,7 +99,7 @@ export type EdgeMaxAggregateInputType = {
 }
 
 export type EdgeCountAggregateInputType = {
-  node_id?: true
+  edge_id?: true
   source_id?: true
   target_id?: true
   type?: true
@@ -196,7 +196,7 @@ export type EdgeGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 }
 
 export type EdgeGroupByOutputType = {
-  node_id: number
+  edge_id: number
   source_id: number
   target_id: number
   type: string
@@ -229,7 +229,7 @@ export type EdgeWhereInput = {
   AND?: Prisma.EdgeWhereInput | Prisma.EdgeWhereInput[]
   OR?: Prisma.EdgeWhereInput[]
   NOT?: Prisma.EdgeWhereInput | Prisma.EdgeWhereInput[]
-  node_id?: Prisma.IntFilter<"Edge"> | number
+  edge_id?: Prisma.IntFilter<"Edge"> | number
   source_id?: Prisma.IntFilter<"Edge"> | number
   target_id?: Prisma.IntFilter<"Edge"> | number
   type?: Prisma.StringFilter<"Edge"> | string
@@ -241,7 +241,7 @@ export type EdgeWhereInput = {
 }
 
 export type EdgeOrderByWithRelationInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
@@ -253,7 +253,7 @@ export type EdgeOrderByWithRelationInput = {
 }
 
 export type EdgeWhereUniqueInput = Prisma.AtLeast<{
-  node_id?: number
+  edge_id?: number
   source_id_target_id_type?: Prisma.EdgeSource_idTarget_idTypeCompoundUniqueInput
   AND?: Prisma.EdgeWhereInput | Prisma.EdgeWhereInput[]
   OR?: Prisma.EdgeWhereInput[]
@@ -266,10 +266,10 @@ export type EdgeWhereUniqueInput = Prisma.AtLeast<{
   updated_at?: Prisma.DateTimeFilter<"Edge"> | Date | string
   target?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
   source?: Prisma.XOR<Prisma.NodeScalarRelationFilter, Prisma.NodeWhereInput>
-}, "node_id" | "source_id_target_id_type">
+}, "edge_id" | "source_id_target_id_type">
 
 export type EdgeOrderByWithAggregationInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
@@ -287,7 +287,7 @@ export type EdgeScalarWhereWithAggregatesInput = {
   AND?: Prisma.EdgeScalarWhereWithAggregatesInput | Prisma.EdgeScalarWhereWithAggregatesInput[]
   OR?: Prisma.EdgeScalarWhereWithAggregatesInput[]
   NOT?: Prisma.EdgeScalarWhereWithAggregatesInput | Prisma.EdgeScalarWhereWithAggregatesInput[]
-  node_id?: Prisma.IntWithAggregatesFilter<"Edge"> | number
+  edge_id?: Prisma.IntWithAggregatesFilter<"Edge"> | number
   source_id?: Prisma.IntWithAggregatesFilter<"Edge"> | number
   target_id?: Prisma.IntWithAggregatesFilter<"Edge"> | number
   type?: Prisma.StringWithAggregatesFilter<"Edge"> | string
@@ -306,7 +306,7 @@ export type EdgeCreateInput = {
 }
 
 export type EdgeUncheckedCreateInput = {
-  node_id?: number
+  edge_id?: number
   source_id: number
   target_id: number
   type: string
@@ -325,7 +325,7 @@ export type EdgeUpdateInput = {
 }
 
 export type EdgeUncheckedUpdateInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  edge_id?: Prisma.IntFieldUpdateOperationsInput | number
   source_id?: Prisma.IntFieldUpdateOperationsInput | number
   target_id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.StringFieldUpdateOperationsInput | string
@@ -335,7 +335,7 @@ export type EdgeUncheckedUpdateInput = {
 }
 
 export type EdgeCreateManyInput = {
-  node_id?: number
+  edge_id?: number
   source_id: number
   target_id: number
   type: string
@@ -352,7 +352,7 @@ export type EdgeUpdateManyMutationInput = {
 }
 
 export type EdgeUncheckedUpdateManyInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  edge_id?: Prisma.IntFieldUpdateOperationsInput | number
   source_id?: Prisma.IntFieldUpdateOperationsInput | number
   target_id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.StringFieldUpdateOperationsInput | string
@@ -378,7 +378,7 @@ export type EdgeSource_idTarget_idTypeCompoundUniqueInput = {
 }
 
 export type EdgeCountOrderByAggregateInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
@@ -388,13 +388,13 @@ export type EdgeCountOrderByAggregateInput = {
 }
 
 export type EdgeAvgOrderByAggregateInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
 }
 
 export type EdgeMaxOrderByAggregateInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
@@ -403,7 +403,7 @@ export type EdgeMaxOrderByAggregateInput = {
 }
 
 export type EdgeMinOrderByAggregateInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
@@ -412,7 +412,7 @@ export type EdgeMinOrderByAggregateInput = {
 }
 
 export type EdgeSumOrderByAggregateInput = {
-  node_id?: Prisma.SortOrder
+  edge_id?: Prisma.SortOrder
   source_id?: Prisma.SortOrder
   target_id?: Prisma.SortOrder
 }
@@ -510,7 +510,7 @@ export type EdgeCreateWithoutTargetInput = {
 }
 
 export type EdgeUncheckedCreateWithoutTargetInput = {
-  node_id?: number
+  edge_id?: number
   source_id: number
   type: string
   properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -536,7 +536,7 @@ export type EdgeCreateWithoutSourceInput = {
 }
 
 export type EdgeUncheckedCreateWithoutSourceInput = {
-  node_id?: number
+  edge_id?: number
   target_id: number
   type: string
   properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -573,7 +573,7 @@ export type EdgeScalarWhereInput = {
   AND?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
   OR?: Prisma.EdgeScalarWhereInput[]
   NOT?: Prisma.EdgeScalarWhereInput | Prisma.EdgeScalarWhereInput[]
-  node_id?: Prisma.IntFilter<"Edge"> | number
+  edge_id?: Prisma.IntFilter<"Edge"> | number
   source_id?: Prisma.IntFilter<"Edge"> | number
   target_id?: Prisma.IntFilter<"Edge"> | number
   type?: Prisma.StringFilter<"Edge"> | string
@@ -599,7 +599,7 @@ export type EdgeUpdateManyWithWhereWithoutSourceInput = {
 }
 
 export type EdgeCreateManyTargetInput = {
-  node_id?: number
+  edge_id?: number
   source_id: number
   type: string
   properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -608,7 +608,7 @@ export type EdgeCreateManyTargetInput = {
 }
 
 export type EdgeCreateManySourceInput = {
-  node_id?: number
+  edge_id?: number
   target_id: number
   type: string
   properties: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -625,7 +625,7 @@ export type EdgeUpdateWithoutTargetInput = {
 }
 
 export type EdgeUncheckedUpdateWithoutTargetInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  edge_id?: Prisma.IntFieldUpdateOperationsInput | number
   source_id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.StringFieldUpdateOperationsInput | string
   properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -634,7 +634,7 @@ export type EdgeUncheckedUpdateWithoutTargetInput = {
 }
 
 export type EdgeUncheckedUpdateManyWithoutTargetInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  edge_id?: Prisma.IntFieldUpdateOperationsInput | number
   source_id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.StringFieldUpdateOperationsInput | string
   properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -651,7 +651,7 @@ export type EdgeUpdateWithoutSourceInput = {
 }
 
 export type EdgeUncheckedUpdateWithoutSourceInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  edge_id?: Prisma.IntFieldUpdateOperationsInput | number
   target_id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.StringFieldUpdateOperationsInput | string
   properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -660,7 +660,7 @@ export type EdgeUncheckedUpdateWithoutSourceInput = {
 }
 
 export type EdgeUncheckedUpdateManyWithoutSourceInput = {
-  node_id?: Prisma.IntFieldUpdateOperationsInput | number
+  edge_id?: Prisma.IntFieldUpdateOperationsInput | number
   target_id?: Prisma.IntFieldUpdateOperationsInput | number
   type?: Prisma.StringFieldUpdateOperationsInput | string
   properties?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -671,7 +671,7 @@ export type EdgeUncheckedUpdateManyWithoutSourceInput = {
 
 
 export type EdgeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  node_id?: boolean
+  edge_id?: boolean
   source_id?: boolean
   target_id?: boolean
   type?: boolean
@@ -683,7 +683,7 @@ export type EdgeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 }, ExtArgs["result"]["edge"]>
 
 export type EdgeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  node_id?: boolean
+  edge_id?: boolean
   source_id?: boolean
   target_id?: boolean
   type?: boolean
@@ -695,7 +695,7 @@ export type EdgeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 }, ExtArgs["result"]["edge"]>
 
 export type EdgeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  node_id?: boolean
+  edge_id?: boolean
   source_id?: boolean
   target_id?: boolean
   type?: boolean
@@ -707,7 +707,7 @@ export type EdgeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 }, ExtArgs["result"]["edge"]>
 
 export type EdgeSelectScalar = {
-  node_id?: boolean
+  edge_id?: boolean
   source_id?: boolean
   target_id?: boolean
   type?: boolean
@@ -716,7 +716,7 @@ export type EdgeSelectScalar = {
   updated_at?: boolean
 }
 
-export type EdgeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"node_id" | "source_id" | "target_id" | "type" | "properties" | "created_at" | "updated_at", ExtArgs["result"]["edge"]>
+export type EdgeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"edge_id" | "source_id" | "target_id" | "type" | "properties" | "created_at" | "updated_at", ExtArgs["result"]["edge"]>
 export type EdgeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   target?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
   source?: boolean | Prisma.NodeDefaultArgs<ExtArgs>
@@ -737,7 +737,7 @@ export type $EdgePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     source: Prisma.$NodePayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
-    node_id: number
+    edge_id: number
     source_id: number
     target_id: number
     type: string
@@ -827,8 +827,8 @@ export interface EdgeDelegate<ExtArgs extends runtime.Types.Extensions.InternalA
    * // Get first 10 Edges
    * const edges = await prisma.edge.findMany({ take: 10 })
    * 
-   * // Only select the `node_id`
-   * const edgeWithNode_idOnly = await prisma.edge.findMany({ select: { node_id: true } })
+   * // Only select the `edge_id`
+   * const edgeWithEdge_idOnly = await prisma.edge.findMany({ select: { edge_id: true } })
    * 
    */
   findMany<T extends EdgeFindManyArgs>(args?: Prisma.SelectSubset<T, EdgeFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EdgePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
@@ -872,9 +872,9 @@ export interface EdgeDelegate<ExtArgs extends runtime.Types.Extensions.InternalA
    *   ]
    * })
    * 
-   * // Create many Edges and only return the `node_id`
-   * const edgeWithNode_idOnly = await prisma.edge.createManyAndReturn({
-   *   select: { node_id: true },
+   * // Create many Edges and only return the `edge_id`
+   * const edgeWithEdge_idOnly = await prisma.edge.createManyAndReturn({
+   *   select: { edge_id: true },
    *   data: [
    *     // ... provide data here
    *   ]
@@ -963,9 +963,9 @@ export interface EdgeDelegate<ExtArgs extends runtime.Types.Extensions.InternalA
    *   ]
    * })
    * 
-   * // Update zero or more Edges and only return the `node_id`
-   * const edgeWithNode_idOnly = await prisma.edge.updateManyAndReturn({
-   *   select: { node_id: true },
+   * // Update zero or more Edges and only return the `edge_id`
+   * const edgeWithEdge_idOnly = await prisma.edge.updateManyAndReturn({
+   *   select: { edge_id: true },
    *   where: {
    *     // ... provide filter here
    *   },
@@ -1169,7 +1169,7 @@ export interface Prisma__EdgeClient<T, Null = never, ExtArgs extends runtime.Typ
  * Fields of the Edge model
  */
 export interface EdgeFieldRefs {
-  readonly node_id: Prisma.FieldRef<"Edge", 'Int'>
+  readonly edge_id: Prisma.FieldRef<"Edge", 'Int'>
   readonly source_id: Prisma.FieldRef<"Edge", 'Int'>
   readonly target_id: Prisma.FieldRef<"Edge", 'Int'>
   readonly type: Prisma.FieldRef<"Edge", 'String'>

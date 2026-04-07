@@ -1,9 +1,11 @@
 import { AIMessage, ToolMessage, BaseMessage, createAgent, HumanMessage } from "langchain";
 import express from 'express';
-import { checkpointer, prisma } from '@/lib/database';
+import { checkpointer } from '@/lib/database';
 import { Logger } from "winston";
-import { InteractionSchema, ServerActionSchema } from '@/lib/models/chat';
+import { ChatMessage, InteractionSchema, ServerActionSchema } from '@/lib/models/chat';
+import { createChatMessage } from '@/lib/dao/chat.dao';
 import ThreadDao from '@/lib/dao/thread.dao';
+import crypto from 'node:crypto';
 
 type ChatHistoryEntry =
   | { kind: "tool_calling";    message: AIMessage }
@@ -39,19 +41,20 @@ export function classifyMessage(msg: BaseMessage): ChatHistoryEntry | null {
  * @param res - Express response used to write SSE events
  * @param logger - Logger instance
  * @param previousMessageCount - Number of messages seen before this chunk (for diffing)
- * @returns The new messages added in this chunk and the updated total message count
+ * @returns The new messages added in this chunk, the updated total message count, and parsed ChatMessage objects for persistence
  */
 export function processValueChunk(
   chunk: any,
   res: express.Response,
   logger: Logger,
   previousMessageCount: number
-): { messages: BaseMessage[]; messageCount: number } {
+): { messages: BaseMessage[]; messageCount: number; chatMessages: ChatMessage[] } {
   logger.silly('Processing value chunk:', chunk);
 
   const allMessages: BaseMessage[] = chunk.messages ?? [];
   const justAdded = allMessages.slice(previousMessageCount);
   const newMessages: BaseMessage[] = [];
+  const chatMessages: ChatMessage[] = [];
 
   for (const msg of justAdded) {
     const entry = classifyMessage(msg);
@@ -78,6 +81,7 @@ export function processValueChunk(
         });
         res.write(`data: ${JSON.stringify({ mode: 'tool_complete', toolCallId: entry.message.tool_call_id, data: serverAction })}\n\n`);
         newMessages.push(entry.message);
+        chatMessages.push(serverAction);
         break;
       }
 
@@ -98,12 +102,13 @@ export function processValueChunk(
         });
         res.write(`data: ${JSON.stringify({ mode: 'final_response', data: interaction })}\n\n`);
         newMessages.push(entry.message);
+        chatMessages.push(interaction);
         break;
       }
     }
   }
 
-  return { messages: newMessages, messageCount: allMessages.length };
+  return { messages: newMessages, messageCount: allMessages.length, chatMessages };
 }
 
 export async function chatHandler(
@@ -155,6 +160,18 @@ export async function chatHandler(
         name: 'chat-agent',
       });
     }
+
+    // Persist the human message as a Node before streaming starts
+    const humanMsg = InteractionSchema.parse({
+      type: 'chat_message',
+      id: crypto.randomUUID(),
+      content: message,
+      role: 'human',
+      created_at: new Date().toISOString(),
+      metadata: {},
+    });
+    const humanNode = await createChatMessage(threadId, humanMsg);
+    let lastNodeId: number = humanNode.node_id;
 
     // Construct the user message
     const newMessages: BaseMessage[] = [
@@ -209,6 +226,10 @@ export async function chatHandler(
           const result = processValueChunk(chunk, res, req.logger, previousMessageCount);
           newMessages.push(...result.messages);
           previousMessageCount = result.messageCount;
+          for (const chatMsg of result.chatMessages) {
+            const node = await createChatMessage(threadId, chatMsg, lastNodeId);
+            lastNodeId = node.node_id;
+          }
           break;
         }
         default:

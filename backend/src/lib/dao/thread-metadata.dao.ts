@@ -51,7 +51,14 @@ function findAgentThread(agentId: number) {
 
 async function deleteThread(threadId: string) {
   await prisma.$transaction(async (tx) => {
-    // Delete LangGraph checkpoint data first
+    // Delete chat history nodes (edges cascade automatically via onDelete: Cascade)
+    await tx.node.deleteMany({
+      where: {
+        type: 'chat_message',
+        properties: { path: '$.threadId', equals: threadId },
+      },
+    });
+    // Delete LangGraph checkpoint data
     await tx.writes.deleteMany({ where: { thread_id: threadId } });
     await tx.checkpoints.deleteMany({ where: { thread_id: threadId } });
     // Delete the metadata row

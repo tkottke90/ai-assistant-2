@@ -187,6 +187,15 @@ function replayStreamEvent(
         history: patchMessage(thread.value.history as ChatMessage[], id, { name: event.name }),
       };
       break;
+    case 'chat:stream:final_response':
+      thread.value = {
+        ...thread.value,
+        history: patchMessage(thread.value.history as ChatMessage[], id, {
+          usage: event.usage,
+          model: event.model,
+        }),
+      };
+      break;
     case 'chat:stream:tool_call_start': {
       const stub = {
         id: event.id,

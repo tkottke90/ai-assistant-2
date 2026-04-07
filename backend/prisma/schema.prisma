@@ -23,7 +23,7 @@ model Node {
 }
 
 model Edge {
-  node_id    Int      @id @default(autoincrement())
+  edge_id    Int      @id @default(autoincrement())
   source_id  Int
   target_id  Int
   type       String

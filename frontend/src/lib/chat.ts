@@ -1,6 +1,7 @@
 import {
   getThreadHistory,
   listThreads,
+  type InteractionMessage,
   type ThreadResponse,
   type ThreadsResponse,
 } from '@tkottke90/ai-assistant-client';
@@ -34,6 +35,7 @@ export type StreamChunk =
   | { kind: 'tool_call_start'; id: string; name: string }
   | { kind: 'tool_result'; toolCallId: string; content: string; name: string }
   | { kind: 'agent_name'; name: string }
+  | { kind: 'final_response'; usage?: InteractionMessage['usage']; model?: string; name?: string }
   | { kind: 'done' }
   | { kind: 'skip' };
 
@@ -44,6 +46,7 @@ export type StreamToolCallStart   = { type: 'chat:stream:tool_call_start';  id: 
 export type StreamToolCallComplete= { type: 'chat:stream:tool_call_complete'; id: string; args: string };
 export type StreamToolResult      = { type: 'chat:stream:tool_result';      toolCallId: string; content: string; summary: string };
 export type StreamAgentName       = { type: 'chat:stream:agent_name';       name: string };
+export type StreamFinalResponse   = { type: 'chat:stream:final_response';   usage?: InteractionMessage['usage']; model?: string; name?: string };
 export type StreamDone            = { type: 'chat:stream:done' };
 export type StreamError           = { type: 'chat:stream:error';            error: string };
 
@@ -63,6 +66,7 @@ export type WorkerStreamEvent =
   | StreamToolCallComplete
   | StreamToolResult
   | StreamAgentName
+  | StreamFinalResponse
   | StreamDone
   | StreamError;
 
@@ -114,11 +118,14 @@ export function classifyLine(line: string): StreamChunk {
       };
     }
 
-    // Final AI response for this turn; may carry the agent name
+    // Final AI response for this turn; carries usage metrics, model, and agent name
     if (data.mode === 'final_response') {
-      const name = data.data?.name;
-      if (name) return { kind: 'agent_name', name };
-      return { kind: 'skip' };
+      return {
+        kind: 'final_response',
+        usage: data.data?.usage,
+        model: data.data?.model,
+        name: data.data?.name,
+      };
     }
 
     return { kind: 'skip' };
@@ -211,6 +218,11 @@ export async function streamChat(
 
           case 'agent_name':
             emit({ type: 'chat:stream:agent_name', name: chunk.name });
+            break;
+
+          case 'final_response':
+            if (chunk.name) emit({ type: 'chat:stream:agent_name', name: chunk.name });
+            emit({ type: 'chat:stream:final_response', usage: chunk.usage, model: chunk.model, name: chunk.name });
             break;
 
           case 'skip':

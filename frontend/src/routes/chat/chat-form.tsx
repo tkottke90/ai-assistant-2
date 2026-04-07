@@ -146,6 +146,18 @@ export function ChatForm() {
     };
   });
 
+  useWorkerEventListener('chat:stream:final_response', (e) => {
+    const id = activeAssistantId.value;
+    if (!id) return;
+    thread.value = {
+      ...thread.value,
+      history: patchMessage(thread.value.history as ChatMessage[], id, {
+        usage: e.detail.usage,
+        model: e.detail.model,
+      }),
+    };
+  });
+
   useWorkerEventListener('chat:stream:done', () => {
     activeAssistantId.value = null;
     isStreaming.value = false;

@@ -1,23 +1,29 @@
 import { prisma } from '../database.js';
 import { ChatMessage } from '../models/chat.js';
 
-export function createChat(input: ChatMessage) {
-  return prisma.node.create({
-    data: {
-      type: input.type,
-      properties: input as object,
-    }
-  });
-}
-
-/**
- * Create a new chat message in the thread
- * @param threadId 
- * @param input 
- * @param parentId 
- */
 export function createChatMessage(threadId: string, input: ChatMessage, parentId?: number) {
-  
+  return prisma.$transaction(async (tx) => {
+    const node = await tx.node.create({
+      data: {
+        type: 'chat_message',
+        properties: { ...input, threadId } as object,
+        created_at: new Date(input.created_at),
+      },
+    });
+
+    if (parentId != null) {
+      await tx.edge.create({
+        data: {
+          source_id: parentId,
+          target_id: node.node_id,
+          type: 'NEXT_MSG',
+          properties: {},
+        },
+      });
+    }
+
+    return node;
+  });
 }
 
 export function getChatByThreadId(threadId: string) {

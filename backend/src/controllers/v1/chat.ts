@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { createAgent } from 'langchain';
-import { BaseMessage, HumanMessage } from '@langchain/core/messages';
+import { HumanMessage } from '@langchain/core/messages';
 import { checkpointer, prisma } from '../../lib/database';
 import { ZodBodyValidator, ZodParamValidator } from '../../middleware/zod.middleware';
 import z from 'zod';
-import { InteractionSchema, ServerActionSchema, threadResponseSchema } from '../../lib/models/chat';
+import { ChatMessageSchema, InteractionSchema, ServerActionSchema, threadResponseSchema } from '../../lib/models/chat';
 import crypto from 'node:crypto';
-import ThreadDao from '../../lib/dao/thread.dao.js';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
+import { getChatByThreadId } from '../../lib/dao/chat.dao.js';
 import { chatHandler } from './chat/chatMessage';
 
 export const router = Router();
@@ -145,17 +145,17 @@ router.delete('/threads/:threadId', async (req, res): Promise<void> => {
 router.post('/threads/:threadId/summarize', async (req, res): Promise<void> => {
   const threadId = req.params.threadId as string;
 
-  const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
-  if (history.length === 0) {
+  const nodes = await getChatByThreadId(threadId);
+  if (nodes.length === 0) {
     res.status(404).json({ error: 'Thread not found or has no messages' });
     return;
   }
 
-  const excerpt = history
+  const excerpt = nodes
     .slice(0, 6)
-    .map(({ msg }) => {
-      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-      return `${msg.type}: ${content}`;
+    .map((n) => {
+      const msg = ChatMessageSchema.parse(n.properties);
+      return `${msg.role}: ${msg.content}`;
     })
     .join('\n');
 
@@ -184,7 +184,7 @@ router.get(
       return;
     }
 
-    const history = await ThreadDao.getMessagesFromThread(checkpointer, threadId);
+    const nodes = await getChatByThreadId(threadId as string);
 
     res.setHeader('Cache-Control', 'no-store');
 
@@ -193,44 +193,7 @@ router.get(
       threadId,
       agent: metadata.agent ? { id: metadata.agent.agent_id, name: metadata.agent.name } : null,
       consumption: 0,
-      history: history
-        .filter(({ msg }) => msg.content !== '') // Filter out empty messages (placeholders for thinking)
-        .map(({ msg, ts }) => {
-          switch(msg.type) {
-            case 'tool':
-              return ServerActionSchema.parse({
-                type: 'server_action',
-                id: msg.id,
-                content: msg.content,
-                created_at: ts,
-                metadata: {
-                  ...msg.additional_kwargs,
-                  tool_name: msg.name,
-                },
-                role: msg.type,
-                actions: (msg.response_metadata as Record<string, any>)?.actions || [],
-                severity: (msg.response_metadata as Record<string, any>)?.severity ?? 0
-              })
-            case 'ai':
-            case 'human':
-            default: {
-              return InteractionSchema.parse({
-                type: 'chat_message',
-                id: msg.id,
-                content: msg.content,
-                name: msg.name,
-                created_at: ts,
-                metadata: msg.additional_kwargs,
-                role: msg.type,
-                model: (msg.response_metadata as Record<string, any>)?.model,
-                usage: ThreadDao.getMessageUsage(msg),
-                stats: {
-                  ...ThreadDao.getGenerationDetails(msg),
-                }
-              })
-            }
-          }
-        }) 
+      history: nodes.map(n => ChatMessageSchema.parse(n.properties)),
     };
 
 

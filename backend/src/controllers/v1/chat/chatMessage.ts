@@ -142,6 +142,7 @@ export async function chatHandler(
 
     // Create the agent instance
     let agent;
+    let agentId = -1;
 
     if (agentId != null) {
       // If an agentId is provided, have the agent process the message with the existing agent runtime
@@ -163,6 +164,7 @@ export async function chatHandler(
       res.on('close', () => abortController.abort());
 
       // Assign the agent runtime to our variable
+      agentId = runtime.id;
       agent = await runtime.getAgent(abortController.signal);
     } else {
       // Create a generic agent instance without an existing runtime (for ad-hoc messages not tied to a specific agent)

@@ -4,7 +4,7 @@ import type { Logger } from 'winston';
 import type { ToolsConfig } from '../config/tools.schema.js';
 import { ToolsConfigSchema } from '../config/tools.schema.js';
 import AgentToolDao from '../dao/agent-tool.dao.js';
-import { seedBuiltinTools } from './builtin/index.js';
+import { seedBuiltinTools, createDateTool } from './builtin/index.js';
 import { createMemoryTools } from './builtin/memory-tools.js';
 import { createBuiltinTools } from './builtin/tools.js';
 import { McpServerManager } from './mcp/manager.js';
@@ -113,8 +113,9 @@ export class ToolManager {
     });
 
     const memoryTools = createMemoryTools(agentId);
+    const dateTools = [createDateTool()];
 
-    return [...permissionTools, ...memoryTools as StructuredTool[]];
+    return [...permissionTools, ...memoryTools as StructuredTool[], ...dateTools as StructuredTool[]];
   }
 
   /**

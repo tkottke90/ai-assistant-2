@@ -2,14 +2,16 @@ import ToolDao from '../../dao/tool.dao.js';
 import type { StructuredTool } from '@langchain/core/tools';
 import type { Logger } from 'winston';
 export { createMemoryTools } from './memory-tools.js';
+export { createDateTool } from './date-tool.js';
 
-/** Namespaced IDs for the five built-in tools */
+/** Namespaced IDs for the built-in tools */
 export const BUILTIN_IDS = {
   DISCOVER_TOOLS: 'built-in::discover_tools',
   GET_TOOL_DETAILS: 'built-in::get_tool_details',
   REQUEST_PERMISSION: 'built-in::request_permission',
   EXECUTE_ACTION: 'built-in::execute_action',
   EXECUTE_TOOL: 'built-in::execute_tool',
+  GET_DATE: 'built-in::get_date',
 } as const;
 
 interface BuiltinSeedEntry {
@@ -91,6 +93,26 @@ const BUILTIN_SEEDS: BuiltinSeedEntry[] = [
         params: { type: 'object', description: 'Parameters matching the tool input schema' },
       },
       required: ['tool_id', 'params'],
+    },
+  },
+  {
+    id: BUILTIN_IDS.GET_DATE,
+    name: 'get_date',
+    description:
+      'Get the current date and/or time. Supports multiple output formats: ' +
+      '"human" (locale date-time), "human-date" (locale date only), ' +
+      '"iso" (ISO 8601 date-time), and "iso-date" (ISO 8601 date only).',
+    locked_tier: 3,
+    input_schema: {
+      type: 'object',
+      properties: {
+        format: {
+          type: 'string',
+          enum: ['human', 'human-date', 'iso', 'iso-date'],
+          description: 'Output format. Defaults to "human".',
+        },
+      },
+      required: [],
     },
   },
 ];

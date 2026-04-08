@@ -36,7 +36,7 @@ export function LlmSelector({ llmSelection, disabled = false }: LlmSelectorProps
           value={selectedModel.value}
           onChange={(e) => setModel(e.currentTarget.value)}
           disabled={disabled || models.value.length === 0}
-          className="size-sm w-fit max-w-[10rem] rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 dark:hover:bg-input/50"
+          className="size-sm w-fit max-w-40 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 dark:hover:bg-input/50"
         >
           <option value="" disabled>{modelsError.value ? 'Error loading models' : 'Select model'}</option>
           {models.value.map(m => (

@@ -210,4 +210,16 @@ html, body, #app {
   .prose pre {
     @apply my-4;
   }
+
+  .prose a {
+    @apply hover:underline;
+  }
+
+  .prose code {
+    @apply bg-neutral-100 dark:bg-neutral-800 px-1 rounded;
+  }
+
+  .prose p {
+    @apply my-2;
+  }
 }

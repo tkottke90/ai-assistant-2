@@ -78,16 +78,12 @@ export function Drawer({ className, children, trigger, title, onOpen, eventTrigg
     }
 
     dialogRef.current.addEventListener('click', (event) => {
-      const target = event.target as HTMLDialogElement;
+      if (!dialogRef.current) return;
 
-      if (!target || !dialogRef.current) return;
-
-      const rect = dialogRef.current.getBoundingClientRect();
-
-      const outsideX = event.clientX < rect.left || event.clientX >= rect.right;
-      const outsideY = event.clientY < rect.top || event.clientY >= rect.bottom;
-
-      if (outsideX || outsideY) {
+      // When clicking the backdrop, the dialog element itself is the event target.
+      // Child element clicks (including synthetic events from <select>) will have
+      // a child element as the target, not the dialog itself.
+      if (event.target === dialogRef.current) {
         animateExit(dialogRef.current, direction);
       }
     }, { signal: abortController.signal });

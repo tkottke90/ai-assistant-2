@@ -6,6 +6,7 @@ import { ChatMessage, InteractionSchema, ServerActionSchema } from '@/lib/models
 import { createChatMessage } from '@/lib/dao/chat.dao';
 import ThreadDao from '@/lib/dao/thread.dao';
 import crypto from 'node:crypto';
+import { BaseError } from "@tkottke90/js-errors";
 
 type ChatHistoryEntry =
   | { kind: "tool_calling";    message: AIMessage }
@@ -69,15 +70,26 @@ export function processValueChunk(
         break;
 
       case 'tool_complete': {
+        const severity = 
+          (entry.message.response_metadata as Record<string, any>)?.severity
+          ?? (entry.message.status === 'error' ? 2 : 0);
+        
+        
         const serverAction = ServerActionSchema.parse({
           type: 'server_action',
           id: entry.message.id,
           content: typeof entry.message.content === 'string' ? entry.message.content : JSON.stringify(entry.message.content),
           created_at: new Date().toISOString(),
-          metadata: entry.message.additional_kwargs,
+          metadata: {
+            // Add Generic Tool Summary as a fallback if one is not provided
+            tool_summary: `Tool Used: ${entry.message.name}`,
+            args: {},
+            ...entry.message.response_metadata,
+            ...entry.message.additional_kwargs
+          },
           role: entry.message.type,
           actions: (entry.message.response_metadata as Record<string, any>)?.actions ?? [],
-          severity: (entry.message.response_metadata as Record<string, any>)?.severity ?? 0,
+          severity,
         });
         res.write(`data: ${JSON.stringify({ mode: 'tool_complete', toolCallId: entry.message.tool_call_id, data: serverAction })}\n\n`);
         newMessages.push(entry.message);
@@ -242,8 +254,10 @@ export async function chatHandler(
     res.write('done: [DONE]\n\n');
     res.end();
   } catch (error) {
-    req.logger.error('Stream error:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Stream error occurred' })}\n\n`);
+    const err = BaseError.fromCatch(error);
+
+    req.logger.error(err.toString());
+    res.write(`data: ${JSON.stringify({ kind: 'error', message: err.message })}\n\n`);
     res.end();
   }
 }

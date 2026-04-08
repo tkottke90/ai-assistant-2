@@ -1,10 +1,12 @@
 import { Drawer } from "@/components/drawer";
 import { AgentToolList } from "@/components/agent-tool-list";
+import { LlmSelector } from "@/components/llm-selector";
 import { buttonVariants, ConfirmButton, LoadingButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApi } from "@/hooks/use-api";
 import { useAgentTools } from "@/hooks/use-agent-tools";
+import { useLlmSelection } from "@/hooks/use-llm-selection";
 import { formatRelativeDate } from "@/lib/date-utils";
 import { createContextWithHook } from "@/lib/utils";
 import { Signal, useSignal } from "@preact/signals";
@@ -18,7 +20,7 @@ import {
   type Memory,
 } from "@tkottke90/ai-assistant-client";
 import { Pencil, Trash2 } from "lucide-preact";
-import { useCallback } from "preact/hooks";
+import { useCallback, useEffect } from "preact/hooks";
 import { toast } from "sonner";
 import { AgentTitle } from "./title";
 
@@ -50,7 +52,6 @@ export function AgentDrawer(props: iAgentDrawerProps) {
 
     const result = await updateAgentApi({ id: agent.value.agent_id, ...updates });
     agent.value = { ...result, is_active: agent.value.is_active };
-    props.onChange?.();
   }, []);
 
   return (
@@ -59,10 +60,14 @@ export function AgentDrawer(props: iAgentDrawerProps) {
       trigger={<button className={buttonVariants({ size: "icon-xs", variant: "iconInfo" })}><Pencil className="size-full" /></button>}
       className="flex flex-col"
       onOpen={fetchDetails}
+      onClose={() => props.onChange?.()}
     >
       <AgentDrawerContext value={{ agent, details, detailsLoading, updateAgent, refreshDetails: fetchDetails }}>
         <header className="mb-4 min-h-16">
-          <p><strong>Description:&nbsp;</strong>{agent.value.description}</p>
+          <p>
+            <strong>Description:&nbsp;</strong>
+            {agent.value.description}
+          </p>
         </header>
         <main className="grow overflow-auto">
           <Tabs defaultValue="system_prompt" className="w-full h-full">
@@ -74,7 +79,9 @@ export function AgentDrawer(props: iAgentDrawerProps) {
               <TabsTrigger value="system_prompt">System Prompt</TabsTrigger>
               <TabsTrigger value="tools">Tool Access</TabsTrigger>
               <TabsTrigger value="memories">Memories</TabsTrigger>
+              <TabsTrigger value="options">Options</TabsTrigger>
             </TabsList>
+            <hr className="mt-2 opacity-50" />
             <TabsContent value="system_prompt" className="h-full overflow-auto">
               <SystemPromptTab />
             </TabsContent>
@@ -89,6 +96,9 @@ export function AgentDrawer(props: iAgentDrawerProps) {
             </TabsContent>
             <TabsContent value="memories">
               <MemoriesTab />
+            </TabsContent>
+            <TabsContent value="options">
+              <OptionsTab />
             </TabsContent>
           </Tabs>
         </main>
@@ -252,6 +262,115 @@ function MemoriesTab() {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function OptionsTab() {
+  const { agent, updateAgent } = useAgentDrawer();
+  const loading = useSignal(false);
+  const llmLoading = useSignal(false);
+  const error = useSignal<string | null>(null);
+  const llmSelection = useLlmSelection();
+
+  // Seed the LLM selector with the agent's current engine/model on mount
+  useEffect(() => {
+    if (agent.value?.engine) {
+      llmSelection.selectedAlias.value = agent.value.engine;
+    }
+    if (agent.value?.model) {
+      llmSelection.selectedModel.value = agent.value.model;
+    }
+  }, []);
+
+  const handleAutoStartChange = async (checked: boolean) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      await updateAgent({ auto_start: checked });
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to update option';
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const handleLlmSave = async () => {
+    llmLoading.value = true;
+    error.value = null;
+    try {
+      await updateAgent({
+        engine: llmSelection.selectedAlias.value || undefined,
+        model: llmSelection.selectedModel.value || undefined,
+      });
+      toast.success('Model settings saved');
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to save model settings';
+    } finally {
+      llmLoading.value = false;
+    }
+  };
+
+  return (
+    <div className="p-2 space-y-4 flex flex-col h-full">
+      <div className="grow">
+        <div className="flex items-center justify-between rounded-md p-3 bg-neutral-100 dark:bg-neutral-700">
+          <div>
+            <p className="font-medium text-sm">Auto Start</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Automatically start this agent when the application loads.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={agent.value?.auto_start ?? false}
+            disabled={loading.value}
+            onClick={(e) => {
+              e.preventDefault();
+              handleAutoStartChange(!(agent.value?.auto_start ?? false));
+            }}
+            className={[
+              "relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full transition-colors duration-200",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              agent.value?.auto_start
+                ? "bg-blue-500 dark:bg-blue-600"
+                : "bg-neutral-300 dark:bg-neutral-600",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
+                agent.value?.auto_start ? "translate-x-4.5" : "translate-x-0.5",
+              ].join(" ")}
+            />
+          </button>
+        </div>
+
+        <div className="rounded-md p-3 bg-neutral-100 dark:bg-neutral-700 space-y-3">
+          <div>
+            <p className="font-medium text-sm">Model / Engine</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Select the LLM engine and model for this agent.
+            </p>
+          </div>
+          <LlmSelector llmSelection={llmSelection} disabled={llmLoading.value} />
+        </div>
+
+        {error.value && (
+          <p className="text-sm text-red-500 dark:text-red-400">{error.value}</p>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <LoadingButton
+          loading={llmLoading}
+          variant="constructive"
+          onClick={handleLlmSave}
+        >
+          Save
+        </LoadingButton>
+      </div>
     </div>
   );
 }

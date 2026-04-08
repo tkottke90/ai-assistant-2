@@ -25,9 +25,11 @@ router.post('/',
     req.logger.debug('Agent created successfully', { ...agent });
     req.logger.info('Registering agent with Agent Manager');
     
-    const llmEngine = req.app.llm.getClient(agentData.engine);
+    const llmEngine = agentData.engine && agentData.model
+      ? req.app.llm.getClientWithModel(agentData.engine, agentData.model)
+      : req.app.llm.getClient(agentData.engine);
     agentManager.registerAgent(
-      AgentRuntime.fromDatabase(agent, llmEngine)
+      AgentRuntime.fromDatabase(agent as any, llmEngine, req.app.tools, req.logger)
     );
     
     req.logger.info('Agent registered successfully');

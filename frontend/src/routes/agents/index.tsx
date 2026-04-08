@@ -237,6 +237,7 @@ function CreateAgentForm() {
           auto_start: false,
           engine: llmSelection.selectedAlias.value || undefined,
           model: llmSelection.selectedModel.value || undefined,
+          version: 1
         }).then(() => {
             dialog.close();
           })

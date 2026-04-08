@@ -37,6 +37,7 @@ export type StreamChunk =
   | { kind: 'agent_name'; name: string }
   | { kind: 'final_response'; usage?: InteractionMessage['usage']; model?: string; name?: string }
   | { kind: 'done' }
+  | { kind: 'error'; message: string }
   | { kind: 'skip' };
 
 // Outbound events sent from the worker to the main thread
@@ -128,6 +129,11 @@ export function classifyLine(line: string): StreamChunk {
       };
     }
 
+    // Error sent by the backend during streaming
+    if (data.error) {
+      return { kind: 'error', message: data.error };
+    }
+
     return { kind: 'skip' };
   } catch {
     return { kind: 'skip' };
@@ -172,6 +178,7 @@ export async function streamChat(
   };
 
   let streamDone = false;
+  let streamErrored = false;
 
   try {
     while (true) {
@@ -225,6 +232,12 @@ export async function streamChat(
             emit({ type: 'chat:stream:final_response', usage: chunk.usage, model: chunk.model, name: chunk.name });
             break;
 
+          case 'error':
+            streamErrored = true;
+            streamDone = true;
+            emit({ type: 'chat:stream:error', error: chunk.message });
+            break;
+
           case 'skip':
           default:
             break;
@@ -238,7 +251,9 @@ export async function streamChat(
   } finally {
     // Flush any remaining thinking content
     flushThinking();
-    emit({ type: 'chat:stream:done' });
+    if (!streamErrored) {
+      emit({ type: 'chat:stream:done' });
+    }
   }
 }
 

@@ -301,6 +301,16 @@ export function ChatPage() {
     },
   );
 
+  // After each turn completes, re-sync thread history from the server so that
+  // in-memory tool-call stubs are replaced with canonical persisted rows.
+  // The worker warms the thread-data cache immediately after streaming, so the
+  // first emit from fetchThread is near-instant (served from IndexedDB).
+  useWorkerEventListener('chat:stream:done', () => {
+    if (threadId.value) {
+      fetchThread({ threadId: threadId.value });
+    }
+  });
+
   // Handle stream resume — replay snapshot events to rebuild the partial assistant message
   useWorkerEventListener('chat:stream:resume', (e) => {
     const detail = e.detail as StreamResume;

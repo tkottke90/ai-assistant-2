@@ -194,7 +194,7 @@ export async function chatHandler(
     // Invoke the agent
     const stream = agent.stream(
       { messages: newMessages },
-      { streamMode: ["messages", "values"], configurable: { thread_id: threadId } }
+      { streamMode: ["messages", "values"], configurable: { thread_id: threadId }, recursionLimit: 50 }
     );
 
 

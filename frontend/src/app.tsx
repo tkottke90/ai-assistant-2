@@ -1,13 +1,14 @@
 import { ErrorBoundary, LocationProvider, Route, Router } from 'preact-iso';
 import { Toaster } from 'sonner';
-import { ChatPage } from './routes/chat/index.tsx';
-import { AgentsPage } from './routes/agents/index.tsx';
-import { ArchivePage } from './routes/archive/index.tsx';
+import { ChatPage } from '@/routes/chat/index.tsx';
+import { AgentsPage } from '@/routes/agents/index.tsx';
+import { ArchivePage } from '@/routes/archive/index.tsx';
 import { useCallback } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { AppContextProvider } from './app-context.tsx';
 import { EvaluationsPage } from './routes/evaluations/index.tsx';
 import { EvaluationDetailsPage } from './routes/evaluations/details/index.tsx';
+import { ToolsPage } from '@/routes/tools/index.tsx';
 
 function NotFound() {
   return (
@@ -42,6 +43,7 @@ function App() {
               <Route path="/archive" component={ArchivePage} />
               <Route path="/evaluations" component={EvaluationsPage} />
               <Route path="/evaluations/:evaluationId" component={EvaluationDetailsPage} />
+              <Route path="/tools" component={ToolsPage} />
               <Route path="*" component={NotFound} />
             </Router>
           </AppContextProvider>

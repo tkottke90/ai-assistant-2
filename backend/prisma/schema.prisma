@@ -100,6 +100,8 @@ model Tool {
   mcp_server_id Int?
   // Set for built-in tools — user cannot override via AgentTool.tier
   locked_tier   Int?
+  // Optional group label resolved from McpServerConfig.tool_groups at registration time
+  group         String?
   input_schema  Json
   output_schema Json?
   created_at    DateTime   @default(now())
@@ -111,6 +113,7 @@ model Tool {
 
   @@index([source])
   @@index([mcp_server_id])
+  @@index([group])
 }
 
 model AgentTool {

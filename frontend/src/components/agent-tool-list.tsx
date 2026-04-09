@@ -10,10 +10,13 @@ import { useEffect, useMemo } from 'preact/hooks';
 // ── Pure utility functions ─────────────────────────────────────────────────────
 
 /** Human-readable label describing where a tool comes from. */
-export function getSourceLabel(source: string, mcpServer: { config_id: string } | null): string {
+export function getSourceLabel(source: string, mcpServer: { config_id: string } | null, group?: string | null): string {
   if (source === 'built-in') return 'Built-in';
   if (source === 'simple') return 'Simple';
-  if (source === 'mcp' && mcpServer) return `MCP: ${mcpServer.config_id}`;
+  if (source === 'mcp') {
+    if (group) return `MCP: ${group}`;
+    if (mcpServer) return `MCP: ${mcpServer.config_id}`;
+  }
   return source;
 }
 
@@ -121,7 +124,7 @@ export function ToolRow({ tool, onTierChange, onRemove }: {
         <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate font-mono">{tool.id}</p>
       </div>
       <span className={`shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium ${sourceBadgeClass(tool.source)}`}>
-        {getSourceLabel(tool.source, tool.mcp_server)}
+        {getSourceLabel(tool.source, tool.mcp_server, tool.group)}
       </span>
       <select
         disabled={locked}
@@ -158,7 +161,7 @@ export function AvailableToolRow({ tool, onAdd }: {
         <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate font-mono">{tool.id}</p>
       </div>
       <span className={`shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium ${sourceBadgeClass(tool.source)}`}>
-        {getSourceLabel(tool.source, tool.mcp_server)}
+        {getSourceLabel(tool.source, tool.mcp_server, tool.group)}
       </span>
       <button
         onClick={() => onAdd(tool)}

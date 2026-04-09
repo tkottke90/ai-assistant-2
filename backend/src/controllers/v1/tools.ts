@@ -27,9 +27,8 @@ router.post('/search', ZodBodyValidator(SearchBodySchema), async (req, res) => {
   const results = await discoverTools(
     query,
     agent_id,
-    toolsConfig.discovery_max_results,
-    toolsConfig.discovery_keyword_min_results,
     (configId) => req.app.tools.getServerStatus(configId),
+    toolsConfig.discovery_max_results,
   );
 
   res.json(results);
@@ -167,6 +166,7 @@ router.get('/', async (req, res) => {
     name: tool.name,
     description: tool.description,
     source: tool.source,
+    group: tool.group ?? null,
     mcp_server: tool.mcp_server ? { config_id: tool.mcp_server.config_id } : null,
     assigned: false,
     tier: 1,
@@ -194,6 +194,34 @@ router.get('/:id', ZodParamValidator(ToolIdParamSchema), ZodQueryValidator(ToolQ
   const tool = await ToolDao.getTool(toolId);
   if (!tool) throw new NotFoundError('Tool not found');
   return res.json(tool);
+});
+
+// ─── Tool group update ────────────────────────────────────────────────────────
+
+const UpdateToolGroupBodySchema = z.object({
+  group: z.string().nullable(),
+});
+
+router.patch('/:id', ZodParamValidator(ToolIdParamSchema), ZodBodyValidator(UpdateToolGroupBodySchema), async (req, res) => {
+  const toolId = req.params.id as string;
+  const existing = await ToolDao.getTool(toolId);
+  if (!existing) throw new NotFoundError('Tool not found');
+
+  await ToolDao.updateToolGroup(toolId, req.body.group);
+
+  const updated = await ToolDao.getTool(toolId);
+  res.json({
+    tool_id: updated!.tool_id,
+    id: updated!.id,
+    name: updated!.name,
+    description: updated!.description,
+    source: updated!.source,
+    group: updated!.group ?? null,
+    mcp_server: updated!.mcp_server ? { config_id: updated!.mcp_server.config_id } : null,
+    assigned: false,
+    tier: 1,
+    locked_tier: updated!.locked_tier,
+  });
 });
 
 // ─── Agent tool assignments ───────────────────────────────────────────────────

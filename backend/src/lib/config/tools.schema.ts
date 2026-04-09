@@ -24,6 +24,13 @@ const McpServerConfigSchema = z.object({
   url: z.string().url().optional(),
   /** Environment variables passed to the MCP server process (stdio only) */
   env: z.record(z.string(), z.string()).optional().default({}),
+  /**
+   * Maps tool-name prefixes to human-readable group labels.
+   * Key = prefix (e.g. "github"), value = display label (e.g. "GitHub").
+   * A tool matches a prefix if its name equals the prefix or starts with `prefix + "_"`.
+   * First match wins. Tools with no match have group = null.
+   */
+  tool_groups: z.record(z.string(), z.string()).optional().default({}),
 });
 
 export const ToolsConfigSchema = z.object({

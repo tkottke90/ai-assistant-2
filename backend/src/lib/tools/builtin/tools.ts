@@ -19,8 +19,6 @@ export interface BuiltinToolContext {
   /** Returns the MCP server connection status */
   getServerStatus: (configId: string) => McpServerStatus;
   permissionTtlSeconds: number;
-  maxResults: number;
-  keywordMinResults: number;
 }
 
 /**
@@ -33,8 +31,6 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
       const results = await discoverTools(
         query,
         ctx.agentId,
-        ctx.maxResults,
-        ctx.keywordMinResults,
         ctx.getServerStatus,
       );
       return JSON.stringify(results);
@@ -42,8 +38,11 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
     {
       name: 'discover_tools',
       description:
-        'Search the tool registry for tools relevant to the current task. ' +
-        'Tier 2/3 tools always appear; Tier 1 tools appear only on keyword match.',
+        'List all tools available to you. Returns every tool regardless of tier. ' +
+        'Each result includes a `tier` field: Tier 1 requires request_permission, ' +
+        'Tier 2/3 can be called directly with execute_tool. ' +
+        'Provide a query describing your task to improve future semantic ranking.',
+
       schema: z.object({
         query: z.string().describe('Natural language description of what you need to do'),
       }),

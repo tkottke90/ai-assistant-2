@@ -46,6 +46,7 @@ export type ToolMinAggregateOutputType = {
   source: string | null
   mcp_server_id: number | null
   locked_tier: number | null
+  group: string | null
   created_at: Date | null
   updated_at: Date | null
 }
@@ -58,6 +59,7 @@ export type ToolMaxAggregateOutputType = {
   source: string | null
   mcp_server_id: number | null
   locked_tier: number | null
+  group: string | null
   created_at: Date | null
   updated_at: Date | null
 }
@@ -70,6 +72,7 @@ export type ToolCountAggregateOutputType = {
   source: number
   mcp_server_id: number
   locked_tier: number
+  group: number
   input_schema: number
   output_schema: number
   created_at: number
@@ -98,6 +101,7 @@ export type ToolMinAggregateInputType = {
   source?: true
   mcp_server_id?: true
   locked_tier?: true
+  group?: true
   created_at?: true
   updated_at?: true
 }
@@ -110,6 +114,7 @@ export type ToolMaxAggregateInputType = {
   source?: true
   mcp_server_id?: true
   locked_tier?: true
+  group?: true
   created_at?: true
   updated_at?: true
 }
@@ -122,6 +127,7 @@ export type ToolCountAggregateInputType = {
   source?: true
   mcp_server_id?: true
   locked_tier?: true
+  group?: true
   input_schema?: true
   output_schema?: true
   created_at?: true
@@ -223,6 +229,7 @@ export type ToolGroupByOutputType = {
   source: string
   mcp_server_id: number | null
   locked_tier: number | null
+  group: string | null
   input_schema: runtime.JsonValue
   output_schema: runtime.JsonValue | null
   created_at: Date
@@ -260,6 +267,7 @@ export type ToolWhereInput = {
   source?: Prisma.StringFilter<"Tool"> | string
   mcp_server_id?: Prisma.IntNullableFilter<"Tool"> | number | null
   locked_tier?: Prisma.IntNullableFilter<"Tool"> | number | null
+  group?: Prisma.StringNullableFilter<"Tool"> | string | null
   input_schema?: Prisma.JsonFilter<"Tool">
   output_schema?: Prisma.JsonNullableFilter<"Tool">
   created_at?: Prisma.DateTimeFilter<"Tool"> | Date | string
@@ -277,6 +285,7 @@ export type ToolOrderByWithRelationInput = {
   source?: Prisma.SortOrder
   mcp_server_id?: Prisma.SortOrderInput | Prisma.SortOrder
   locked_tier?: Prisma.SortOrderInput | Prisma.SortOrder
+  group?: Prisma.SortOrderInput | Prisma.SortOrder
   input_schema?: Prisma.SortOrder
   output_schema?: Prisma.SortOrderInput | Prisma.SortOrder
   created_at?: Prisma.SortOrder
@@ -297,6 +306,7 @@ export type ToolWhereUniqueInput = Prisma.AtLeast<{
   source?: Prisma.StringFilter<"Tool"> | string
   mcp_server_id?: Prisma.IntNullableFilter<"Tool"> | number | null
   locked_tier?: Prisma.IntNullableFilter<"Tool"> | number | null
+  group?: Prisma.StringNullableFilter<"Tool"> | string | null
   input_schema?: Prisma.JsonFilter<"Tool">
   output_schema?: Prisma.JsonNullableFilter<"Tool">
   created_at?: Prisma.DateTimeFilter<"Tool"> | Date | string
@@ -314,6 +324,7 @@ export type ToolOrderByWithAggregationInput = {
   source?: Prisma.SortOrder
   mcp_server_id?: Prisma.SortOrderInput | Prisma.SortOrder
   locked_tier?: Prisma.SortOrderInput | Prisma.SortOrder
+  group?: Prisma.SortOrderInput | Prisma.SortOrder
   input_schema?: Prisma.SortOrder
   output_schema?: Prisma.SortOrderInput | Prisma.SortOrder
   created_at?: Prisma.SortOrder
@@ -336,6 +347,7 @@ export type ToolScalarWhereWithAggregatesInput = {
   source?: Prisma.StringWithAggregatesFilter<"Tool"> | string
   mcp_server_id?: Prisma.IntNullableWithAggregatesFilter<"Tool"> | number | null
   locked_tier?: Prisma.IntNullableWithAggregatesFilter<"Tool"> | number | null
+  group?: Prisma.StringNullableWithAggregatesFilter<"Tool"> | string | null
   input_schema?: Prisma.JsonWithAggregatesFilter<"Tool">
   output_schema?: Prisma.JsonNullableWithAggregatesFilter<"Tool">
   created_at?: Prisma.DateTimeWithAggregatesFilter<"Tool"> | Date | string
@@ -348,6 +360,7 @@ export type ToolCreateInput = {
   description: string
   source: string
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -365,6 +378,7 @@ export type ToolUncheckedCreateInput = {
   source: string
   mcp_server_id?: number | null
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -379,6 +393,7 @@ export type ToolUpdateInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -396,6 +411,7 @@ export type ToolUncheckedUpdateInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   mcp_server_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -412,6 +428,7 @@ export type ToolCreateManyInput = {
   source: string
   mcp_server_id?: number | null
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -424,6 +441,7 @@ export type ToolUpdateManyMutationInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -438,6 +456,7 @@ export type ToolUncheckedUpdateManyInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   mcp_server_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -462,6 +481,7 @@ export type ToolCountOrderByAggregateInput = {
   source?: Prisma.SortOrder
   mcp_server_id?: Prisma.SortOrder
   locked_tier?: Prisma.SortOrder
+  group?: Prisma.SortOrder
   input_schema?: Prisma.SortOrder
   output_schema?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
@@ -482,6 +502,7 @@ export type ToolMaxOrderByAggregateInput = {
   source?: Prisma.SortOrder
   mcp_server_id?: Prisma.SortOrder
   locked_tier?: Prisma.SortOrder
+  group?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
 }
@@ -494,6 +515,7 @@ export type ToolMinOrderByAggregateInput = {
   source?: Prisma.SortOrder
   mcp_server_id?: Prisma.SortOrder
   locked_tier?: Prisma.SortOrder
+  group?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
 }
@@ -593,6 +615,7 @@ export type ToolCreateWithoutMcp_serverInput = {
   description: string
   source: string
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -608,6 +631,7 @@ export type ToolUncheckedCreateWithoutMcp_serverInput = {
   description: string
   source: string
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -652,6 +676,7 @@ export type ToolScalarWhereInput = {
   source?: Prisma.StringFilter<"Tool"> | string
   mcp_server_id?: Prisma.IntNullableFilter<"Tool"> | number | null
   locked_tier?: Prisma.IntNullableFilter<"Tool"> | number | null
+  group?: Prisma.StringNullableFilter<"Tool"> | string | null
   input_schema?: Prisma.JsonFilter<"Tool">
   output_schema?: Prisma.JsonNullableFilter<"Tool">
   created_at?: Prisma.DateTimeFilter<"Tool"> | Date | string
@@ -664,6 +689,7 @@ export type ToolCreateWithoutAgent_toolsInput = {
   description: string
   source: string
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -680,6 +706,7 @@ export type ToolUncheckedCreateWithoutAgent_toolsInput = {
   source: string
   mcp_server_id?: number | null
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -709,6 +736,7 @@ export type ToolUpdateWithoutAgent_toolsInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -725,6 +753,7 @@ export type ToolUncheckedUpdateWithoutAgent_toolsInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   mcp_server_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -738,6 +767,7 @@ export type ToolCreateWithoutEvaluation_toolsInput = {
   description: string
   source: string
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -754,6 +784,7 @@ export type ToolUncheckedCreateWithoutEvaluation_toolsInput = {
   source: string
   mcp_server_id?: number | null
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -783,6 +814,7 @@ export type ToolUpdateWithoutEvaluation_toolsInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -799,6 +831,7 @@ export type ToolUncheckedUpdateWithoutEvaluation_toolsInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   mcp_server_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -813,6 +846,7 @@ export type ToolCreateManyMcp_serverInput = {
   description: string
   source: string
   locked_tier?: number | null
+  group?: string | null
   input_schema: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Date | string
@@ -825,6 +859,7 @@ export type ToolUpdateWithoutMcp_serverInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -840,6 +875,7 @@ export type ToolUncheckedUpdateWithoutMcp_serverInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -855,6 +891,7 @@ export type ToolUncheckedUpdateManyWithoutMcp_serverInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   locked_tier?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  group?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input_schema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   output_schema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -909,6 +946,7 @@ export type ToolSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   source?: boolean
   mcp_server_id?: boolean
   locked_tier?: boolean
+  group?: boolean
   input_schema?: boolean
   output_schema?: boolean
   created_at?: boolean
@@ -927,6 +965,7 @@ export type ToolSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   source?: boolean
   mcp_server_id?: boolean
   locked_tier?: boolean
+  group?: boolean
   input_schema?: boolean
   output_schema?: boolean
   created_at?: boolean
@@ -942,6 +981,7 @@ export type ToolSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   source?: boolean
   mcp_server_id?: boolean
   locked_tier?: boolean
+  group?: boolean
   input_schema?: boolean
   output_schema?: boolean
   created_at?: boolean
@@ -957,13 +997,14 @@ export type ToolSelectScalar = {
   source?: boolean
   mcp_server_id?: boolean
   locked_tier?: boolean
+  group?: boolean
   input_schema?: boolean
   output_schema?: boolean
   created_at?: boolean
   updated_at?: boolean
 }
 
-export type ToolOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"tool_id" | "id" | "name" | "description" | "source" | "mcp_server_id" | "locked_tier" | "input_schema" | "output_schema" | "created_at" | "updated_at", ExtArgs["result"]["tool"]>
+export type ToolOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"tool_id" | "id" | "name" | "description" | "source" | "mcp_server_id" | "locked_tier" | "group" | "input_schema" | "output_schema" | "created_at" | "updated_at", ExtArgs["result"]["tool"]>
 export type ToolInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   mcp_server?: boolean | Prisma.Tool$mcp_serverArgs<ExtArgs>
   agent_tools?: boolean | Prisma.Tool$agent_toolsArgs<ExtArgs>
@@ -992,6 +1033,7 @@ export type $ToolPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     source: string
     mcp_server_id: number | null
     locked_tier: number | null
+    group: string | null
     input_schema: runtime.JsonValue
     output_schema: runtime.JsonValue | null
     created_at: Date
@@ -1429,6 +1471,7 @@ export interface ToolFieldRefs {
   readonly source: Prisma.FieldRef<"Tool", 'String'>
   readonly mcp_server_id: Prisma.FieldRef<"Tool", 'Int'>
   readonly locked_tier: Prisma.FieldRef<"Tool", 'Int'>
+  readonly group: Prisma.FieldRef<"Tool", 'String'>
   readonly input_schema: Prisma.FieldRef<"Tool", 'Json'>
   readonly output_schema: Prisma.FieldRef<"Tool", 'Json'>
   readonly created_at: Prisma.FieldRef<"Tool", 'DateTime'>

@@ -145,6 +145,13 @@ tools:
   #       - gateway
   #       - run
   #     env: {}                  # Optional environment variables passed to the process
+  #     # tool_groups maps a tool-name prefix to a human-readable label displayed in the UI.
+  #     # A tool matches if its name equals the prefix OR starts with `prefix + "_"`.
+  #     # Tools with no matching prefix show the server's `id` as the label (e.g. "MCP: docker-mcp").
+  #     tool_groups:
+  #       github: GitHub            # github_* tools → badge reads "MCP: GitHub"
+  #       hackernews: Hacker News   # hackernews_* tools → badge reads "MCP: Hacker News"
+  #       brave: Brave Search
   #
   # http example:
   # mcp_servers:

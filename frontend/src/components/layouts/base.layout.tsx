@@ -22,6 +22,7 @@ function SidebarContents() {
       <main className="grow flex flex-col justify-start overflow-y-auto">
         <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/agents">Agents</a>
         <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/evaluations">Evaluations</a>
+        <a className="w-full text-center py-4 px-6 hover:bg-neutral-500"  href="/tools">Tools</a>
         <hr className="border-neutral-500/30 my-2 mx-4" />
         <ThreadList />
       </main>

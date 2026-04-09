@@ -151,6 +151,7 @@ export const ToolScalarFieldEnum = {
   source: 'source',
   mcp_server_id: 'mcp_server_id',
   locked_tier: 'locked_tier',
+  group: 'group',
   input_schema: 'input_schema',
   output_schema: 'output_schema',
   created_at: 'created_at',

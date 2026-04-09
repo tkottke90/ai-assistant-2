@@ -23,6 +23,7 @@ function upsertTool(data: {
   source: string;
   mcp_server_id?: number | null;
   locked_tier?: number | null;
+  group?: string | null;
   input_schema: Record<string, unknown>;
   output_schema?: Record<string, unknown> | null;
 }) {
@@ -35,12 +36,14 @@ function upsertTool(data: {
       source: data.source,
       mcp_server_id: data.mcp_server_id ?? null,
       locked_tier: data.locked_tier ?? null,
+      group: data.group ?? null,
       input_schema: data.input_schema as any,
       output_schema: (data.output_schema ?? null) as any,
     },
     update: {
       name: data.name,
       description: data.description,
+      group: data.group ?? null,
       input_schema: data.input_schema as any,
       output_schema: (data.output_schema ?? null) as any,
     },
@@ -126,12 +129,17 @@ async function viewAgentTools(agentId: number) {
       name: tool.name,
       description: tool.description,
       source: tool.source,
+      group: tool.group ?? null,
       mcp_server: tool.mcp_server ? { config_id: tool.mcp_server.config_id } : null,
       assigned: isBuiltin ? true : assignment !== null,
       tier: (isBuiltin ? 3 : (assignment?.tier ?? 1)) as 1 | 2 | 3,
       locked_tier: isBuiltin ? 3 : null,
     };
   });
+}
+
+function updateToolGroup(toolId: string, group: string | null) {
+  return prisma.tool.update({ where: { id: toolId }, data: { group } });
 }
 
 function deleteToolsByMcpServer(mcpServerId: number) {
@@ -147,6 +155,7 @@ const ToolDao = {
   listTools,
   viewAgentTools,
   searchToolsByKeyword,
+  updateToolGroup,
   deleteToolsByMcpServer,
 };
 

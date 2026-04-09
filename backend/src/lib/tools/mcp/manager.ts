@@ -14,6 +14,20 @@ import type { Logger } from 'winston';
  * The McpServer DB records are upserted for FK purposes only; tool loading
  * happens through MultiServerMCPClient.getTools() which returns LangChain-ready tools.
  */
+/**
+ * Resolves the display group label for an MCP tool name given the server's group map.
+ * Matches if the tool name equals the prefix or starts with `prefix + "_"`.
+ * Returns the label string, or null if no prefix matches.
+ */
+function resolveToolGroup(toolName: string, groups: Record<string, string>): string | null {
+  for (const [prefix, label] of Object.entries(groups)) {
+    if (toolName === prefix || toolName.startsWith(prefix + '_')) {
+      return label;
+    }
+  }
+  return null;
+}
+
 export class McpServerManager {
   private client: MultiServerMCPClient | null = null;
   private states = new Map<string, McpServerRuntimeState>();
@@ -95,12 +109,14 @@ export class McpServerManager {
       // Upsert each discovered tool into the DB registry
       for (const tool of tools) {
         const namespacedId = `mcp::${cfg.id}::${tool.name}`;
+        const group = resolveToolGroup(tool.name, cfg.tool_groups ?? {});
         await ToolDao.upsertTool({
           id: namespacedId,
           name: tool.name,
           description: tool.description ?? '',
           source: 'mcp',
           mcp_server_id: dbServer.server_id,
+          group,
           input_schema: (tool.schema as any)?.shape ?? {},
           output_schema: null,
         });
@@ -205,12 +221,14 @@ export class McpServerManager {
       const dbServer = await ToolDao.upsertMcpServer(cfg.id);
       for (const tool of serverTools) {
         const namespacedId = `mcp::${cfg.id}::${tool.name}`;
+        const group = resolveToolGroup(tool.name, cfg.tool_groups ?? {});
         await ToolDao.upsertTool({
           id: namespacedId,
           name: tool.name,
           description: tool.description ?? '',
           source: 'mcp',
           mcp_server_id: dbServer.server_id,
+          group,
           input_schema: (tool.schema as any)?.shape ?? {},
           output_schema: null,
         });

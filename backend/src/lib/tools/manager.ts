@@ -108,8 +108,6 @@ export class ToolManager {
       getActiveTool: (id) => this.getActiveTool(id),
       getServerStatus: (configId) => this.getServerStatus(configId),
       permissionTtlSeconds: config.permission_request_ttl_seconds,
-      maxResults: config.discovery_max_results,
-      keywordMinResults: config.discovery_keyword_min_results,
     });
 
     const memoryTools = createMemoryTools(agentId);

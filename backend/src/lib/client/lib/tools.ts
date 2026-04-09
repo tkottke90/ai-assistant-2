@@ -30,6 +30,7 @@ export const AgentToolSchema = z.object({
     description: z.string(),
     source: z.string(),
     locked_tier: z.number().nullable(),
+    group: z.string().nullable(),
     mcp_server: z.object({ config_id: z.string() }).nullable(),
   }),
 });
@@ -40,6 +41,7 @@ export const AgentToolViewSchema = z.object({
   name: z.string(),
   description: z.string(),
   source: z.string(),
+  group: z.string().nullable(),
   mcp_server: z.object({ config_id: z.string() }).nullable(),
   assigned: z.boolean(),
   tier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
@@ -153,6 +155,19 @@ export const searchTools = createClientMethod(
   async (response) => {
     if (!response.ok) throw new Error('Failed to search tools');
     return z.array(ToolSummarySchema).parse(await response.json());
+  }
+);
+
+/** Update the group label for a tool */
+export const updateToolGroup = createClientMethod(
+  '/api/v1/tools/:id',
+  {
+    method: 'patch',
+    inputSchema: z.object({ id: z.string(), group: z.string().nullable() }),
+  },
+  async (response) => {
+    if (!response.ok) throw new Error('Failed to update tool group');
+    return AgentToolViewSchema.parse(await response.json());
   }
 );
 

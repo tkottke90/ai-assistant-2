@@ -40,7 +40,7 @@ interface DrawerProps extends DialogProps {
   showTrigger?: boolean;
 }
 
-export function Drawer({ className, children, trigger, title, onOpen, eventTrigger, direction, showTrigger = true }: DrawerProps) {
+export function Drawer({ className, children, trigger, title, onOpen, onClose, eventTrigger, direction, showTrigger = true }: DrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   
   const triggerRef = useHtmlElementListeners(
@@ -86,6 +86,10 @@ export function Drawer({ className, children, trigger, title, onOpen, eventTrigg
       if (event.target === dialogRef.current) {
         animateExit(dialogRef.current, direction);
       }
+    }, { signal: abortController.signal });
+
+    dialogRef.current.addEventListener('close', () => {
+      onClose?.();
     }, { signal: abortController.signal });
 
     return () => abortController.abort();

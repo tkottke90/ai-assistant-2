@@ -256,6 +256,7 @@ export function ChatPage() {
   const thread = useSignal<ThreadResponse>({} as ThreadResponse);
   const isStreaming = useSignal(false);
   const activeAssistantId = useSignal<string | null>(null);
+  const activeMessage = useSignal<ChatMessage[]>([]);
 
   // Agent selection (manages list of active agents + selected agent ID)
   const agentSelection = useAgentSelection();
@@ -309,6 +310,8 @@ export function ChatPage() {
     if (threadId.value) {
       fetchThread({ threadId: threadId.value });
     }
+
+    console.dir(thread)
   });
 
   // Handle stream resume — replay snapshot events to rebuild the partial assistant message
@@ -338,10 +341,8 @@ export function ChatPage() {
   return (
     <BaseLayout className="flex flex-col gap-2 dark:bg-elevated">
       <header className="flex gap-2 items-center w-full">
-        <span className="flex gap-2 items-center">
-          <BaseLayoutShowBtn />
-          <h2 className="inline">Chat</h2>
-        </span>
+        <BaseLayoutShowBtn />
+        <ThreadHeader thread={thread} />
       </header>
       <ChatContextProvider value={{ thread, agentSelection, isStreaming, activeAssistantId }}>
         <ChatPageContent />
@@ -370,8 +371,6 @@ function ChatPageContent() {
 
   return (
     <>
-      <ThreadHeader />
-
       <main className="w-full grow overflow-y-auto pr-4" ref={scrollRef}>
         <ChatList />
       </main>

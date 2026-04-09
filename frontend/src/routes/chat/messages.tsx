@@ -79,7 +79,7 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
           { (message.name ?? message.role).charAt(0).toUpperCase()}
         </div>
       </aside>
-      <main className={`row-start-2 col-start-2 bg-neutral-300 dark:bg-neutral-500 p-4 dark:text-white max-w-11/12 xl:max-w-8/12
+      <main className={`row-start-2 col-start-2 group-data-[role=human]:bg-neutral-300 group-data-[role=human]:dark:bg-neutral-500 p-4 group-data-[role=human]:dark:text-white max-w-11/12 xl:max-w-8/12
         group-data-[role=assistant]:rounded-r-md group-data-[role=assistant]:rounded-bl-md group-data-[role=assistant]:mr-auto
         group-data-[role=human]:rounded-l-md group-data-[role=human]:rounded-br-md  group-data-[role=human]:col-start-1 group-data-[role=human]:ml-auto`}
       >

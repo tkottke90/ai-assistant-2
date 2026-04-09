@@ -1,11 +1,12 @@
 import { Button, ConfirmButton } from "@/components/ui/button";
-import { useSignal } from "@preact/signals";
-import { summarizeThread, updateThread, deleteThread } from "@tkottke90/ai-assistant-client";
+import { Signal, useSignal } from "@preact/signals";
+import { summarizeThread, updateThread, deleteThread, type ThreadResponse } from "@tkottke90/ai-assistant-client";
 import { Sparkles, Archive, Trash2 } from "lucide-react";
 import { useLocation } from "preact-iso";
 import { useChatContext } from "./chat-context";
 import { fireWorkerEvent } from "@/lib/workerClient";
 import { REFRESH_THREADS_EVT } from "@/lib/chat";
+import { truncate } from "@/lib/string.utils";
 
 export async function summarizeAndUpdateTitle(
   threadId: string,
@@ -43,8 +44,7 @@ export async function deleteThreadById(
   }
 }
 
-export function ThreadHeader() {
-  const { thread } = useChatContext();
+export function ThreadHeader({ thread }: { thread: Signal<ThreadResponse>}) {
   const summarizing = useSignal(false);
 
   const { route } = useLocation();
@@ -62,11 +62,9 @@ export function ThreadHeader() {
   if (!thread.value) return null;
 
   return (
-    <div className="flex items-center justify-between px-4 py-1.5 border-b border-neutral-200 dark:border-neutral-700 text-sm">
-      <span className="font-medium truncate text-neutral-700 dark:text-neutral-300">
-        {thread.value.title ?? "Untitled Thread"}
-      </span>
-      <div className="flex items-center gap-1 text-neutral-400">
+    <div className="flex grow min-w-0 gap-4 items-center justify-between py-1.5 border-b border-neutral-200 dark:border-neutral-700 text-sm">
+      <h2 className="truncate min-w-0 flex-1">{thread.value.agent?.name ?? thread.value?.title ?? 'Chat'}</h2>
+      <div className="flex items-center gap-1 text-neutral-400 shrink-0">
         <Button
           onClick={handleSummarize}
           disabled={summarizing.value}

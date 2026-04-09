@@ -43,7 +43,7 @@ function upsertTool(data: {
     update: {
       name: data.name,
       description: data.description,
-      group: data.group ?? null,
+      ...(data.group !== undefined && { group: data.group }),
       input_schema: data.input_schema as any,
       output_schema: (data.output_schema ?? null) as any,
     },

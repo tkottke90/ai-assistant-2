@@ -13,6 +13,8 @@ import { Queue } from "../types/queue";
 import { createRecursiveScratchpadMiddleware } from "./middleware/recursive-2";
 import { createToolSummaryMiddleware } from './middleware/tool-summary';
 import { createUsageMiddleware } from './middleware/usage';
+import { TOOLS_SYSTEM_PROMPT } from './prompts/tools-prompt';
+import { TOOL_FAILURE_PROMPT } from "./prompts/tool-failure-prompt";
 
 export class AgentRuntime {
   private queue = new Queue<any>();
@@ -50,8 +52,11 @@ export class AgentRuntime {
     const systemPromptText = [
       this.systemPrompt,
       `<identity>The user will refer to you as ${this.name}.</identity>`,
+      TOOLS_SYSTEM_PROMPT,
       // MEMORY_SYSTEM_PROMPT
     ].join('\n\n');
+
+    this.logger.debug('Creating Agent', { systemPromptWordCount: systemPromptText.split(' ').length });
 
     return createAgent({
       model: this.llm,
@@ -66,21 +71,8 @@ export class AgentRuntime {
           initialDelayMs: 1000,
           retryOn: (err) => err.name === 'ToolUseException' || err.message.includes('tool call failed'),
           onFailure: (err, context) => {
-            // When the tool call fails after the max retries, we want to return a description
-            // of what the error was and some guidance for next steps, rather than just returning an error message.
-            const response = [
-              'The tool call failed with the following error message:',
-              `${err.name}: ${err.message}.`,
-              'Review the error message for any clues on what went wrong and any recommended next steps.',
-              'Do NOT retry the same call with the same inputs. Instead, try a different approach or use different arguments.',
-              '\n\n **Common Issues**:',
-              '\n- Invalid arguments: Check if the arguments you provided to the tool are correct and in the expected format. Review the tool documentation and error message for any hints on what might be wrong with the arguments.',
-              '\n- Rate limits: You may have hit a rate limit for the tool or an external API it uses. Stop and ask the user to try again later',
-              '\n- Permissions: The tool may require certain permissions or access that it does not have. Stop and let the user know to review the tool configuration and permissions.',
-            ].join(' ');
-
             this.logger.error(`Tool call failed after retries: ${err.message}`, { context })
-            return response;
+            return TOOL_FAILURE_PROMPT(err);
           },
         }),
         // createRecursiveScratchpadMiddleware(this.name, this.llm, this.logger.child({ location: `AgentRuntime.${this.name}.Scratchpad` })),

@@ -49,8 +49,22 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
     }
   );
 
+  const TOOL_ID_DESCRIPTION =
+    'Full namespaced tool ID as returned by discover_tools. ' +
+    'Format: "<source>::<name>" — e.g., "simple::web_search", "mcp::github::list_repos". ' +
+    'Do NOT use the human-readable name alone.';
+
+  const INVALID_TOOL_ID_ERROR = (tool_id: string) =>
+    JSON.stringify({
+      error:
+        `Invalid tool_id "${tool_id}". Tool IDs must be namespaced — ` +
+        'format: "<source>::<name>", e.g. "simple::web_search" or "mcp::github::list_repos". ' +
+        'Call discover_tools to find the correct namespaced ID.',
+    });
+
   const getToolDetailsTool = tool(
     async ({ tool_id }) => {
+      if (!tool_id.includes('::')) return INVALID_TOOL_ID_ERROR(tool_id);
       const manifest = await getToolManifest(tool_id, ctx.agentId);
       if (!manifest) return JSON.stringify({ error: `Tool not found: ${tool_id}` });
       return JSON.stringify(manifest);
@@ -61,13 +75,25 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
         'Get full details (schema, capabilities) for a specific tool. ' +
         'Use this before requesting permission so you can write an accurate request.',
       schema: z.object({
-        tool_id: z.string().describe('Namespaced tool identifier, e.g. "simple::web_search"'),
+        tool_id: z.string().describe(TOOL_ID_DESCRIPTION),
       }),
     }
   );
 
   const requestPermissionTool = tool(
     async ({ tool_id, description, action }) => {
+      if (!tool_id.includes('::')) return INVALID_TOOL_ID_ERROR(tool_id);
+
+      const invalidBatchId = action.find(c => !c.tool_id.includes('::'));
+      if (invalidBatchId) {
+        return JSON.stringify({
+          error:
+            `Invalid tool_id "${invalidBatchId.tool_id}" in action batch. Tool IDs must be namespaced — ` +
+            'format: "<source>::<name>", e.g. "simple::web_search". ' +
+            'Call discover_tools to find the correct namespaced ID.',
+        });
+      }
+
       const config = getConfig();
       const threadId: string = (config?.configurable as any)?.thread_id ?? 'unknown';
 
@@ -133,14 +159,17 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
         'Request user approval to use a Tier 1 tool. Creates a pending request visible to the user. ' +
         'The agent suspends until the user approves or denies.',
       schema: z.object({
-        tool_id: z.string().describe('Namespaced tool identifier'),
+        tool_id: z.string().describe(TOOL_ID_DESCRIPTION),
         description: z
           .string()
           .describe(
             'Agent-authored goal statement. Shown to user during review and fed back at execution time.'
           ),
         action: z
-          .array(z.object({ tool_id: z.string(), params: z.record(z.string(), z.unknown()) }))
+          .array(z.object({
+            tool_id: z.string().describe(TOOL_ID_DESCRIPTION),
+            params: z.record(z.string(), z.unknown()),
+          }))
           .describe('ToolCallBatch — v1: always a single-item array'),
       }),
     }
@@ -194,6 +223,8 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
 
   const executeToolTool = tool(
     async ({ tool_id, params }) => {
+      if (!tool_id.includes('::')) return INVALID_TOOL_ID_ERROR(tool_id);
+
       const dbTool = await ToolDao.getTool(tool_id);
       if (!dbTool) return JSON.stringify({ error: `Tool not found: ${tool_id}` });
 
@@ -224,7 +255,7 @@ export function createBuiltinTools(ctx: BuiltinToolContext): StructuredTool[] {
         'Execute a Tier 2 or Tier 3 tool directly without requesting permission. ' +
         'Fails immediately if the tool is Tier 1.',
       schema: z.object({
-        tool_id: z.string().describe('Namespaced tool identifier'),
+        tool_id: z.string().describe(TOOL_ID_DESCRIPTION),
         params: z
           .record(z.string(), z.unknown())
           .describe('Parameters matching the tool input schema'),

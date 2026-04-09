@@ -116,7 +116,7 @@ export class McpServerManager {
           description: tool.description ?? '',
           source: 'mcp',
           mcp_server_id: dbServer.server_id,
-          group,
+          ...(group !== null && { group }),
           input_schema: (tool.schema as any)?.shape ?? {},
           output_schema: null,
         });
@@ -228,7 +228,7 @@ export class McpServerManager {
           description: tool.description ?? '',
           source: 'mcp',
           mcp_server_id: dbServer.server_id,
-          group,
+          ...(group !== null && { group }),
           input_schema: (tool.schema as any)?.shape ?? {},
           output_schema: null,
         });

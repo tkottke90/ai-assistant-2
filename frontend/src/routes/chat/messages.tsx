@@ -5,6 +5,9 @@ import type { ChatMessage, InteractionMessage, ServerAction } from '@tkottke90/a
 import { Files } from 'lucide-preact';
 import { useChatContext } from './chat-context';
 import { toast } from 'sonner';
+import { batch, useComputed, useSignal, useSignalEffect } from '@preact/signals';
+import { useWorkerEventListener } from '@/lib/workerClient';
+import { buildUserMessage, buildAssistantMessage } from './chat-utils';
 
 
 const severityStyles = {
@@ -60,10 +63,6 @@ function ActionMessage({ message }: {message: ServerAction}) {
 
 function InteractionMessage({ message }: {message: InteractionMessage}) {
   const { isStreaming } = useChatContext();
-  const thinking = message.metadata?.thinking as string | undefined;
-  // Thinking is "active" (show pulse) when we are streaming and the agent hasn't
-  // started producing its final response yet.
-  const thinkingActive = isStreaming.value && !message.content;
 
   return (
     <div 
@@ -79,9 +78,9 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
           { (message.name ?? message.role).charAt(0).toUpperCase()}
         </div>
       </aside>
-      <main className={`row-start-2 col-start-2 group-data-[role=human]:bg-neutral-300 group-data-[role=human]:dark:bg-neutral-500 p-4 group-data-[role=human]:dark:text-white max-w-11/12 xl:max-w-8/12
+      <main className={`row-start-2 col-start-2 group-data-[role=human]:bg-neutral-300 group-data-[role=human]:dark:bg-neutral-500 p-4 group-data-[role=human]:dark:text-white max-w-11/12 xl:max-w-10/12
         group-data-[role=assistant]:rounded-r-md group-data-[role=assistant]:rounded-bl-md group-data-[role=assistant]:mr-auto
-        group-data-[role=human]:rounded-l-md group-data-[role=human]:rounded-br-md  group-data-[role=human]:col-start-1 group-data-[role=human]:ml-auto`}
+        group-data-[role=human]:rounded-l-md group-data-[role=human]:rounded-br-md  group-data-[role=human]:col-start-1 group-data-[role=human]:ml-auto group`}
       >
         { message.assets && (
           <div className="flex gap-2 mb-2 overflow-hidden rounded empty:hidden">
@@ -108,39 +107,43 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
             ))}
           </div>
         )}
-        { thinking && (
-          <details className="mb-3 text-sm" open={thinkingActive}>
-            <summary className="cursor-pointer select-none text-current/50 hover:text-current/70 transition-colors flex items-center gap-2">
-              <span>Thinking...</span>
-              { thinkingActive && (
-                <span className="inline-flex items-center gap-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-current/50 animate-bounce [animation-delay:-0.32s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-current/50 animate-bounce [animation-delay:-0.16s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-current/50 animate-bounce" />
-                </span>
-              )}
-            </summary>
-            <p className="mt-2 text-xs text-current/60 whitespace-pre-wrap leading-relaxed">
-              {thinking}
-            </p>
-          </details>
+        <MarkdownDisplay className="group" data-isStreaming={isStreaming.value}>{message.content}</MarkdownDisplay>
+        { !message.content && message.role !== 'human' && (
+          <div className="flex items-center gap-1 py-1">
+            <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.32s]" />
+            <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.16s]" />
+            <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce" />
+          </div>
         )}
-        <MarkdownDisplay className="peer">{message.content}</MarkdownDisplay>
-        <div className="hidden peer-empty:flex group-data-[role=human]:peer-empty:hidden items-center gap-1 py-1">
-          <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.32s]" />
-          <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.16s]" />
-          <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce" />
-        </div>
       </main>
-      <footer className={`col-span-2 row-start-3 flex gap-3 group-data-[role=human]:flex-row-reverse opacity-50 pl-8 group-data-[role=human]:pr-8`}>
-        <span className="group-data-[role=human]:hidden my-auto">
-          { Intl.NumberFormat('en', { notation: 'standard' }).format(message.usage?.total ?? 0) } tokens
-        </span>
+      <footer className="col-span-2 row-start-3 flex gap-3
+        group-data-[role=human]:flex-row-reverse opacity-50 pl-8 group-data-[role=human]:pr-8"
+      >
+        <div className="flex items-center gap-4 text-sm">
+          {/*  Token Usage  */}
+          <span className="group-data-[role=human]:hidden my-auto">
+            { Intl.NumberFormat('en', { notation: 'standard' }).format(message.usage?.total ?? 0) } tokens
+          </span>
+          
+          {/*  Token Rate  */}
+          <span className="group-data-[role=human]:hidden my-auto">
+            { Intl.NumberFormat('en', { notation: 'standard' }).format(message?.stats?.tokensPerSecond ?? 0) } t/s
+          </span>
+          
+          {/*  Tool Usage  */}
+          <span className="group-data-[role=human]:hidden my-auto">
+            { message.stats?.toolsUsed ? `${message?.stats?.toolsUsed} tool(s) used` : null }
+            { message.stats?.toolFailures ? ` (${message?.stats?.toolFailures} failures)` : null }
+          </span>
+        </div>
+        
+
+        {/*  Action Items  */}
         <span className="p-2 rounded-full active:bg-neutral-500 cursor-pointer">
-          <Files size={20} onClick={() => {
+          <Files size={20} title="Copy" onClick={() => {
             navigator.clipboard.writeText(message.content).then(() => {
               // Optionally, you could add some feedback to the user here, like a toast notification.
-              toast.success('Copied to clipboard');
+              toast.success('Copied to clipboard', { duration: 1000 });
             }).catch(err => {
               console.error('Failed to copy text: ', err);
             });
@@ -159,4 +162,51 @@ export function ChatMessageDisplay({ message }: {message: ChatMessage}) {
     case 'chat_message':
       return <InteractionMessage message={message} />
   }
+}
+
+export function ChatList() {
+  const { thread, isStreaming } = useChatContext();
+
+  // Holds the current "turn" of messages while the assistant is
+  // streaming it's response
+  const assistantMessage = useSignal<ChatMessage | null>(null);
+
+  const messages = useComputed(() => {
+    return (thread.value.history ?? []) as ChatMessage[];
+  });
+ 
+  
+  useWorkerEventListener('chat:stream:start', (e) => {
+    
+    batch(() => {
+      assistantMessage.value = buildAssistantMessage(e.detail.assistantName ?? 'assistant');
+    })
+  });
+  
+  useWorkerEventListener('chat:stream:done', (e) => {
+    
+    batch(() => {
+      assistantMessage.value = null;
+    })
+  });
+
+  useWorkerEventListener('chat:stream:data', (e) => {
+    assistantMessage.value  = {
+      ...assistantMessage.value!,
+
+      // TODO: fix this typing
+      ...(e.detail as any).content
+    };
+  });
+
+  return (
+    <div className="flex flex-col gap-2 pb-8">
+      {messages.value.map(message => (
+        <ChatMessageDisplay key={message.id} message={message} />
+      ))}
+
+      { /* Capture message for streamed response */}
+      { isStreaming.value && assistantMessage.value && <ChatMessageDisplay message={assistantMessage.value} /> }
+    </div>
+  );
 }

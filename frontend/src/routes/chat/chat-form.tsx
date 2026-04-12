@@ -1,20 +1,18 @@
-import { Button } from "@/components/ui/button";
 import { LlmSelector } from "@/components/llm-selector";
-import type { Signal } from "@preact/signals";
-import { SendHorizonal } from "lucide-preact";
-import { toast } from "sonner";
-import type { ActiveAgent, ChatMessage, ServerAction, ThreadResponse } from "@tkottke90/ai-assistant-client";
-import {
-  buildUserMessage,
-  buildAssistantMessage,
-  appendToMessage,
-  patchMessage,
-} from "./chat-utils";
+import { Button } from "@/components/ui/button";
 import { useLlmSelection } from "@/hooks/use-llm-selection";
+import { REFRESH_THREADS_EVT, STREAM_CHAT_EVT } from "@/lib/chat";
+import { fireWorkerEvent, useWorkerEventListener } from "@/lib/workerClient";
+import type { Signal } from "@preact/signals";
+import type { ActiveAgent, ThreadResponse } from "@tkottke90/ai-assistant-client";
+import { SendHorizonal, SquareStopIcon } from "lucide-preact";
+import { toast } from "sonner";
 import { AgentChips } from "./agent-chips";
 import { useChatContext } from "./chat-context";
-import { fireWorkerEvent, useWorkerEventListener } from "@/lib/workerClient";
-import { REFRESH_THREADS_EVT, STREAM_CHAT_EVT } from "@/lib/chat";
+import {
+  buildAssistantMessage,
+  buildUserMessage,
+} from "./chat-utils";
 
 export function createSubmitHandler(
   thread: Signal<ThreadResponse>,
@@ -45,7 +43,7 @@ export function createSubmitHandler(
 
     thread.value = {
       ...thread.value,
-      history: [...(thread.value.history ?? []), userMessage, assistantMessage],
+      history: [...(thread.value.history ?? []), userMessage],
     };
     isStreaming.value = true;
 
@@ -69,129 +67,36 @@ export function ChatForm() {
 
   // ── Stream event handlers ────────────────────────────────────────────────
 
-  useWorkerEventListener('chat:stream:text_delta', (e) => {
-    const id = activeAssistantId.value;
-    if (!id) return;
-    thread.value = {
-      ...thread.value,
-      history: appendToMessage(thread.value.history as ChatMessage[], id, e.detail.content),
-    };
-  });
-
-  useWorkerEventListener('chat:stream:thinking', (e) => {
-    const id = activeAssistantId.value;
-    if (!id) return;
-    thread.value = {
-      ...thread.value,
-      history: (thread.value.history as ChatMessage[]).map(msg => {
-        if (msg.id !== id || msg.type !== 'chat_message') return msg;
-        const existing = (msg.metadata?.thinking as string) ?? '';
-        return { ...msg, metadata: { ...msg.metadata, thinking: existing + e.detail.content } };
-      }),
-    };
-  });
-
-  useWorkerEventListener('chat:stream:agent_name', (e) => {
-    const id = activeAssistantId.value;
-    if (!id) return;
-    thread.value = {
-      ...thread.value,
-      history: patchMessage(thread.value.history as ChatMessage[], id, { name: e.detail.name }),
-    };
-  });
-
-  useWorkerEventListener('chat:stream:tool_call_start', (e) => {
-    const stub: ServerAction = {
-      id: e.detail.id,
-      type: 'server_action',
-      role: 'tool',
-      content: `Calling tool - ${e.detail.name}`,
-      created_at: new Date().toISOString(),
-      metadata: { tool_name: e.detail.name },
-      severity: 0,
-    };
-
-    const history = thread.value.history.slice(0, -1);
-    const pendingMessage = thread.value.history?.at(-1);
-
-    thread.value = {
-      ...thread.value,
-      history: [
-        ...(history as ChatMessage[]),
-        stub,
-        pendingMessage as ChatMessage,
-      ],
-    };
-  });
-
-  useWorkerEventListener('chat:stream:tool_call_complete', (e) => {
-    thread.value = {
-      ...thread.value,
-      history: (thread.value.history as ChatMessage[]).map(msg =>
-        msg.id === e.detail.id && msg.type === 'server_action'
-          ? { ...msg, metadata: { ...msg.metadata, tool_args: e.detail.args } }
-          : msg
-      ),
-    };
-  });
-
-  useWorkerEventListener('chat:stream:tool_result', (e) => {
-    thread.value = {
-      ...thread.value,
-      history: (thread.value.history as ChatMessage[]).map(msg =>
-        msg.id === e.detail.toolCallId && msg.type === 'server_action'
-          ? { ...msg, content: e.detail.content, metadata: { ...msg.metadata, tool_summary: e.detail.summary } }
-          : msg
-      ),
-    };
-  });
-
-  useWorkerEventListener('chat:stream:final_response', (e) => {
-    const id = activeAssistantId.value;
-    if (!id) return;
-    thread.value = {
-      ...thread.value,
-      history: patchMessage(thread.value.history as ChatMessage[], id, {
-        usage: e.detail.usage,
-        model: e.detail.model,
-      }),
-    };
+  useWorkerEventListener('chat:stream:start', (e) => {
+    isStreaming.value = true;
   });
 
   useWorkerEventListener('chat:stream:done', () => {
     activeAssistantId.value = null;
     isStreaming.value = false;
+
     fireWorkerEvent({ type: REFRESH_THREADS_EVT });
   });
-
+  
   useWorkerEventListener('chat:stream:error', (e) => {
     console.error('Chat stream error:', e.detail.error);
     toast.error('Failed to get a response. Please try again.');
-    const id = activeAssistantId.value;
-    if (id) {
-      thread.value = {
-        ...thread.value,
-        history: (thread.value.history ?? []).filter((msg: ChatMessage) => msg.id !== id),
-      };
-    }
+    
     activeAssistantId.value = null;
     isStreaming.value = false;
   });
 
-  // ── Submit handler ───────────────────────────────────────────────────────
-
-  const handleSubmit = createSubmitHandler(
-    thread,
-    isStreaming,
-    selectedAlias,
-    selectedModel,
-    agentSelection.selectedAgentId,
-    agentSelection.activeAgents,
-    activeAssistantId,
-  );
-
   return (
-    <form className="w-full flex flex-col gap-1" onSubmit={handleSubmit}>
+    <form className="w-full flex flex-col gap-1" onSubmit={createSubmitHandler(
+        thread,
+        isStreaming,
+        selectedAlias,
+        selectedModel,
+        agentSelection.selectedAgentId,
+        agentSelection.activeAgents,
+        activeAssistantId,
+      )}
+    >
       <input type="text" hidden id="threadId" name="threadId" value={thread.value.threadId} />
 
       <div className="w-full flex flex-row gap-2">
@@ -202,13 +107,17 @@ export function ChatForm() {
             className="w-full h-24 p-2 rounded-md focus:ring-0 focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Type your message here..."
             name="message"
-            disabled={isStreaming.value}
           />
         </div>
 
         <Button variant="default" type="submit" disabled={isStreaming.value}>
-          <span class="hidden lg:inline">Send</span>
-          <SendHorizonal size={20} class="inline lg:hidden" />
+          
+          { isStreaming.value && <span class="ml-1 text-sm animate-pulse">
+            <SquareStopIcon size={20} class="inline" />
+          </span> }
+          
+          { !isStreaming.value && <span class="hidden lg:inline">Send</span> }
+          { !isStreaming.value && <SendHorizonal size={20} class="inline lg:hidden" /> }
         </Button>
       </div>
 

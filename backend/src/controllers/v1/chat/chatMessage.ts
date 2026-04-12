@@ -1,17 +1,22 @@
-import { AIMessage, ToolMessage, BaseMessage, createAgent, HumanMessage } from "langchain";
+import { AIMessage, ToolMessage, BaseMessage, createAgent, HumanMessage, AIMessageChunk } from "langchain";
 import express from 'express';
 import { checkpointer } from '@/lib/database';
 import { Logger } from "winston";
 import { ChatMessage, InteractionSchema, ServerActionSchema } from '@/lib/models/chat';
-import { createChatMessage } from '@/lib/dao/chat.dao';
+import ChatDao from '@/lib/dao/chat.dao';
 import ThreadDao from '@/lib/dao/thread.dao';
-import crypto from 'node:crypto';
 import { BaseError } from "@tkottke90/js-errors";
+import { Message } from "ollama";
+import { ChatData } from "./chat-data";
+import crypto from 'node:crypto';
+import { createUsageMiddleware } from "@/lib/agents/middleware/usage";
 
 type ChatHistoryEntry =
   | { kind: "tool_calling";    message: AIMessage }
   | { kind: "tool_complete";   message: ToolMessage }
   | { kind: "final_response";  message: AIMessage };
+
+type MessageChunk = { mode: 'thinking' | 'tool_call' | 'responding', content: string, messageId?: string, title?: string };
 
 export function classifyMessage(msg: BaseMessage): ChatHistoryEntry | null {
   switch (msg.type) {
@@ -30,97 +35,6 @@ export function classifyMessage(msg: BaseMessage): ChatHistoryEntry | null {
     default:
       return null;
   }
-}
-
-
-/**
- * Process `value` stream chunks from the LangChain runnable. It determines
- * the kind of chunk (tool calling, tool complete, or final response), emits
- * events to the frontend, and returns any new BaseMessages for the chat history.
- *
- * @param chunk - The values chunk from the LangChain stream
- * @param res - Express response used to write SSE events
- * @param logger - Logger instance
- * @param previousMessageCount - Number of messages seen before this chunk (for diffing)
- * @returns The new messages added in this chunk, the updated total message count, and parsed ChatMessage objects for persistence
- */
-export function processValueChunk(
-  chunk: any,
-  res: express.Response,
-  logger: Logger,
-  previousMessageCount: number
-): { messages: BaseMessage[]; messageCount: number; chatMessages: ChatMessage[] } {
-  logger.silly('Processing value chunk:', chunk);
-
-  const allMessages: BaseMessage[] = chunk.messages ?? [];
-  const justAdded = allMessages.slice(previousMessageCount);
-  const newMessages: BaseMessage[] = [];
-  const chatMessages: ChatMessage[] = [];
-
-  for (const msg of justAdded) {
-    const entry = classifyMessage(msg);
-    if (!entry) continue;
-
-    switch (entry.kind) {
-      case 'tool_calling':
-        for (const toolCall of entry.message.tool_calls ?? []) {
-          res.write(`data: ${JSON.stringify({ mode: 'tool_calling', data: { name: toolCall.name, id: toolCall.id } })}\n\n`);
-        }
-        newMessages.push(entry.message);
-        break;
-
-      case 'tool_complete': {
-        const severity = 
-          (entry.message.response_metadata as Record<string, any>)?.severity
-          ?? (entry.message.status === 'error' ? 2 : 0);
-        
-        
-        const serverAction = ServerActionSchema.parse({
-          type: 'server_action',
-          id: entry.message.id,
-          content: typeof entry.message.content === 'string' ? entry.message.content : JSON.stringify(entry.message.content),
-          created_at: new Date().toISOString(),
-          metadata: {
-            // Add Generic Tool Summary as a fallback if one is not provided
-            tool_summary: `Tool Used: ${entry.message.name}`,
-            args: {},
-            ...entry.message.response_metadata,
-            ...entry.message.additional_kwargs
-          },
-          role: entry.message.type,
-          actions: (entry.message.response_metadata as Record<string, any>)?.actions ?? [],
-          severity,
-        });
-        res.write(`data: ${JSON.stringify({ mode: 'tool_complete', toolCallId: entry.message.tool_call_id, data: serverAction })}\n\n`);
-        newMessages.push(entry.message);
-        chatMessages.push(serverAction);
-        break;
-      }
-
-      case 'final_response': {
-        const interaction = InteractionSchema.parse({
-          type: 'chat_message',
-          id: entry.message.id,
-          content: typeof entry.message.content === 'string' ? entry.message.content : JSON.stringify(entry.message.content),
-          name: entry.message.name,
-          created_at: new Date().toISOString(),
-          metadata: entry.message.additional_kwargs,
-          role: entry.message.type,
-          model: (entry.message.response_metadata as Record<string, any>)?.model,
-          usage: ThreadDao.getMessageUsage(entry.message),
-          stats: {
-            ...ThreadDao.getGenerationDetails(entry.message),
-          },
-        });
-        res.write(`data: ${JSON.stringify({ mode: 'final_response', data: interaction })}\n\n`);
-        newMessages.push(entry.message);
-        chatMessages.push(interaction);
-        break;
-      }
-    }
-  }
-
-  return { messages: newMessages, messageCount: allMessages.length, chatMessages };
 }
 
 export async function chatHandler(
@@ -171,36 +85,24 @@ export async function chatHandler(
         model: llm,
         checkpointer,
         name: 'chat-agent',
+        middleware: [
+          createUsageMiddleware(llm, 'chat-agent', req.logger)
+        ]
       });
     }
 
-    // Persist the human message as a Node before streaming starts
-    const humanMsg = InteractionSchema.parse({
-      type: 'chat_message',
-      id: crypto.randomUUID(),
-      content: message,
-      role: 'human',
-      created_at: new Date().toISOString(),
-      metadata: {},
-    });
-    const humanNode = await createChatMessage(threadId, humanMsg);
-    let lastNodeId: number = humanNode.node_id;
-
-    // Construct the user message
-    const newMessages: BaseMessage[] = [
-      new HumanMessage(message)
-    ];
-    let previousMessageCount = 0;
+    // Construct message objects
+    const userMessage = new HumanMessage(message)
+    const aiMessageData = new ChatData();
 
     // Invoke the agent
     const stream = agent.stream(
-      { messages: newMessages },
+      { messages: [ userMessage ] },
       { streamMode: ["messages", "values"], configurable: { thread_id: threadId, agent_id }, recursionLimit: 500 }
     );
 
-
     // Iterate over the stream and send updates to the client as they arrive
-    req.logger.debug('Starting streamed response');
+    req.logger.info('Starting streamed response');
     for await (const [streamMode, chunk] of await stream) {
 
       switch (streamMode) {
@@ -208,47 +110,60 @@ export async function chatHandler(
         // they can be passed directly to the client for real-time updates on the agent's progress.
         case 'messages':
           req.logger.silly('Received message chunk:', chunk);
+
+          aiMessageData.nextChunk(chunk[0], streamMode);
+          break;
           
-          const message = chunk[0];
-          const hasContent = message.type === 'ai' && message.content;
-          const hasReasoning = message.type === 'ai' && (
-            (message.additional_kwargs as Record<string, any>)?.reasoning_content ||
-            (message.response_metadata as Record<string, any>)?.reasoning_content
-          );
-          if (hasContent || hasReasoning) {
-            // Pass through text deltas and reasoning/thinking chunks
-            const data = JSON.stringify({
-              mode: 'message',
-              chunk: {
-                id: message.id,
-                content: message.content,
-                name: message.name,
-                metadata: message.additional_kwargs,
-                response_metadata: message.response_metadata,
-              }
-            });
-            res.write(`data: ${data}\n\n`);
+        // Values are inputs at the end of each stage of the agent's process, they give wholesale
+        // values all at once unlike `messages` which are incremental. Like a snapshot of the entire
+        // chat history, we need to go through each message in this case
+        case 'values': {
+          const msgs = chunk.messages as BaseMessage[];
+          
+          // When the chat data is empty, we know we are processing the first
+          // event. We should only process the most recent message because the 
+          // values stream sends the entire message history
+          if (!aiMessageData.activeChunk) {
+            msgs
+              // Add the message history to the chat data to skip them in the future
+              .forEach(m => {
+                if (m instanceof ToolMessage) {
+                  aiMessageData.addHistoricalChunkId(m.tool_call_id);
+                } else if (m.id) {
+                  aiMessageData.addHistoricalChunkId(m.id);
+                }
+              });
+
+            aiMessageData.nextChunk(msgs.at(-1)!, streamMode);
+            break;
           }
 
-          break;
-
-        // Values are inputs at the end of each stage of the agent's process, they give wholesale
-        // values all at once unlike `messages` which are incremental. Like a snapshot of the last
-        // step the agent took.
-        case 'values': {
-          const result = processValueChunk(chunk, res, req.logger, previousMessageCount);
-          newMessages.push(...result.messages);
-          previousMessageCount = result.messageCount;
-          for (const chatMsg of result.chatMessages) {
-            const node = await createChatMessage(threadId, chatMsg, lastNodeId);
-            lastNodeId = node.node_id;
+          for (const msg of msgs) {
+            aiMessageData.nextChunk(msg, streamMode);
           }
           break;
         }
-        default:
-          req.logger.warn('Received unknown stream mode:', streamMode);
       }
+
+      res.write(`data: ${JSON.stringify(
+        aiMessageData.toChatMessage(agent.options.name)
+      )}\n`);
     }
+
+    // After stream is done we can update our records in the database
+    req.logger.debug('Stream ended, updating chat history');
+    updateChatHistory(
+      threadId,
+      InteractionSchema.parse({
+        type: 'chat_message',
+        id: crypto.randomUUID(),
+        content: message,
+        role: 'human',
+        created_at: new Date().toISOString(),
+        metadata: {},
+      }), 
+      aiMessageData.toChatMessage(agent.options.name)
+    );
 
     // Signal completion
     req.logger.debug('Full response sent');
@@ -261,4 +176,15 @@ export async function chatHandler(
     res.write(`data: ${JSON.stringify({ kind: 'error', message: err.message })}\n\n`);
     res.end();
   }
+}
+
+async function updateChatHistory(threadId: string, inputMessage: ChatMessage, outputMessage: ChatMessage) {
+  // Get last message in the thread to use as the parent for the new messages we're adding to the history
+  const lastMessage = await ChatDao.getChatByThreadId(threadId).then(messages => messages.at(-1));
+
+  // Add the user's input message to the history
+  const { node_id: humanId } = await ChatDao.createChatMessage(threadId, inputMessage, lastMessage ? lastMessage.node_id : undefined);
+
+  // Add the assistant's response to the history, linking it to the user's message
+  await ChatDao.createChatMessage(threadId, outputMessage, humanId);
 }

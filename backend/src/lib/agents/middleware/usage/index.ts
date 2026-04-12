@@ -1,9 +1,19 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { BaseMessage, ToolMessage, UsageMetadata } from "@langchain/core/messages";
 import { createMiddleware } from "langchain";
 import { Logger } from "winston";
 import z from "zod";
 
 const LOG_PREFIX = (name: string = 'Agent') => `AgentRuntime.${name}.ToolSummary.`;
+
+export interface CustomUsageMetadata extends UsageMetadata {
+  tokens_per_second?: number;
+  duration_ms?: number;
+
+  context_window_tokens?: number;
+  context_window_limit?: number;
+  context_utilization_pct?: number;
+}
 
 export function createUsageMiddleware(
   model: BaseChatModel,
@@ -19,6 +29,7 @@ export function createUsageMiddleware(
       // This is your context window consumption metric
       lastContextWindowTokens: z.number().default(0),
     }),
+    
     wrapModelCall: async (request, handler) => {
       const logger = middlewareLogger.child({ location: LOG_PREFIX(name) + '.usageMiddleware' });
 

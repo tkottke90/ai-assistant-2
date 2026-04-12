@@ -7,7 +7,7 @@ import z from 'zod';
 import { ChatMessageSchema, InteractionSchema, ServerActionSchema, threadResponseSchema } from '../../lib/models/chat';
 import crypto from 'node:crypto';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
-import { getChatByThreadId } from '../../lib/dao/chat.dao.js';
+import ChatDao from '@/lib/dao/chat.dao.js';
 import { chatHandler } from './chat/chatMessage';
 
 export const router = Router();
@@ -184,7 +184,7 @@ router.get(
       return;
     }
 
-    const nodes = await getChatByThreadId(threadId as string);
+    const nodes = await ChatDao.getChatByThreadId(threadId as string);
 
     res.setHeader('Cache-Control', 'no-store');
 

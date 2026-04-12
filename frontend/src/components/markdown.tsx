@@ -32,7 +32,10 @@ function ThinkingCodeBlock({ children, ...props }: BaseProps<{}>) {
   return (
     <details className="px-4 py-2
     border border-slate-500 rounded bg-slate-600/30 open:border-slate-400/50">
-      <summary className="cursor-pointer animate-pulse border-b border-slate-400/0 open:border-slate-400/50">Thinking</summary>
+      <summary className="cursor-pointer group-data-[isStreaming=true]:animate-pulse border-b border-slate-400/0 open:border-slate-400/50">
+        <span className="hidden group-data-[isStreaming=true]:inline">Thinking...</span>
+        <span className="group-data-[isStreaming=true]:hidden">Reasoning</span>
+      </summary>
       <p className="text-sm **:bg-transparent">{children}</p>
     </details>
   );
@@ -126,7 +129,7 @@ function CodeBlock({ children, ...props }: preact.JSX.HTMLAttributes<HTMLPreElem
 export function MarkdownDisplay(props: BaseProps<{ children: string }>) {
 
   return (
-    <div className={cn("prose orderList unorderList list select-text overflow-visible", props.className)}>
+    <div {...props} className={cn("prose orderList unorderList list select-text overflow-visible", props.className)}>
       <Markdown 
         remarkPlugins={[remarkGfm]}
         components={{

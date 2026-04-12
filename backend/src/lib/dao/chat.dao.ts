@@ -1,7 +1,7 @@
 import { prisma } from '../database.js';
 import { ChatMessage } from '../models/chat.js';
 
-export function createChatMessage(threadId: string, input: ChatMessage, parentId?: number) {
+function createChatMessage(threadId: string, input: ChatMessage, parentId?: number) {
   return prisma.$transaction(async (tx) => {
     const node = await tx.node.create({
       data: {
@@ -26,7 +26,7 @@ export function createChatMessage(threadId: string, input: ChatMessage, parentId
   });
 }
 
-export function getChatByThreadId(threadId: string) {
+function getChatByThreadId(threadId: string) {
   return prisma.node.findMany({
     where: {
       type: 'chat_message',
@@ -40,3 +40,8 @@ export function getChatByThreadId(threadId: string) {
     },
   });
 }
+
+export default {
+  createChatMessage,
+  getChatByThreadId,
+};

@@ -6,7 +6,7 @@ import type { StreamResume, WorkerStreamEvent } from "@/lib/chat";
 import { GET_THREAD_EVT, REFRESH_THREADS_EVT, RESUME_STREAM_EVT } from "@/lib/chat";
 import { useEventListener } from "@/lib/html-utils";
 import { fireWorkerEvent, useWorkerEvent, useWorkerEventListener } from "@/lib/workerClient";
-import { useComputed, useSignal, useSignalEffect } from "@preact/signals";
+import { useSignal, useSignalEffect } from "@preact/signals";
 import {
   type AgentAction,
   type ChatMessage,
@@ -24,7 +24,7 @@ import {
   buildAssistantMessage,
   patchMessage,
 } from "./chat-utils";
-import { ChatMessageDisplay } from "./messages";
+import { ChatList } from "./messages";
 import { ThreadHeader } from "./thread-header";
 
 // ── Pure utility functions ───────────────────────────────────────────────────
@@ -137,22 +137,6 @@ function PendingActionsPanel({ agentId, threadId }: {
   );
 }
 
-function ChatList() {
-  const { thread } = useChatContext();
-
-  const messages = useComputed(() => {
-    return (thread.value.history ?? []) as ChatMessage[];
-  });
-
-  return (
-    <div className="flex flex-col gap-2 pb-8">
-      {messages.value.map(message => (
-        <ChatMessageDisplay key={message.id} message={message} />
-      ))}
-    </div>
-  );
-}
-
 // ── Chat Page ─────────────────────────────────────────────────────────────────
 
 import type { Signal } from "@preact/signals";
@@ -256,7 +240,6 @@ export function ChatPage() {
   const thread = useSignal<ThreadResponse>({} as ThreadResponse);
   const isStreaming = useSignal(false);
   const activeAssistantId = useSignal<string | null>(null);
-  const activeMessage = useSignal<ChatMessage[]>([]);
 
   // Agent selection (manages list of active agents + selected agent ID)
   const agentSelection = useAgentSelection();
@@ -310,8 +293,6 @@ export function ChatPage() {
     if (threadId.value) {
       fetchThread({ threadId: threadId.value });
     }
-
-    console.dir(thread)
   });
 
   // Handle stream resume — replay snapshot events to rebuild the partial assistant message
@@ -353,16 +334,39 @@ export function ChatPage() {
 
 // ── Chat Page Content ─────────────────────────────────────────────────────────
 
+function scrollToBottom(el?: HTMLElement | null, behavior: ScrollBehavior = 'smooth') {
+  if (!el) return;
+
+  requestAnimationFrame(() => {
+    el.scrollTo({ behavior, top: el.scrollHeight });
+  });
+}
+
 function ChatPageContent() {
   const { agentSelection, isStreaming, thread } = useChatContext();
 
   const scrollRef = useRef<HTMLElement>(null);
 
-  // Auto-scroll to the bottom when the message list grows
+  // Auto-scroll to the bottom when the page loads
   useSignalEffect(() => {
     const history = thread.value.history;
+
     if (!scrollRef.current || !history?.length) return;
-    scrollRef.current.scrollTo({ behavior: 'smooth', top: scrollRef.current.scrollHeight });
+    
+    scrollToBottom(scrollRef.current, 'instant');
+  });
+
+  // Scroll to the bottom when a new stream starts
+  useWorkerEventListener('chat:stream:start', () => scrollToBottom(scrollRef.current) );
+
+  // Auto-scroll to the bottom when we are at the bottom of the page and new content arrives (e.g. during streaming)
+  // This way we do not annoy the user by forcing the scroll to jump around when they are trying to read previous messages
+  useWorkerEventListener('chat:stream:data', () =>{
+    const isAtBottom = scrollRef.current
+      ? scrollRef.current.scrollHeight - scrollRef.current.scrollTop - scrollRef.current.clientHeight < 100
+      : false;
+
+    if (isAtBottom) scrollToBottom(scrollRef.current) 
   });
 
   const selectedAgentId = agentSelection.selectedAgentId.value;

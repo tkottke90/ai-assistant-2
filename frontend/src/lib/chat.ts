@@ -30,6 +30,7 @@ export interface StreamChatMessage {
  * Never sent to the main thread — coalesced into WorkerStreamEvent instead.
  */
 export type StreamChunk =
+  | { kind: 'chat'; content: any }
   | { kind: 'text'; content: string }
   | { kind: 'thinking'; content: string }
   | { kind: 'tool_call_start'; id: string; name: string }
@@ -41,6 +42,11 @@ export type StreamChunk =
   | { kind: 'skip' };
 
 // Outbound events sent from the worker to the main thread
+export type StreamChatStart       = { type: 'chat:stream:start', message: string, assistantName?: string };
+export type StreamChat            = { type: 'chat:stream:data'; content: any };
+export type StreamDone            = { type: 'chat:stream:done' };
+export type StreamError           = { type: 'chat:stream:error';            error: string };
+
 export type StreamTextDelta       = { type: 'chat:stream:text_delta';       content: string };
 export type StreamThinking        = { type: 'chat:stream:thinking';         content: string };
 export type StreamToolCallStart   = { type: 'chat:stream:tool_call_start';  id: string; name: string };
@@ -48,8 +54,6 @@ export type StreamToolCallComplete= { type: 'chat:stream:tool_call_complete'; id
 export type StreamToolResult      = { type: 'chat:stream:tool_result';      toolCallId: string; content: string; summary: string };
 export type StreamAgentName       = { type: 'chat:stream:agent_name';       name: string };
 export type StreamFinalResponse   = { type: 'chat:stream:final_response';   usage?: InteractionMessage['usage']; model?: string; name?: string };
-export type StreamDone            = { type: 'chat:stream:done' };
-export type StreamError           = { type: 'chat:stream:error';            error: string };
 
 export type StreamResume          = {
   type: 'chat:stream:resume';
@@ -61,6 +65,8 @@ export type StreamResume          = {
 export type StreamResumeNone      = { type: 'chat:stream:resume:none';      threadId: string };
 
 export type WorkerStreamEvent =
+  | StreamChat
+  | StreamChatStart
   | StreamTextDelta
   | StreamThinking
   | StreamToolCallStart
@@ -74,71 +80,6 @@ export type WorkerStreamEvent =
 export type WorkerStreamControlEvent =
   | StreamResume
   | StreamResumeNone;
-
-/**
- * Classify a single raw stream line into a StreamChunk.
- * Pure function — no side effects.
- */
-export function classifyLine(line: string): StreamChunk {
-  if (line.startsWith('done: ')) return { kind: 'done' };
-  if (!line.startsWith('data: ')) return { kind: 'skip' };
-
-  try {
-    const data = JSON.parse(line.slice(6));
-
-    // Incremental text/thinking delta from the LLM
-    if (data.mode === 'message') {
-      const chunk = data.chunk;
-      if (!chunk) return { kind: 'skip' };
-
-      // Thinking — reasoning_content present in response_metadata
-      if (chunk.response_metadata?.reasoning_content) {
-        return { kind: 'thinking', content: chunk.response_metadata.reasoning_content };
-      }
-
-      // Text delta
-      if (chunk.content) {
-        return { kind: 'text', content: chunk.content };
-      }
-
-      return { kind: 'skip' };
-    }
-
-    // Agent is about to call a tool
-    if (data.mode === 'tool_calling') {
-      return { kind: 'tool_call_start', id: data.data?.id ?? '', name: data.data?.name ?? '' };
-    }
-
-    // Tool execution has completed; contains the full ServerAction result
-    if (data.mode === 'tool_complete') {
-      return {
-        kind: 'tool_result',
-        toolCallId: data.toolCallId ?? '',
-        content: data.data?.content ?? '',
-        name: data.data?.metadata?.tool_name ?? '',
-      };
-    }
-
-    // Final AI response for this turn; carries usage metrics, model, and agent name
-    if (data.mode === 'final_response') {
-      return {
-        kind: 'final_response',
-        usage: data.data?.usage,
-        model: data.data?.model,
-        name: data.data?.name,
-      };
-    }
-
-    // Error sent by the backend during streaming
-    if (data.error) {
-      return { kind: 'error', message: data.error };
-    }
-
-    return { kind: 'skip' };
-  } catch {
-    return { kind: 'skip' };
-  }
-}
 
 /**
  * Worker-side streaming handler. Owns the fetch + stream reader loop, classifies
@@ -159,26 +100,10 @@ export async function streamChat(
 
   if (!response.body) throw new Error('No response body');
 
+  emit({ type: 'chat:stream:start', message, assistantName: params.agentName });
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-
-  // Debounce thinking tokens — flush every 50ms or on phase change
-  let thinkingBuffer = '';
-  let thinkingFlushTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const flushThinking = () => {
-    if (thinkingFlushTimer) {
-      clearTimeout(thinkingFlushTimer);
-      thinkingFlushTimer = null;
-    }
-    if (thinkingBuffer) {
-      emit({ type: 'chat:stream:thinking', content: thinkingBuffer });
-      thinkingBuffer = '';
-    }
-  };
-
-  let streamDone = false;
-  let streamErrored = false;
 
   try {
     while (true) {
@@ -186,74 +111,33 @@ export async function streamChat(
       if (done) break;
 
       const raw = decoder.decode(value);
-      const lines = raw.split('\n\n');
+      const lines = raw.split('\n');
 
       for (const line of lines) {
-        const chunk = classifyLine(line);
+        if (!line.startsWith('data: ')) continue;
 
-        switch (chunk.kind) {
-          case 'done':
-            streamDone = true;
-            break;
+        const payload = line.replace(/^data: /, '');
 
-          case 'text':
-            flushThinking();
-            emit({ type: 'chat:stream:text_delta', content: chunk.content });
-            break;
+        // TODO: Replace this with the ChatDataChunk interface
+        let chunk: Record<string, any>;
 
-          case 'thinking':
-            thinkingBuffer += chunk.content;
-            if (thinkingFlushTimer) clearTimeout(thinkingFlushTimer);
-            thinkingFlushTimer = setTimeout(flushThinking, 50);
-            break;
+        try {
+          chunk = JSON.parse(payload);
 
-          case 'tool_call_start':
-            emit({ type: 'chat:stream:tool_call_start', id: chunk.id, name: chunk.name });
-            break;
+          emit({ type: 'chat:stream:data', content: chunk });
+        } catch (error) {
+          console.error(error);
 
-          case 'tool_result': {
-            // The backend emits tool calls atomically — emit complete (no args) then the result
-            emit({ type: 'chat:stream:tool_call_complete', id: chunk.toolCallId, args: '' });
-            emit({
-              type: 'chat:stream:tool_result',
-              toolCallId: chunk.toolCallId,
-              content: chunk.content,
-              summary: `${chunk.name}: ${chunk.content}`.slice(0, 120),
-            });
-            break;
-          }
-
-          case 'agent_name':
-            emit({ type: 'chat:stream:agent_name', name: chunk.name });
-            break;
-
-          case 'final_response':
-            if (chunk.name) emit({ type: 'chat:stream:agent_name', name: chunk.name });
-            emit({ type: 'chat:stream:final_response', usage: chunk.usage, model: chunk.model, name: chunk.name });
-            break;
-
-          case 'error':
-            streamErrored = true;
-            streamDone = true;
-            emit({ type: 'chat:stream:error', error: chunk.message });
-            break;
-
-          case 'skip':
-          default:
-            break;
+          // If we can't parse the line, emit it as a text delta (fallback for non-conformant streams)
+          console.log('Failed to parse stream line as JSON, emitting as text delta:', payload);
+          continue;
         }
-
-        if (streamDone) break;
       }
+    }
 
-      if (streamDone) break;
-    }
-  } finally {
-    // Flush any remaining thinking content
-    flushThinking();
-    if (!streamErrored) {
-      emit({ type: 'chat:stream:done' });
-    }
+    emit({ type: 'chat:stream:done' });
+  } catch (error) {
+    emit({ type: 'chat:stream:error', error: error instanceof Error ? error.message : String(error) });
   }
 }
 

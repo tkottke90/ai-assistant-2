@@ -10,13 +10,13 @@ import { Message } from "ollama";
 import { ChatData } from "./chat-data";
 import crypto from 'node:crypto';
 import { createUsageMiddleware } from "@/lib/agents/middleware/usage";
+import { GraphRecursionError } from '@langchain/langgraph';
+
 
 type ChatHistoryEntry =
   | { kind: "tool_calling";    message: AIMessage }
   | { kind: "tool_complete";   message: ToolMessage }
   | { kind: "final_response";  message: AIMessage };
-
-type MessageChunk = { mode: 'thinking' | 'tool_call' | 'responding', content: string, messageId?: string, title?: string };
 
 export function classifyMessage(msg: BaseMessage): ChatHistoryEntry | null {
   switch (msg.type) {
@@ -48,6 +48,13 @@ export async function chatHandler(
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
+  // Initialize AI Message Data to keep track of the current message being constructed from the stream
+  const aiMessageData = new ChatData();
+  let agentName = 'chat-agent';
+
+  // Initialize chat history for this request
+  const chatHistory: ChatMessage[] = [];
+
   try {
     // Load the appropriate LLM client based on alias/model
     const llm = (alias && model)
@@ -73,32 +80,52 @@ export async function chatHandler(
       // Log the incoming message and agent details for debugging
       runtime.logger.info('Reviewing Message', runtime.agentDetails);
 
-      // Setup our abort controller to allow for cancellation if the client disconnects
-      const abortController = new AbortController();
-      res.on('close', () => abortController.abort());
-
       // Assign the agent runtime to our variable
-      agent = await runtime.getAgent(abortController.signal);
+      agent = await runtime.getAgent();
+      agentName = runtime.name;
     } else {
       // Create a generic agent instance without an existing runtime (for ad-hoc messages not tied to a specific agent)
       agent = createAgent({
-        model: llm,
+        model: llm.withRetry({ stopAfterAttempt: 3 }),
         checkpointer,
-        name: 'chat-agent',
+        name: agentName,
         middleware: [
-          createUsageMiddleware(llm, 'chat-agent', req.logger)
+          createUsageMiddleware(llm, agentName, req.logger)
         ]
       });
     }
 
+    // Setup our abort controller to allow for cancellation if the client disconnects
+    const abortController = new AbortController();
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        abortController.abort();
+      }
+    });
+
     // Construct message objects
-    const userMessage = new HumanMessage(message)
-    const aiMessageData = new ChatData();
+    const userMessage = new HumanMessage(message);
+
+    chatHistory.push(
+      InteractionSchema.parse({
+        type: 'chat_message',
+        id: crypto.randomUUID(),
+        content: message,
+        role: 'human',
+        created_at: new Date().toISOString(),
+        metadata: {},
+      }),
+    );
 
     // Invoke the agent
     const stream = agent.stream(
       { messages: [ userMessage ] },
-      { streamMode: ["messages", "values"], configurable: { thread_id: threadId, agent_id }, recursionLimit: 500 }
+      { 
+        streamMode: ["messages", "values"], 
+        configurable: { thread_id: threadId, agent_id },
+        recursionLimit: 500,
+        signal: abortController.signal
+      }
     );
 
     // Iterate over the stream and send updates to the client as they arrive
@@ -152,39 +179,57 @@ export async function chatHandler(
 
     // After stream is done we can update our records in the database
     req.logger.debug('Stream ended, updating chat history');
-    updateChatHistory(
-      threadId,
-      InteractionSchema.parse({
-        type: 'chat_message',
-        id: crypto.randomUUID(),
-        content: message,
-        role: 'human',
-        created_at: new Date().toISOString(),
-        metadata: {},
-      }), 
-      aiMessageData.toChatMessage(agent.options.name)
-    );
+    
+    chatHistory.push(aiMessageData.toChatMessage(agentName));
 
     // Signal completion
     req.logger.debug('Full response sent');
     res.write('done: [DONE]\n\n');
     res.end();
   } catch (error) {
-    const err = BaseError.fromCatch(error);
+    
+    chatHistory.push(aiMessageData.toChatMessage(agentName));
 
-    req.logger.error(err.toString());
-    res.write(`data: ${JSON.stringify({ kind: 'error', message: err.message })}\n\n`);
+    debugger;
+
+    if (error instanceof GraphRecursionError) {
+      chatHistory.push(ServerActionSchema.parse({
+        type: 'server_action',
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        severity: 2,           // red
+        content: 'The agent hit the recursion limit and could not complete your request. You can retry the same message.',
+        created_at: new Date().toISOString(),
+        metadata: { retry_message: message },   // carries the original user message
+        actions: [{ label: 'Retry' }],
+      }));
+
+      res.write(`data: ${JSON.stringify({ kind: 'error', message: error.message })}\n\n`);
+
+    } else {
+      const err = BaseError.fromCatch(error);
+  
+      req.logger.error(err.toString());
+      res.write(`data: ${JSON.stringify({ kind: 'error', message: err.message })}\n\n`);
+    }
+
+  } finally {
+    await updateChatHistory(threadId, chatHistory)
+
+
     res.end();
   }
 }
 
-async function updateChatHistory(threadId: string, inputMessage: ChatMessage, outputMessage: ChatMessage) {
+async function updateChatHistory(threadId: string, messages: ChatMessage[]) {
   // Get last message in the thread to use as the parent for the new messages we're adding to the history
   const lastMessage = await ChatDao.getChatByThreadId(threadId).then(messages => messages.at(-1));
 
-  // Add the user's input message to the history
-  const { node_id: humanId } = await ChatDao.createChatMessage(threadId, inputMessage, lastMessage ? lastMessage.node_id : undefined);
+  let lastNodeId = lastMessage?.node_id;
 
-  // Add the assistant's response to the history, linking it to the user's message
-  await ChatDao.createChatMessage(threadId, outputMessage, humanId);
+  for (const message of messages) {
+    const { node_id } = await ChatDao.createChatMessage(threadId, message, lastNodeId);
+
+    lastNodeId = node_id;
+  }
 }

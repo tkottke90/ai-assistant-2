@@ -72,16 +72,16 @@ function ToolResultCodeBlock({ children, ...props }: BaseProps<{}>) {
   }, [children]);
   
   return (
-    <details className="px-4 py-2 mb-4
+    <details className="px-4 py-2 mb-4 overflow-hidden
     border border-slate-500 rounded bg-slate-600/30 open:border-slate-400/50">
-      <summary className="cursor-pointer">Used Tool: { toolDetails.name }</summary>
+      <summary className="cursor-pointer">Used Tool: { toolDetails.tool }</summary>
       <br />
       <h5>Input Arguments</h5>
-      <pre className="whitespace-pre-wrap">
+      <pre className="whitespace-pre-wrap max-w-full overflow-x-auto">
         {JSON.stringify(toolDetails.args, null, 2)}
       </pre>
       <h5>Tool Response</h5>
-      <pre className="whitespace-pre-wrap">
+      <pre className="whitespace-pre-wrap max-w-full overflow-x-auto">
         {JSON.stringify(toolDetails.response, null, 2)}
       </pre>
     </details>
@@ -108,7 +108,7 @@ function CodeBlock({ children, ...props }: preact.JSX.HTMLAttributes<HTMLPreElem
 
   return (
     <div className="relative group">
-      <pre className={cn(props.className, 'bg-[#222] **:bg-[#222] text-white opacity-100')} ref={(el) => { ref.current = el; }} {...props}>
+      <pre className={cn(props.className, 'bg-[#222] **:bg-[#222] text-white opacity-100 overflow-x-auto max-w-full')} ref={(el) => { ref.current = el; }} {...props}>
         {children}
       </pre>
       <div className="absolute top-2 right-2 flex items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
@@ -129,7 +129,7 @@ function CodeBlock({ children, ...props }: preact.JSX.HTMLAttributes<HTMLPreElem
 export function MarkdownDisplay(props: BaseProps<{ children: string }>) {
 
   return (
-    <div {...props} className={cn("prose orderList unorderList list select-text overflow-visible", props.className)}>
+    <div {...props} className={cn("prose orderList unorderList list select-text overflow-hidden", props.className)}>
       <Markdown 
         remarkPlugins={[remarkGfm]}
         components={{

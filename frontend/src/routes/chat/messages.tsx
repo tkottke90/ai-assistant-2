@@ -108,7 +108,7 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
           </div>
         )}
         <MarkdownDisplay className="group" data-isStreaming={isStreaming.value}>{message.content}</MarkdownDisplay>
-        { !message.content && message.role !== 'human' && (
+        { isStreaming.value && message.role !== 'human' && (
           <div className="flex items-center gap-1 py-1">
             <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.32s]" />
             <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.16s]" />
@@ -137,11 +137,10 @@ function InteractionMessage({ message }: {message: InteractionMessage}) {
           </span>
         </div>
         
-
         {/*  Action Items  */}
         <span className="p-2 rounded-full active:bg-neutral-500 cursor-pointer">
           <Files size={20} title="Copy" onClick={() => {
-            navigator.clipboard.writeText(message.content).then(() => {
+            navigator.clipboard.writeText(message.metadata?.copyContent ?? message.content).then(() => {
               // Optionally, you could add some feedback to the user here, like a toast notification.
               toast.success('Copied to clipboard', { duration: 1000 });
             }).catch(err => {

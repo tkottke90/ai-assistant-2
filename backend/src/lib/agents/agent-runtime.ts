@@ -48,7 +48,7 @@ export class AgentRuntime {
     });
   }
 
-  async getAgent(_shutdownSignal: AbortSignal) {
+  async getAgent() {
     const systemPromptText = [
       this.systemPrompt,
       `<identity>The user will refer to you as ${this.name}.</identity>`,
@@ -59,7 +59,7 @@ export class AgentRuntime {
     this.logger.debug('Creating Agent', { systemPromptWordCount: systemPromptText.split(' ').length });
 
     return createAgent({
-      model: this.llm,
+      model: this.llm.withRetry({ stopAfterAttempt: 3 }),
       name: this.name,
       checkpointer,
       systemPrompt: new SystemMessage(systemPromptText),
@@ -111,7 +111,7 @@ export class AgentRuntime {
    */
   async resumeAfterAction(threadId: string, actionId: string, status: 'approved' | 'denied'): Promise<void> {
     const abortController = new AbortController();
-    const agent = await this.getAgent(abortController.signal);
+    const agent = await this.getAgent();
     try {
       this.logger?.info(`Resuming agent ${this.name} on thread ${threadId} after action ${actionId} (${status})`);
       const stream = agent.stream(

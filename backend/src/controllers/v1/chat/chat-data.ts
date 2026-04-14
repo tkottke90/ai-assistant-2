@@ -166,6 +166,11 @@ export class ChatData {
     }
 
     switch(chunkType) {
+      case 'ai': 
+        debugger;
+
+        break;
+
       // Capture the agent's reasoning comments in a special "thinking"
       // chunk so that we can render them differently in the UI using
       // code blocks
@@ -218,7 +223,7 @@ export class ChatData {
       // a tool with a specific set of arguments.  This allows us to show
       // that in the UI as a pending tool call.
       case 'tool_call': {
-        (message as AIMessageChunk).tool_call_chunks?.forEach(toolCall => {
+        (message as AIMessageChunk).tool_calls?.forEach(toolCall => {
           // Skip tool calls without an id - no way to track them 
           if (!toolCall.id) return;
           
@@ -238,7 +243,7 @@ export class ChatData {
               toolCall.name || 'unknown-tool',
               StringUtils.codeBlockFence(),
             ]),
-            args: args,
+            args: args ? JSON.stringify(args) : undefined,
             response: ''
           })
         });
@@ -305,6 +310,10 @@ export class ChatData {
     const sortedChunks = this.chunkOrder.map(id => this.chunks.get(id)).filter(Boolean) as ChatDataChunk[];
     const content = sortedChunks.map(chunk => chunk.content).join('\n\n');
 
+    // Create a chunk containing only the response, this is the text that would be copied
+    // when the user clicks "copy response" in the UI, it should not include the agent's internal thinking or tool calls
+    const copyContent = sortedChunks.filter(chunk => chunk.mode === 'responding').map(chunk => chunk.content).join('\n\n');
+
     // Aggregate across unique model calls
     let inputTokens = 0;
     let outputTokens = 0;
@@ -329,7 +338,9 @@ export class ChatData {
       content,
       created_at: new Date().toISOString(),
       name,
-      metadata: {},
+      metadata: {
+        copyContent
+      },
       usage: {
         prompt: inputTokens,              // 3. total input tokens (cost)
         completion: outputTokens,          // 4. total output tokens (cost)

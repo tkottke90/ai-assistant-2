@@ -65,6 +65,10 @@ export function AgentDrawer(props: iAgentDrawerProps) {
       <AgentDrawerContext value={{ agent, details, detailsLoading, updateAgent, refreshDetails: fetchDetails }}>
         <header className="mb-4 min-h-16">
           <p>
+            <strong>ID:&nbsp;</strong>
+            {agent.value.agent_id}
+          </p>
+          <p>
             <strong>Description:&nbsp;</strong>
             {agent.value.description}
           </p>

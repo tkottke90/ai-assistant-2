@@ -1,10 +1,10 @@
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
-import { listThreads, newThread, updateThread } from "@tkottke90/ai-assistant-client";
+import { listThreads, newThread, updateThread, deleteThread } from "@tkottke90/ai-assistant-client";
 import type { ThreadMetadata, AgentThread, ThreadsResponse } from "@tkottke90/ai-assistant-client";
 import { useLocation } from "preact-iso";
-import { Plus, MessageSquare, Archive, Bot } from "lucide-preact";
-import { Button } from "./ui/button";
+import { Plus, MessageSquare, Archive, Bot, Trash2 } from "lucide-preact";
+import { Button, ConfirmButton } from "./ui/button";
 import { formatRelativeDate } from "@/lib/date-utils";
 import { useWorkerEvent, fireWorkerEvent } from "@/lib/workerClient";
 import { REFRESH_THREADS_EVT } from "@/lib/chat";
@@ -65,9 +65,10 @@ interface ThreadRowProps {
   thread: ThreadMetadata;
   active: boolean;
   onArchive: (threadId: string) => void;
+  onDelete: (threadId: string) => void;
 }
 
-function ThreadRow({ thread, active, onArchive }: ThreadRowProps) {
+function ThreadRow({ thread, active, onArchive, onDelete }: ThreadRowProps) {
   const hovered = useSignal(false);
 
   return (
@@ -85,17 +86,28 @@ function ThreadRow({ thread, active, onArchive }: ThreadRowProps) {
       <MessageSquare size={14} className="shrink-0" />
       <span className="truncate flex-1">{threadDisplayLabel(thread)}</span>
       {hovered.value && (
+      <>
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onArchive(thread.thread_id);
           }}
-          className="ml-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 shrink-0"
+          className=" text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 shrink-0"
           title="Archive thread"
         >
           <Archive size={14} />
         </button>
+        <ConfirmButton
+          onConfirm={() => {
+            onDelete(thread.thread_id);
+          }}
+          className=" text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 shrink-0"
+          title="Delete thread"
+        >
+          <Trash2 size={14} />
+        </ConfirmButton>
+      </>
       )}
     </a>
   );
@@ -142,6 +154,15 @@ export function ThreadList() {
     }
   };
 
+  const handleDelete = async (threadId: string) => {
+    try {
+      await deleteThread(threadId);
+      fireWorkerEvent({ type: REFRESH_THREADS_EVT });
+    } catch (err) {
+      console.error("Failed to delete thread:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1 px-2">
       <div className="flex items-center justify-between px-2 py-1">
@@ -176,6 +197,7 @@ export function ThreadList() {
               thread={thread}
               active={isActiveThread(thread.thread_id, currentPath)}
               onArchive={handleArchive}
+              onDelete={handleDelete}
             />
           ))}
           <a

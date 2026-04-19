@@ -1,0 +1,139 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "Memory & Scratchpad Eval"
+
+env:
+  OPENAI_API_BASE_URL: https://lemonade.tdkottke.com/api/v1
+  OPENAI_API_KEY: "-"
+
+evaluateOptions:
+  maxConcurrency: 1
+  delay: 2000
+  # Each multi-turn test can take ~160s/turn × 2 turns + reflection overhead.
+  # 15 minutes gives headroom for 3 tests sequentially.
+  timeout: 900000
+
+# Simple passthrough — the agent owns its own system prompt.
+prompts:
+  - "{{message}}"
+
+providers:
+  - id: file://providers/agent-provider.mjs
+    label: "Dummy Agent"
+
+defaultTest:
+  options:
+    provider: openai:chat:Qwen3-4B-GGUF
+  vars:
+    baseUrl: "http://localhost:6060"
+    # Dummy agent with no tools and the default system prompt
+    agentId: 5
+
+tests:
+  # ── 1. No deprecated memory tools called ─────────────────────────────────
+  - description: "Agent should not call any deprecated memory tools"
+    vars:
+      message: "Can you remember that I prefer short, direct answers without extra context?"
+    assert:
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const staleTools = ['store_memory', 'search_memories', 'recall_memory', 'update_memory', 'forget_memory', 'link_memories', 'get_related'];
+          const used = (meta.toolsUsed ?? []).filter(t => staleTools.includes(t));
+          if (used.length > 0) {
+            throw new Error(`Deprecated memory tools were called: ${used.join(', ')}`);
+          }
+          return true;
+      - type: llm-rubric
+        value: "Response acknowledges the preference without invoking any memory-management tools"
+
+  # ── 2. Reflection captures response-style preference (scratchpad) ────────
+  - description: "Reflection system captures a response-style preference into the scratchpad"
+    vars:
+      message: "Can you remember that I prefer short, direct answers without extra context?"
+    assert:
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const sp = meta.scratchpad ?? '';
+          const lower = sp.toLowerCase();
+          if (!lower.includes('short') && !lower.includes('direct') && !lower.includes('concise') && !lower.includes('brief')) {
+            throw new Error(`Reflection did not capture the preference. Scratchpad: ${sp.slice(0, 300)}`);
+          }
+          return true;
+
+  # ── 3. Reflection captures "do not like X" negative-preference phrasing ──
+  - description: "Reflection system captures a negatively-phrased preference (don't like long explanations)"
+    vars:
+      message: "Please make a note that I don't like long explanations — keep answers brief."
+    assert:
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const sp = meta.scratchpad ?? '';
+          const lower = sp.toLowerCase();
+          if (!lower.includes('brief') && !lower.includes('short') && !lower.includes('concise') && !lower.includes('long')) {
+            throw new Error(`Reflection did not capture the negative preference. Scratchpad: ${sp.slice(0, 300)}`);
+          }
+          return true;
+
+  # ── 4. Scratchpad carries a fact across turns ─────────────────────────────
+  - description: "Scratchpad captures a user-stated fact and agent recalls it after a distractor turn"
+    vars:
+      # 3 turns: state fact → distractor → recall.
+      # The distractor forces the agent to rely on the scratchpad injection rather
+      # than the most-recent message still being in the context window.
+      # JSON string — prevents promptfoo from expanding the array into separate test cases.
+      messages: '["Just so you know, my main project is called Lighthouse and it''s built in TypeScript.", "What''s your favourite colour?", "What project am I working on?"]'
+    assert:
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          if (meta.error) throw new Error(meta.error);
+          return true;
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const sp = meta.scratchpad;
+          if (!sp) throw new Error('Scratchpad is empty after turn 1 — the middleware did not capture any content');
+          if (!sp.includes('Lighthouse')) throw new Error(`Scratchpad does not contain "Lighthouse". Got: ${sp.slice(0, 300)}`);
+          return true;
+      - type: llm-rubric
+        value: "Response correctly identifies 'Lighthouse' as the user's own project without hedging, uncertainty, or asking the user to confirm"
+
+  # ── 5. Agent applies a captured formatting preference ──────────────────────
+  - description: "Agent applies a captured preference without asking the user to confirm it"
+    vars:
+      # JSON string — prevents promptfoo from expanding the array into separate test cases.
+      # 3 turns: state preference → distractor → exercise preference.
+      # The distractor forces the agent to rely on the scratchpad rather than the
+      # preference still being the most-recent message in the context window.
+      messages: '["Please always respond in bullet points.", "What is the capital of Japan?", "Explain what a REST API is."]'
+    assert:
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          if (meta.error) throw new Error(meta.error);
+          return true;
+      - type: llm-rubric
+        value: "Response uses bullet points AND does not ask the user to confirm or repeat the formatting preference"
+
+  # ── 6. Reflection captures formatting preference into scratchpad ──────────
+  - description: "Reflection system captures a formatting directive (bullet points) into the scratchpad"
+    vars:
+      messages: '["Please always respond in bullet points.", "What is the capital of Japan?", "Explain what a REST API is."]'
+    assert:
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          if (meta.error) throw new Error(meta.error);
+          return true;
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const sp = meta.scratchpad ?? '';
+          const lower = sp.toLowerCase();
+          if (!lower.includes('bullet') && !lower.includes('format')) {
+            throw new Error(`Reflection did not capture the formatting preference. Scratchpad: ${sp.slice(0, 300)}`);
+          }
+          return true;

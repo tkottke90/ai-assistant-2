@@ -481,3 +481,85 @@ describe('Recursive Middleware - ToolSection', () => {
     });
   });
 });
+
+// ─── TTL helpers ─────────────────────────────────────────────────────────────
+
+import { computeEffectiveTTL, isExpired, DEFAULT_TTL } from './sections.js';
+
+describe('TTL helpers', () => {
+
+  describe('computeEffectiveTTL', () => {
+    it('should equal initialTTL when turnCount equals lastSelectedTurn', () => {
+      expect(computeEffectiveTTL(5, 10, 5)).to.equal(10);
+    });
+
+    it('should decrease as turns advance past lastSelectedTurn', () => {
+      expect(computeEffectiveTTL(5, 10, 8)).to.equal(7);
+    });
+
+    it('should return 0 exactly at expiry boundary', () => {
+      expect(computeEffectiveTTL(5, 10, 15)).to.equal(0);
+    });
+
+    it('should return negative value when past expiry', () => {
+      expect(computeEffectiveTTL(5, 10, 16)).to.equal(-1);
+    });
+  });
+
+  describe('isExpired', () => {
+    it('should return false when effectiveTTL > 0', () => {
+      expect(isExpired(5, 10, 10)).to.equal(false);
+    });
+
+    it('should return true when effectiveTTL = 0 (boundary)', () => {
+      expect(isExpired(5, 10, 15)).to.equal(true);
+    });
+
+    it('should return true when effectiveTTL < 0', () => {
+      expect(isExpired(5, 10, 20)).to.equal(true);
+    });
+  });
+
+  describe('DEFAULT_TTL', () => {
+    it('should define tool as 10', () => {
+      expect(DEFAULT_TTL.tool).to.equal(10);
+    });
+
+    it('should define text as 5', () => {
+      expect(DEFAULT_TTL.text).to.equal(5);
+    });
+  });
+
+  describe('BaseSection TTL attributes', () => {
+    it('should default lastSelectedTurn to 0 and initialTTL to 5 when not provided', () => {
+      const s = new BaseSection('s', 'desc');
+      expect(s.lastSelectedTurn).to.equal(0);
+      expect(s.initialTTL).to.equal(5);
+    });
+
+    it('should persist custom lastSelectedTurn and initialTTL', () => {
+      const s = new BaseSection('s', 'desc', '', 7, 10);
+      expect(s.lastSelectedTurn).to.equal(7);
+      expect(s.initialTTL).to.equal(10);
+    });
+
+    it('should round-trip lastSelectedTurn and initialTTL through toXML/fromXML', () => {
+      const original = new BaseSection('s', 'a section', 'content', 3, 8);
+      const restored = BaseSection.fromXML(original.toXML());
+      expect(restored.lastSelectedTurn).to.equal(3);
+      expect(restored.initialTTL).to.equal(8);
+    });
+
+    it('should default ToolSection initialTTL to 10', () => {
+      const t = new ToolSection('fetch', 'desc');
+      expect(t.initialTTL).to.equal(10);
+    });
+
+    it('should round-trip ToolSection lastSelectedTurn and initialTTL through toXML/fromXML', () => {
+      const original = new ToolSection('fetch', 'desc', 4, 12);
+      const restored = ToolSection.fromXML(original.toXML());
+      expect(restored.lastSelectedTurn).to.equal(4);
+      expect(restored.initialTTL).to.equal(12);
+    });
+  });
+});

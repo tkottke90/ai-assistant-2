@@ -1,0 +1,8 @@
+- id: "openai:chat:Qwen3-1.7B-GGUF"
+  label: "Qwen3 1.7b - Control"
+  config:
+    showThinking: false
+- id: "openai:chat:Qwen3-0.6B-GGUF"
+  label: "Qwen3 0.6b"
+  config:
+    showThinking: false

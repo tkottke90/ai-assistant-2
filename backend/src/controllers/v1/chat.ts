@@ -8,6 +8,7 @@ import { ChatMessageSchema, InteractionSchema, ServerActionSchema, threadRespons
 import crypto from 'node:crypto';
 import ThreadMetadataDao from '../../lib/dao/thread-metadata.dao.js';
 import ChatDao from '@/lib/dao/chat.dao.js';
+import CheckpointDao from '@/lib/dao/checkpoint.dao';
 import { chatHandler } from './chat/chatMessage';
 
 export const router = Router();
@@ -145,7 +146,7 @@ router.delete('/threads/:threadId', async (req, res): Promise<void> => {
 router.post('/threads/:threadId/summarize', async (req, res): Promise<void> => {
   const threadId = req.params.threadId as string;
 
-  const nodes = await getChatByThreadId(threadId);
+  const nodes = await ChatDao.getChatByThreadId(threadId);
   if (nodes.length === 0) {
     res.status(404).json({ error: 'Thread not found or has no messages' });
     return;
@@ -169,7 +170,6 @@ router.post('/threads/:threadId/summarize', async (req, res): Promise<void> => {
   await ThreadMetadataDao.upsert(threadId, { title });
   res.json({ title });
 });
-
 
 router.get(
   '/:threadId',
@@ -208,5 +208,52 @@ router.get(
       threadResponseSchema.parse(response)
   );
 });
+
+
+/**
+ * Route which provides the scratchpad an agent/thread so that we can
+ * see the thinking process of the agent in the frontend.
+ */
+router.get('/:threadid/scratchpad', async (req, res) => {
+  const { threadid } = req.params;
+
+  const metadata = await ThreadMetadataDao.findByThreadId(threadid);
+    
+  if (!metadata) {
+    res.status(404).json({
+      error: 'Thread not found',
+      links: {
+        self: `/v1/chat/${threadid}/scratchpad`,
+      }
+    });
+    return;
+  }
+
+  // Get the checkpoint from the thread metadata
+  const scratchpad = await CheckpointDao.getCheckpointScratchpad(threadid);
+
+  if (!scratchpad) {
+    res.json({
+      scratchpad: 'No Scratchpad Found for Thread',
+      threadid,
+      links: {
+        self: `/v1/chat/${threadid}/scratchpad`,
+        view: `/chat/${threadid}`
+      }
+    });
+    return;
+  }
+
+  // Extract the scratchpad from the checkpoint
+  res.json({
+    scratchpad,
+    threadid,
+    links: {
+      self: `/v1/chat/${threadid}/scratchpad`,
+      view: `/chat/${threadid}`
+    }
+  });
+});
+
 
 export default router;

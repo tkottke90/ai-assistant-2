@@ -12,11 +12,42 @@ const XML_OPTIONS = {
   textNodeName: TEXT_NODE_KEY,
 }
 
+// ─── TTL helpers ─────────────────────────────────────────────────────────────
+
+export function computeEffectiveTTL(lastSelectedTurn: number, initialTTL: number, turnCount: number): number {
+  return initialTTL - (turnCount - lastSelectedTurn);
+}
+
+export function isExpired(lastSelectedTurn: number, initialTTL: number, turnCount: number): boolean {
+  return computeEffectiveTTL(lastSelectedTurn, initialTTL, turnCount) <= 0;
+}
+
+// ─── Default TTLs ─────────────────────────────────────────────────────────────
+
+export const DEFAULT_TTL: Record<string, number> = {
+  tool: 10,
+  text: 5,
+  ephemeral: 2,
+};
+
+// ─── BaseSection ─────────────────────────────────────────────────────────────
+
 export class BaseSection {
   type = 'text';
+  lastSelectedTurn: number;
+  initialTTL: number;
   protected _sections: Map<string, BaseSection> = new Map();
 
-  constructor(readonly name: string, public description: string, protected _content: string = '') {}
+  constructor(
+    readonly name: string,
+    public description: string,
+    protected _content: string = '',
+    lastSelectedTurn: number = 0,
+    initialTTL: number = DEFAULT_TTL.text,
+  ) {
+    this.lastSelectedTurn = lastSelectedTurn;
+    this.initialTTL = initialTTL;
+  }
 
   get content() {
     return this._content;
@@ -31,10 +62,18 @@ export class BaseSection {
       ...this.fromAttribute("@_type", xml, "text"),
       ...this.fromAttribute("@_name", xml),
       ...this.fromAttribute("@_description", xml, ""),
+      ...this.fromAttribute("@_lastSelectedTurn", xml, 0),
+      ...this.fromAttribute("@_initialTTL", xml, DEFAULT_TTL.text),
       content: this.fromTextNode(xml),
     };
 
-    const section = new BaseSection(parsed.name, parsed.description, parsed.content);
+    const section = new BaseSection(
+      parsed.name,
+      parsed.description,
+      parsed.content,
+      Number(parsed.lastSelectedTurn),
+      Number(parsed.initialTTL),
+    );
 
     const rawChildren = xml.section;
     if (rawChildren) {
@@ -150,6 +189,8 @@ export class BaseSection {
       ...BaseSection.toAttribute("type", this.type),
       ...BaseSection.toAttribute("name", this.name),
       ...BaseSection.toAttribute("description", this.description),
+      ...BaseSection.toAttribute("lastSelectedTurn", this.lastSelectedTurn),
+      ...BaseSection.toAttribute("initialTTL", this.initialTTL),
       ...BaseSection.toTextNode(this._content),
     };
 
@@ -173,8 +214,8 @@ export class ToolSection extends BaseSection {
   type = 'tool';
   private invocations: Array<{ timestamp: string, args: Record<string, any>, result: any }> = [];
 
-  constructor(toolName: string, description: string) {
-    super(`tool:${toolName}`, description);
+  constructor(toolName: string, description: string, lastSelectedTurn: number = 0, initialTTL: number = DEFAULT_TTL.tool) {
+    super(`tool:${toolName}`, description, '', lastSelectedTurn, initialTTL);
   }
 
   addInvocation(timestamp: string, args: Record<string, any>, result: any) {
@@ -199,7 +240,12 @@ export class ToolSection extends BaseSection {
 
   static fromXML(xml: Record<string, any>) {
     const base = super.fromXML(xml);
-    const section = new ToolSection(base.name.replace(/^tool:/, ''), base.description);
+    const section = new ToolSection(
+      base.name.replace(/^tool:/, ''),
+      base.description,
+      base.lastSelectedTurn,
+      base.initialTTL,
+    );
 
     if (!xml.invocations?.invocation) return section;
 

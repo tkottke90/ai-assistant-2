@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "Hephaestus Agent — Live Eval"
+
+env:
+  OPENAI_API_BASE_URL: https://lemonade.tdkottke.com/api/v1
+  OPENAI_API_KEY: "-"
+
+evaluateOptions:
+  maxConcurrency: 1
+  delay: 2000
+
+# Simple passthrough — the agent owns its own system prompt.
+prompts:
+  - "{{message}}"
+
+providers:
+  - id: file://providers/agent-provider.mjs
+    label: "Live Agent (backend)"
+
+defaultTest:
+  options:
+    provider: openai:chat:Qwen3-4B-GGUF
+  vars:
+    baseUrl: "http://localhost:6060"
+    # Set this to the Hephaestus agent's database agent_id in your environment
+    agentId: 2
+
+tests:
+  - file://base-agent.yaml
+
+  # 1. 

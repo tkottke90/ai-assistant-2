@@ -1,0 +1,22 @@
+[
+  {
+    "role": "system",
+    "content": {{ system_message | dump }}
+  }{% if messages | length > 0 %},{% endif %}
+  {% for completion in _conversation %}
+    {
+      "role": "user",
+      "content": "{{ completion.input }}"
+    },
+    {
+      "role": "assistant",
+      "content": "{{ completion.output }}"
+    },
+  {% endfor %}
+  {% for message in messages %}
+    {
+      "role": "{{ message.role }}",
+      "content": {{ message.content | dump }}
+    }{% if not loop.last %},{% endif %}
+  {% endfor %}
+]

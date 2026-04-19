@@ -1,0 +1,34 @@
+# Base configuration for live agent evaluations.
+#
+# NOTE: promptfoo does not support `extends` in this version. This file is a
+# reference template — copy its settings into your agent-specific config file.
+#
+# Unlike base.yaml (which tests prompts directly against LLMs), this config
+# routes all requests through the running backend via the custom agent-provider.
+# The backend controls the system prompt, tools, and model — promptfoo only
+# provides the user message and evaluates the response.
+#
+# Prerequisites:
+#   - Backend must be running: cd backend && npm run dev
+#   - The target agent must be active (auto_start: true, or started via the UI)
+#
+# Copy these settings into your agent-specific config:
+
+description: "Live Agent Eval Base"
+
+evaluateOptions:
+  maxConcurrency: 1
+  delay: 2000   # Agents are stateful; give each turn room to complete
+
+# Simple passthrough — the agent owns its own system prompt.
+prompts:
+  - "{{message}}"
+
+providers:
+  - id: file://providers/agent-provider.mjs
+    label: "Live Agent (backend)"
+
+defaultTest:
+  vars:
+    baseUrl: "http://localhost:3000"
+    # agentId must be overridden in each agent-specific config

@@ -339,7 +339,8 @@ export class ChatData {
       created_at: new Date().toISOString(),
       name,
       metadata: {
-        copyContent
+        copyContent,
+        toolsUsed: this.usage.toolsUsed,
       },
       usage: {
         prompt: inputTokens,              // 3. total input tokens (cost)

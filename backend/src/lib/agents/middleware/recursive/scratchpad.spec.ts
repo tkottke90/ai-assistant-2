@@ -97,4 +97,83 @@ describe('Recursive Middleware - Scratchpad', () => {
       expect(xml).to.include('type="tool"');
     });
   });
+
+  // ─── Layer 1a: TTL, pruning, credits ───────────────────────────────────────
+
+  describe('prune', () => {
+    it('should move an expired section to the graveyard', () => {
+      // lastSelectedTurn=0, initialTTL=5 → expires at turnCount=5
+      scratchpad.addSection(new BaseSection('old-notes', 'some notes', 'content', 0, 5));
+      const { pruned, tombstonesPruned } = scratchpad.prune(5, 30);
+      expect(pruned).to.equal(1);
+      expect(tombstonesPruned).to.equal(0);
+      expect(scratchpad.getSection('old-notes')).to.be.undefined;
+      const graves = scratchpad.graveyardList();
+      expect(graves).to.have.lengthOf(1);
+      expect(graves[0].name).to.equal('old-notes');
+      expect(graves[0].description).to.equal('some notes');
+      expect(graves[0].createdAtTurn).to.equal(5);
+    });
+
+    it('should not prune sections that are still alive', () => {
+      scratchpad.addSection(new BaseSection('alive', 'stays', 'content', 5, 10));
+      const { pruned } = scratchpad.prune(10, 30); // effectiveTTL = 10-(10-5) = 5 → alive
+      expect(pruned).to.equal(0);
+      expect(scratchpad.getSection('alive')).to.exist;
+    });
+
+    it('should prune tombstones that have exceeded graveyardTTL', () => {
+      scratchpad.addSection(new BaseSection('stale', 'old', 'content', 0, 1));
+      scratchpad.prune(1, 2); // moves to graveyard, createdAtTurn=1
+      // At turnCount=4, tombstoneEffectiveTTL = 2 - (4-1) = -1 → prune
+      const { tombstonesPruned } = scratchpad.prune(4, 2);
+      expect(tombstonesPruned).to.equal(1);
+      expect(scratchpad.graveyardList()).to.have.lengthOf(0);
+    });
+
+    it('should keep tombstones that have not yet exceeded graveyardTTL', () => {
+      scratchpad.addSection(new BaseSection('fresh', 'recent', 'content', 0, 1));
+      scratchpad.prune(1, 10); // createdAtTurn=1, graveyardTTL=10
+      const { tombstonesPruned } = scratchpad.prune(5, 10); // tombstoneEffectiveTTL = 10-(5-1) = 6 → keep
+      expect(tombstonesPruned).to.equal(0);
+      expect(scratchpad.graveyardList()).to.have.lengthOf(1);
+    });
+  });
+
+  describe('applySelectionCredits', () => {
+    it('should increment lastSelectedTurn by selectionCredit for all live sections', () => {
+      const section = new BaseSection('s', 'desc', 'content', 5, 10);
+      scratchpad.addSection(section);
+      scratchpad.applySelectionCredits(7, 2, 10);
+      expect(section.lastSelectedTurn).to.equal(7);
+    });
+
+    it('should cap lastSelectedTurn at turnCount + creditCap', () => {
+      const section = new BaseSection('s', 'desc', 'content', 10, 10);
+      scratchpad.addSection(section);
+      // turnCount=7, credit=5, cap=3 → max = 7+3=10, 10+5=15 → capped at 10
+      scratchpad.applySelectionCredits(7, 5, 3);
+      expect(section.lastSelectedTurn).to.equal(10);
+    });
+  });
+
+  describe('graveyard XML round-trip', () => {
+    it('should serialize and restore graveyard entries via toXML/fromXML', () => {
+      scratchpad.addSection(new BaseSection('early-section', 'An early note', 'data', 0, 1));
+      scratchpad.prune(1, 30); // moves early-section to graveyard with createdAtTurn=1
+      const xml = scratchpad.toXML();
+      const restored = Scratchpad.fromXML(xml);
+      const graves = restored.graveyardList();
+      expect(graves).to.have.lengthOf(1);
+      expect(graves[0].name).to.equal('early-section');
+      expect(graves[0].description).to.equal('An early note');
+      expect(graves[0].createdAtTurn).to.equal(1);
+    });
+
+    it('should not include a graveyard block in XML when the graveyard is empty', () => {
+      scratchpad.addSection(new BaseSection('live', 'desc', 'content', 0, 10));
+      const xml = scratchpad.toXML();
+      expect(xml).not.to.include('graveyard');
+    });
+  });
 });

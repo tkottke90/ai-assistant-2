@@ -5,7 +5,6 @@ import type { ToolsConfig } from '../config/tools.schema.js';
 import { ToolsConfigSchema } from '../config/tools.schema.js';
 import AgentToolDao from '../dao/agent-tool.dao.js';
 import { seedBuiltinTools, createDateTool } from './builtin/index.js';
-import { createMemoryTools } from './builtin/memory-tools.js';
 import { createBuiltinTools } from './builtin/tools.js';
 import { McpServerManager } from './mcp/manager.js';
 import type { McpServerStatus } from './models.js';
@@ -98,7 +97,7 @@ export class ToolManager {
   }
 
   /**
-   * Returns the five built-in permission-system tools + memory tools for an agent.
+   * Returns the built-in permission-system tools and date tool for an agent.
    * Always injected into every agent regardless of AgentTool assignments.
    */
   getBuiltinTools(agentId: number): StructuredTool[] {
@@ -110,10 +109,9 @@ export class ToolManager {
       permissionTtlSeconds: config.permission_request_ttl_seconds,
     });
 
-    const memoryTools = createMemoryTools(agentId);
     const dateTools = [createDateTool()];
 
-    return [...permissionTools, ...memoryTools as StructuredTool[], ...dateTools as StructuredTool[]];
+    return [...permissionTools, ...dateTools as StructuredTool[]];
   }
 
   /**

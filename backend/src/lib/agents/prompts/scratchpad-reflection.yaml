@@ -1,0 +1,239 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "Scratchpad Reflection — Layer 2 Golden Dataset"
+
+env:
+  OPENAI_API_BASE_URL: https://lemonade.tdkottke.com/api/v1
+  OPENAI_API_KEY: "-"
+
+evaluateOptions:
+  maxConcurrency: 1
+  delay: 1000
+
+prompts:
+  - file://../../../../test/chat-fixture.json
+
+providers:
+  - file://../../../../test/providers.yaml
+
+defaultTest:
+  options:
+    provider: openai:chat:Qwen3-4B-GGUF
+  vars:
+    system_message: file://scratchpad-reflection.md
+
+# ==== Test Cases ====
+
+tests:
+  # ── 1. Tool returns article content → appends a new specific section ─────────
+  - description: "tool returns article content → appends a new specific section"
+
+    vars:
+      messages:
+        - role: user
+          content: "Can you fetch and read this article for me: https://example.com/nodejs-esm-guide"
+
+        - role: tool
+          content: "Article fetched. Title: 'Node.js ESM Guide'. Content: To use ESM in Node.js, set \"type\": \"module\" in package.json. Use .mjs extension or set type in package.json. Import syntax uses import instead of require. Dynamic imports use await import()."
+
+        - role: assistant
+          content: "I've read the article. The key points are: set type to module in package.json, use .mjs or configure type field, and replace require() calls with import statements."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            (empty — no sections yet)
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            return Array.isArray(r.operations) && r.operations.some(op => op.op === 'append');
+          } catch (e) {
+            throw new Error(`Parse failed: ${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+
+  # ── 2. User corrects a preference → rewrites the existing preferences section ─
+  - description: "user corrects a preference → rewrites or removes the existing preferences section"
+
+    vars:
+      messages:
+        - role: user
+          content: "Actually, I prefer concise answers. Keep it short and skip the background context unless I ask."
+
+        - role: assistant
+          content: "Got it! I'll keep my answers concise and direct from now on."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            - user-preferences: User communication preferences
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            return r.operations.some(op =>
+              (op.op === 'rewrite' || op.op === 'remove') && op.name === 'user-preferences'
+            );
+          } catch (e) {
+            throw new Error(`Parse failed: ${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+
+  # ── 3. User says forget about X → removes the relevant section ───────────────
+  - description: "user says forget about X → removes the relevant section"
+
+    vars:
+      messages:
+        - role: user
+          content: "Forget the Rust CLI project — I've abandoned it. No need to keep that context."
+
+        - role: assistant
+          content: "Understood, I've cleared the Rust CLI project from my context."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            - old-project-context: Details about the abandoned side project
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            return r.operations.some(op => op.op === 'remove' && op.name === 'old-project-context');
+          } catch (e) {
+            throw new Error(`Parse failed: ${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+
+  # ── 4. Purely social exchange → zero operations ──────────────────────────────
+  - description: "purely social exchange → zero operations"
+
+    vars:
+      messages:
+        - role: user
+          content: "Thanks, that's all for now!"
+
+        - role: assistant
+          content: "You're welcome! Let me know if you need anything else."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            (empty — no sections yet)
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            return Array.isArray(r.operations) && r.operations.length === 0;
+          } catch (e) {
+            throw new Error(`Parse failed: ${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+
+  # ── 5. Tool updates partial data → targets existing section (rewrite preferred) ─
+  - description: "tool updates partial data → targets existing api-endpoints section"
+
+    vars:
+      messages:
+        - role: user
+          content: "The user endpoint changed — it's now at /api/v2/users, and the old v1 ones are deprecated."
+
+        - role: assistant
+          content: "Noted — the endpoints are now at /api/v2/users. The v1 endpoints are deprecated."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            - api-endpoints: Known API endpoint URLs for the project
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            return r.operations.some(op => op.name === 'api-endpoints');
+          } catch (e) {
+            throw new Error(`Parse failed: ${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+
+  # ── 6. Same topic second time → rewrite existing section, not a new append ───
+  - description: "same topic second time → targets existing deployment-config section"
+
+    vars:
+      messages:
+        - role: user
+          content: "We switched from ECS Fargate to EKS with Helm charts."
+
+        - role: assistant
+          content: "Noted — deployment is now using EKS with Helm charts instead of ECS Fargate."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            - deployment-config: Current deployment configuration details
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            return r.operations.some(op => op.name === 'deployment-config');
+          } catch (e) {
+            throw new Error(`Parse failed: ${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+
+  # ── 7. New distinct topic → append with new specific kebab-case name ─────────
+  - description: "new distinct topic → append with new specific kebab-case name, not reuse user-preferences"
+
+    vars:
+      messages:
+        - role: user
+          content: "By the way, I'm working in a Python 3.12 environment with uv as the package manager."
+
+        - role: assistant
+          content: "Got it — I'll keep in mind you're using Python 3.12 with uv."
+
+        - role: user
+          content: |
+            Review the conversation above and the current TOC below.
+            Identify every piece of new information and output your ReflectionOutput JSON now.
+
+            ## Current TOC
+            - user-preferences: User preferences
+
+    assert:
+      - type: javascript
+        value: |
+          try {
+            const r = JSON.parse(output);
+            const hasAppend = r.operations.some(op => op.op === 'append');
+            const wrongReuse = r.operations.some(op => op.op === 'rewrite' && op.name === 'user-preferences');
+            if (!hasAppend) throw new Error('Expected at least one append operation');
+            if (wrongReuse) throw new Error('Should not overwrite unrelated user-preferences section');
+            return true;
+          } catch (e) {
+            throw new Error(`${e.message}. Output: ${JSON.stringify(output)}`);
+          }
+

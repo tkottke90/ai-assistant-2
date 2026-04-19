@@ -25,6 +25,20 @@ async function getUserTurnCheckpointId(threadId: string): Promise<string> {
   return threadId;
 }
 
+async function getCheckpointScratchpad(threadId: string) {
+  const historyGen = checkpointer.list({ configurable: { thread_id: threadId } });
+
+  for await (const item of historyGen) {
+    const scratchpad = item.checkpoint.channel_values?.['scratchpad'] as string | undefined;
+    if (scratchpad) {
+      return scratchpad;
+    }
+  }
+
+  return undefined;
+}
+
 export default {
+  getCheckpointScratchpad,
   getUserTurnCheckpointId,
 };

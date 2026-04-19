@@ -1,5 +1,5 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { ATTR_PREFIX, BaseSection, TEXT_NODE_KEY, ToolSection } from "./sections";
+import { ATTR_PREFIX, BaseSection, DEFAULT_TTL, isExpired, TEXT_NODE_KEY, ToolSection } from "./sections";
 import { XMLBuilder, XMLParser } from "fast-xml-parser";
 import { HumanMessage, SystemMessage } from "langchain";
 import z from "zod";
@@ -51,8 +51,15 @@ If the user asks, *“How would I wait for the whole page to load when scraping 
 `
 
 
+export interface GraveyardEntry {
+  name: string;
+  description: string;
+  createdAtTurn: number;
+}
+
 export class Scratchpad {
   private sections: Map<string, BaseSection> = new Map();
+  private graveyard: Map<string, GraveyardEntry> = new Map();
 
   constructor() {}
 
@@ -214,6 +221,54 @@ export class Scratchpad {
   }
 
   /**
+   * Move expired sections to the graveyard and remove tombstones that have
+   * exceeded their graveyard TTL. Call once per `afterModel` pass.
+   */
+  prune(turnCount: number, graveyardTTL: number = 30): { pruned: number; tombstonesPruned: number } {
+    let pruned = 0;
+    let tombstonesPruned = 0;
+
+    for (const [name, section] of this.sections) {
+      if (isExpired(section.lastSelectedTurn, section.initialTTL, turnCount)) {
+        this.graveyard.set(name, {
+          name,
+          description: section.description,
+          createdAtTurn: turnCount,
+        });
+        this.sections.delete(name);
+        pruned++;
+      }
+    }
+
+    for (const [name, entry] of this.graveyard) {
+      const tombstoneEffectiveTTL = graveyardTTL - (turnCount - entry.createdAtTurn);
+      if (tombstoneEffectiveTTL <= 0) {
+        this.graveyard.delete(name);
+        tombstonesPruned++;
+      }
+    }
+
+    return { pruned, tombstonesPruned };
+  }
+
+  /**
+   * Credit `selectionCredit` turns to every live section's `lastSelectedTurn`,
+   * capped at `turnCount + creditCap`. Call in `beforeModel` when sections are injected.
+   */
+  applySelectionCredits(turnCount: number, selectionCredit: number = 2, creditCap: number = 10): void {
+    for (const section of this.sections.values()) {
+      section.lastSelectedTurn = Math.min(
+        section.lastSelectedTurn + selectionCredit,
+        turnCount + creditCap,
+      );
+    }
+  }
+
+  graveyardList(): GraveyardEntry[] {
+    return Array.from(this.graveyard.values());
+  }
+
+  /**
    * Creates a generator that will traverse the sections of the scratchpad in a depth-first manner,
    * yielding each section as it is visited.
    * @param maxDepth The maximum depth to traverse in the section hierarchy. This is a safeguard against infinite loops in case of circular references. The default value is 10.
@@ -309,6 +364,17 @@ export class Scratchpad {
       }
     });
 
+    // Extract graveyard tombstones
+    const graveyardEntries = parsed?.scratchpad?.graveyard?.entry ?? [];
+    graveyardEntries.forEach((entryData: Record<string, any>) => {
+      const name = entryData['@_name'];
+      const description = entryData['@_description'] ?? '';
+      const createdAtTurn = Number(entryData['@_createdAtTurn'] ?? 0);
+      if (name) {
+        scratchpad.graveyard.set(name, { name, description, createdAtTurn });
+      }
+    });
+
     return scratchpad;
   }
 
@@ -323,13 +389,27 @@ export class Scratchpad {
     });
     
     const sections = Array.from(this.sections.values()).map(section => section.toXML());
-    const toc = Array.from(this.sections.values()).map(section => ({ name: section.name, description: section.description }));
+    const toc = Array.from(this.sections.values()).map(section => ({
+      ...BaseSection.toAttribute('name', section.name),
+      ...BaseSection.toAttribute('description', section.description),
+    }));
+    const graveyardEntries = Array.from(this.graveyard.values()).map(entry => ({
+      ...BaseSection.toAttribute('name', entry.name),
+      ...BaseSection.toAttribute('description', entry.description),
+      ...BaseSection.toAttribute('createdAtTurn', entry.createdAtTurn),
+    }));
 
-    return builder.build({
+    const doc: Record<string, any> = {
       scratchpad: {
-        toc: { section: toc },
+        toc: { entry: toc },
         sections: { section: sections },
       }
-    })
+    };
+
+    if (graveyardEntries.length > 0) {
+      doc.scratchpad.graveyard = { entry: graveyardEntries };
+    }
+
+    return builder.build(doc);
   }
 }

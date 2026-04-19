@@ -1,0 +1,2 @@
+options:
+  provider: openai:chat:Qwen3-4B-GGUF

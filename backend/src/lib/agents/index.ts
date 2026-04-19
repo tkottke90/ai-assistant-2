@@ -1,4 +1,5 @@
 import express from 'express';
+import { AgentSchema } from '../config/agents.schema';
 import { AgentRuntime } from "./agent-runtime";
 import { AgentManager } from './agent-manager';
 import AgentDao from '../dao/agent.dao';
@@ -7,6 +8,14 @@ export default async function initializeAgents(app: express.Application) {
   app.logger.info('Initializing Agent Manager');
   const agentLogger = app.logger.child({ location: 'AgentManager' });
   app.agents = new AgentManager(agentLogger);
+
+  const agentsConfig = app.config.loadConfig('agents', AgentSchema);
+  const scratchpadCfg = agentsConfig.scratchpad;
+  const scratchpadLlm = scratchpadCfg?.llm
+    ? scratchpadCfg.model
+      ? app.llm.getClientWithModel(scratchpadCfg.llm, scratchpadCfg.model)
+      : app.llm.getClient(scratchpadCfg.llm)
+    : undefined;
 
   // Load all agents from the database and register them with the Agent Manager
   const agents = await AgentDao.getAllAgents()
@@ -17,7 +26,7 @@ export default async function initializeAgents(app: express.Application) {
       : app.llm.getClient(agentData.engine);
     // Pass ToolManager if available (set by setupTools before setupAgentManager)
     const runtimeLogger = app.logger.child({ location: `Agent.${agentData.name}` });
-    const agentRuntime = AgentRuntime.fromDatabase(agentData as any, llmEngine, app.tools, runtimeLogger);
+    const agentRuntime = AgentRuntime.fromDatabase(agentData as any, llmEngine, app.tools, runtimeLogger, scratchpadCfg, scratchpadLlm);
     app.agents.registerAgent(agentRuntime);
 
     if (agentData.auto_start) {

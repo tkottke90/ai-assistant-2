@@ -1,0 +1,47 @@
+- description: "The agent should respond to a greeting without calling any tools"
+  vars:
+    message: "Hi, what can you help me with?"
+  assert:
+    - type: javascript
+      value: |
+        const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+        const tools = meta.toolsUsed ?? [];
+        if (tools.length > 0) {
+          throw new Error(`Expected no tool calls, but got: ${tools.join(', ')}`);
+        }
+        return true;
+    - type: llm-rubric
+      value: "Response explains the agent's purpose and capabilities clearly"
+
+# ── 2. Negative assertion — agent should NOT call memory tools for a simple fact ──
+- description: "The agent should answer a date question without calling any memory tools"
+  vars:
+    message: "What is today's date?"
+  assert:
+    - type: javascript
+      value: |
+        const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+        const tools = meta.toolsUsed ?? [];
+        const memoryTools = tools.filter(t => t.includes('memory'));
+        if (memoryTools.length > 0) {
+          throw new Error(`Did not expect memory tools, but got: ${memoryTools.join(', ')}`);
+        }
+        return true;
+    - type: llm-rubric
+      value: "Response includes a specific date or time"
+
+# ── 3. Tool failure check — no failures on routine tasks ────────────────────
+- description: "The agent should acknowledge a user preference without any tool failures"
+  vars:
+    message: "Please remember that I prefer concise responses without extra background context."
+  assert:
+    - type: javascript
+      value: |
+        const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+        const failures = meta.stats?.toolFailures ?? 0;
+        if (failures > 0) {
+          throw new Error(`Expected 0 tool failures, got ${failures}`);
+        }
+        return true;
+    - type: llm-rubric
+      value: "Response acknowledges the formatting preference without asking for clarification"

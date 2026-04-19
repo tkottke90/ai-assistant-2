@@ -72,7 +72,7 @@ export async function chatHandler(
 
       // If no runtime exists for the given agentId, or if the agent is not active, return an error
       if (!runtime || !agentManager.isActive(agentId)) {
-        res.write(`data: ${JSON.stringify({ error: 'Agent not found or not active' })}\n\n`);
+        res.write(`done: ${JSON.stringify({ kind: 'error', message: 'Agent not found or not active' })}\n\n`);
         res.end();
         return;
       }
@@ -184,13 +184,10 @@ export async function chatHandler(
 
     // Signal completion
     req.logger.debug('Full response sent');
-    res.write('done: [DONE]\n\n');
-    res.end();
+    res.write(`done: ${JSON.stringify(aiMessageData.toChatMessage(agentName))}\n\n`);
   } catch (error) {
     
     chatHistory.push(aiMessageData.toChatMessage(agentName));
-
-    debugger;
 
     if (error instanceof GraphRecursionError) {
       chatHistory.push(ServerActionSchema.parse({
@@ -204,13 +201,19 @@ export async function chatHandler(
         actions: [{ label: 'Retry' }],
       }));
 
-      res.write(`data: ${JSON.stringify({ kind: 'error', message: error.message })}\n\n`);
+      res.write(`done: ${JSON.stringify({ kind: 'error', message: error.message })}\n\n`);
 
+    } else if (error instanceof Error && 'name' in error && error.name === 'AbortError') {
+      req.logger.error('Client disconnected, aborting agent execution', { code: (error as any).code, stack: error.stack });
+        
+      res.write(`done: ${JSON.stringify({ kind: 'error', message: 'Client disconnected, agent execution aborted' })}\n\n`);
     } else {
+
+      debugger;
+
       const err = BaseError.fromCatch(error);
-  
       req.logger.error(err.toString());
-      res.write(`data: ${JSON.stringify({ kind: 'error', message: err.message })}\n\n`);
+      res.write(`done: ${JSON.stringify({ kind: 'error', message: err.message })}\n\n`);
     }
 
   } finally {

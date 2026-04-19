@@ -6,14 +6,16 @@ import { Command } from "@langchain/langgraph";
 import { createAgent, toolRetryMiddleware } from "langchain";
 import type { Logger } from "winston";
 import { checkpointer } from '../../lib/database';
+import { ScratchpadConfig } from '../config/agents.schema';
 import { Agent, AgentSchema } from "../models/agent";
 import { AgentModel } from "../prisma/models";
 import type { ToolManager } from "../tools/manager";
 import { Queue } from "../types/queue";
-import { createRecursiveScratchpadMiddleware } from "./middleware/recursive-2";
+import { createScratchpadMiddleware } from "./middleware/recursive";
 import { createToolSummaryMiddleware } from './middleware/tool-summary';
 import { createUsageMiddleware } from './middleware/usage';
 import { TOOLS_SYSTEM_PROMPT } from './prompts/tools-prompt';
+import { SCRATCHPAD_SYSTEM_PROMPT } from './prompts/memory-prompt';
 import { TOOL_FAILURE_PROMPT } from "./prompts/tool-failure-prompt";
 
 export class AgentRuntime {
@@ -29,6 +31,8 @@ export class AgentRuntime {
     readonly llm: BaseChatModel,
     private readonly toolManager: ToolManager,
     readonly logger: Logger,
+    private readonly scratchpadConfig?: ScratchpadConfig,
+    private readonly scratchpadLlm?: BaseChatModel,
   ) {
     this.name = agent.name;
     this.description = agent.description ?? '';
@@ -53,7 +57,7 @@ export class AgentRuntime {
       this.systemPrompt,
       `<identity>The user will refer to you as ${this.name}.</identity>`,
       TOOLS_SYSTEM_PROMPT,
-      // MEMORY_SYSTEM_PROMPT
+      SCRATCHPAD_SYSTEM_PROMPT,
     ].join('\n\n');
 
     this.logger.debug('Creating Agent', { systemPromptWordCount: systemPromptText.split(' ').length });
@@ -75,7 +79,13 @@ export class AgentRuntime {
             return TOOL_FAILURE_PROMPT(err);
           },
         }),
-        // createRecursiveScratchpadMiddleware(this.name, this.llm, this.logger.child({ location: `AgentRuntime.${this.name}.Scratchpad` })),
+        createScratchpadMiddleware(
+          this.name,
+          this.llm,
+          this.logger.child({ location: `AgentRuntime.${this.name}.Scratchpad` }),
+          this.scratchpadConfig,
+          this.scratchpadLlm,
+        ),
         // createToolSummaryMiddleware(this.name, this.logger, this.llm),
         createUsageMiddleware(this.llm, this.name, this.logger)
       ],
@@ -128,12 +138,14 @@ export class AgentRuntime {
     }
   }
 
-  static fromDatabase(agentData: AgentModel, llm: BaseChatModel, toolManager: ToolManager, logger: Logger) {
+  static fromDatabase(agentData: AgentModel, llm: BaseChatModel, toolManager: ToolManager, logger: Logger, scratchpadConfig?: ScratchpadConfig, scratchpadLlm?: BaseChatModel) {
     return new AgentRuntime(
       AgentSchema.parse(agentData),
       llm,
       toolManager,
       logger.child({ location: `AgentRuntime:${agentData.name}` }),
+      scratchpadConfig,
+      scratchpadLlm,
     );
   }
 }

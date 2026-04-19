@@ -1,0 +1,12 @@
+[
+  {
+    "role": "system",
+    "content": {{ system_message | dump }}
+  }{% if messages | length > 0 %},{% endif %}
+  {% for message in messages %}
+    {
+      "role": "{{ message.role }}",
+      "content": {{ message.content | dump }}
+    }{% if not loop.last %},{% endif %}
+  {% endfor %}
+]

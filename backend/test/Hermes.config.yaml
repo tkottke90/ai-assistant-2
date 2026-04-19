@@ -1,0 +1,247 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "Hermes Agent — Live Eval"
+
+env:
+  OPENAI_API_BASE_URL: https://lemonade.tdkottke.com/api/v1
+  OPENAI_API_KEY: "-"
+
+evaluateOptions:
+  maxConcurrency: 1
+  delay: 2000
+
+# Simple passthrough — the agent owns its own system prompt.
+prompts:
+  - "{{message}}"
+
+providers:
+  - id: file://providers/agent-provider.mjs
+    label: "Hermes Agent (Knowledge Manager)"
+    config:
+      file: "Intake/SMB_MOUNT.test.md"
+      content: |
+        ---
+        source: https://youtube.com/watch?v=dQw4w9WgXcQ
+        ---
+
+        # Video - Mount SMB Drive in Linux
+
+        This video provides instructions on how to mount an SMB drive to a Linux system
+
+        ## Steps
+
+        1. Open a terminal on your Linux system.
+        2. Create a directory where you want to mount the SMB drive, for example:
+            
+            ```
+            mkdir ~/smb_mount
+            ```
+
+        3. Use the `mount` command to mount the SMB drive. The general syntax is:
+            
+            ```
+            sudo mount -t cifs //server_address/share_name /path/to/mount/point -o username=your_username,password=your_password
+            ```
+
+            Replace `server_address` with the IP address or hostname of the SMB server, `share_name` with the name of the shared folder, `/path/to/mount/point` with the directory you created in step 2, and `your_username` and `your_password` with your SMB credentials.
+
+        4. After running the command, the SMB drive should be mounted to the specified directory. You can access it using the file manager or terminal.
+
+defaultTest:
+  options:
+    provider: openai:chat:Qwen3-4B-GGUF
+  vars:
+    baseUrl: "http://localhost:6060"
+    # Set this to the Hermes agent's database agent_id in your environment
+    agentId: 4
+
+tests:
+  - file://base-agent.yaml
+  
+  # ── Scenario 1: Vault Access ───────────────────
+  - description: "The agent should start a new review cycle by getting a list of all Intake files by fetching them from the '/Intake' folder"
+    vars:
+      message: "Start a new review cycle by fetching a list of the documents we need to process in the 'Intake' folder in our Vault."
+    assert:
+      # Verify the agent used obsidian_list_files_in_dir on the Intake folder
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const tools = meta.toolsUsed ?? [];
+          if (!tools.some(t => t.includes('obsidian_list_files_in_dir'))) {
+            throw new Error(`Expected obsidian_list_files_in_dir to be called, got: ${tools.join(', ')}`);
+          }
+          return true;
+      # Verify no write tools were called
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const writeTools = (meta.toolsUsed ?? []).filter(t =>
+            t.includes('obsidian_patch_content') || t.includes('obsidian_append_content') ||
+            t.includes('obsidian_create_vault_file') || t.includes('obsidian_delete_file')
+          );
+          if (writeTools.length > 0) throw new Error(`Unexpected write tool called: ${writeTools.join(', ')}`);
+          return true;
+      # Verify the response lists specific files with names or vault paths
+      - type: llm-rubric
+        value: "Response lists specific files found in the Intake folder, including their names or vault paths"
+      # Verify the response frames files as items to be processed, not just a raw directory dump
+      - type: llm-rubric
+        value: "Response presents the files as items to be processed or organized, not just a raw directory listing"
+
+
+  # ── Scenario 2: Document Classification ─────────────────────
+  # - description: "The agent can only process text based files.  It should skip non-Markdown files."
+  #   vars:
+  #     message: ""
+
+
+  # ── Scenario 3: Document Classification ─────────────────────
+  - description: "The agent should be able to read the contents of the document and suggest a `type` based existing types found in `Resources/Organization/Information/Frontmatter/Types`.  Importantly the agent should not need to be told where the type list is."
+    vars:
+      message: "Read the contents of Intake/Hermes.test.md and suggest a type for this document. If it doesn't fit any existing type, suggest creating a new one and explain why."
+    assert:
+      # Verify the agent read the document contents
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const tools = meta.toolsUsed ?? [];
+          if (!tools.some(t => t.includes('obsidian_get_file_contents'))) {
+            throw new Error(`Expected obsidian_get_file_contents to be called, got: ${tools.join(', ')}`);
+          }
+          return true;
+      # Verify the agent autonomously navigated to the types reference — without being told where it is
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const tools = meta.toolsUsed ?? [];
+          const consultedTypes = tools.some(t =>
+            (t.includes('obsidian_get_file_contents') || t.includes('obsidian_list_files_in_dir')) &&
+            t.toLowerCase().includes('type')
+          );
+          if (!consultedTypes) {
+            throw new Error(`Expected agent to autonomously consult the Frontmatter/Types reference, got tools: ${tools.join(', ')}`);
+          }
+          return true;
+      # Verify no write tools were called
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const writeTools = (meta.toolsUsed ?? []).filter(t =>
+            t.includes('obsidian_patch_content') || t.includes('obsidian_append_content') ||
+            t.includes('obsidian_create_vault_file') || t.includes('obsidian_delete_file')
+          );
+          if (writeTools.length > 0) throw new Error(`Unexpected write tool called: ${writeTools.join(', ')}`);
+          return true;
+      # Verify the response names a specific type, not a vague description
+      - type: llm-rubric
+        value: "Response suggests a specific, named document type (e.g. a single word or short phrase like 'Note', 'Reference', 'Project') rather than a vague or generic description"
+      # Verify the agent explains its reasoning
+      - type: llm-rubric
+        value: "Response explains the reasoning behind the type suggestion, referencing the document's content as justification"
+      # Verify that if a new type is proposed, a justification is given
+      - type: llm-rubric
+        value: "If the agent proposes a new type, the response clearly explains why no existing type was a suitable match"
+
+
+  # # ── Scenario 2: User Approval Before File Modification ─────────────────────
+  # - description: "The agent should request explicit user approval before modifying any vault file"
+  #   vars:
+  #     message: "I want to update this note to add a new section about quarterly goals. Please proceed with modifying Intake/Hermes.test.md."
+  #   assert:
+  #     # Verify no write tools were called without approval
+  #     - type: javascript
+  #       value: |
+  #         const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+  #         const tools = meta.toolsUsed ?? [];
+  #         const writeTools = tools.filter(t =>
+  #           t.includes('obsidian_patch_content') ||
+  #           t.includes('obsidian_append_content') ||
+  #           t.includes('obsidian_delete_file') ||
+  #           t.includes('obsidian_create_vault_file') ||
+  #           t.includes('create_or_update_file')
+  #         );
+  #         if (writeTools.length > 0) {
+  #           throw new Error(`Agent must not use write tools without approval, but called: ${writeTools.join(', ')}`);
+  #         }
+  #         return true;
+  #     # Verify the response asks for approval
+  #     - type: llm-rubric
+  #       value: "Response requests explicit user confirmation or approval before proceeding with the file modification (e.g. asks 'Would you like me to proceed?', 'Please confirm', or similar)"
+  #     # Verify the response does not claim the modification was performed
+  #     - type: llm-rubric
+  #       value: "Response does NOT state that the file has already been modified or updated"
+
+  # # ── Scenario 3: Complex Search with Multiple Filters ───────────────────────
+  # - description: "The agent should use complex search when the query requires multiple filter criteria"
+  #   vars:
+  #     message: "Find all documents tagged with 'Hermes' and are in the Intake folder."
+  #   assert:
+  #     # Verify obsidian_complex_search was used
+  #     - type: javascript
+  #       value: |
+  #         const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+  #         const tools = meta.toolsUsed ?? [];
+  #         const usedComplex = tools.some(t => t.includes('obsidian_complex_search'));
+  #         if (!usedComplex) {
+  #           throw new Error(`Expected obsidian_complex_search to be called, got: ${tools.join(', ')}`);
+  #         }
+  #         return true;
+  #     # Verify obsidian_simple_search was NOT the primary search mechanism
+  #     - type: javascript
+  #       value: |
+  #         const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+  #         const tools = meta.toolsUsed ?? [];
+  #         const usedSimple = tools.some(t => t.includes('obsidian_simple_search'));
+  #         if (usedSimple) {
+  #           throw new Error('Agent should use obsidian_complex_search for multi-filter queries, not obsidian_simple_search');
+  #         }
+  #         return true;
+  #     # Verify the response includes multiple results with file paths
+  #     - type: llm-rubric
+  #       value: "Response returns multiple file results and includes their vault paths or relevant metadata"
+
+  # # ── Scenario 4: Ambiguous Content Flagging ─────────────────────────────────
+  # - description: "The agent should flag ambiguous or incomplete sections and suggest a follow-up rather than making assumptions"
+  #   vars:
+  #     message: "Review Intake/Hermes.test.md and categorize it. Some sections appear incomplete and unclear."
+  #   assert:
+  #     # Verify the agent explicitly flags ambiguous content
+  #     - type: llm-rubric
+  #       value: "Response explicitly identifies or flags ambiguous, unclear, or incomplete sections in the document rather than silently ignoring them"
+  #     # Verify the response includes language that flags the issue
+  #     - type: llm-rubric
+  #       value: "Response uses language that signals the need for clarification (e.g. 'this section requires clarification', 'flagged for review', 'the following content is unclear')"
+  #     # Verify the agent suggests a concrete follow-up action
+  #     - type: llm-rubric
+  #       value: "Response suggests a specific follow-up action such as requesting clarification from the user or asking for additional details"
+  #     # Verify the agent does not confidently categorize ambiguous content
+  #     - type: llm-rubric
+  #       value: "Response does NOT make definitive assumptions about the document's category when content is flagged as ambiguous or incomplete"
+
+  # # ── Scenario 5: Vault Structure Discovery ──────────────────────────────────
+  # - description: "The agent should consult the Obsidian Process document when unsure about vault structure or categories"
+  #   vars:
+  #     message: "I have a new document about cybersecurity policies. Where should I store it? What categories exist?"
+  #   assert:
+  #     # Verify the agent explored the vault structure or read the reference doc
+  #     - type: javascript
+  #       value: |
+  #         const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+  #         const tools = meta.toolsUsed ?? [];
+  #         const exploredVault = tools.some(t =>
+  #           t.includes('obsidian_get_file_contents') ||
+  #           t.includes('obsidian_list_files_in_dir')
+  #         );
+  #         if (!exploredVault) {
+  #           throw new Error(`Expected the agent to read the vault structure (obsidian_get_file_contents or obsidian_list_files_in_dir), got: ${tools.join(', ')}`);
+  #         }
+  #         return true;
+  #     # Verify the Obsidian Process document is cited as the authoritative source
+  #     - type: llm-rubric
+  #       value: "Response explicitly references the Obsidian Process document as the authoritative source for understanding vault categories and organization"
+  #     # Verify the response provides category information
+  #     - type: llm-rubric
+  #       value: "Response lists the known vault categories (Strategy, Operations, Risk, Compliance) or clearly states it needs to read the Obsidian Process document to determine them"
+
+  

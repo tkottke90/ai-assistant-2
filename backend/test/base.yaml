@@ -1,0 +1,17 @@
+env:
+  OPENAI_API_BASE_URL: https://lemonade.tdkottke.com/api/v1
+  OPENAI_API_KEY: "-"
+
+evaluateOptions:
+  maxConcurrency: 1
+  delay: 1000
+
+defaultTest:
+  options:
+    provider: openai:chat:Qwen3-4B-GGUF
+
+prompts:
+  - file://chat-fixture.json
+
+providers:
+  - file://providers.yaml

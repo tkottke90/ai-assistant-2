@@ -4,6 +4,7 @@ import { AIMessage as LCAIMessage, createMiddleware, HumanMessage, SystemMessage
 import { Logger } from "winston";
 import z from "zod";
 import { ScratchpadConfig, ScratchpadConfigSchema } from "../../../config/agents.schema";
+import { classifyIncrement } from "./classifier";
 import { Scratchpad } from "./scratchpad";
 import { BaseSection, DEFAULT_TTL, ToolSection } from "./sections";
 
@@ -165,7 +166,6 @@ export function createScratchpadMiddleware(
       const update: Record<string, any> = {
         turnCount,
         __beforeModelHasRun: true,
-        __reflectionMessageIndex: state.messages?.length ?? 0,
       };
 
       if (sectionCount > 0) {
@@ -256,48 +256,89 @@ export function createScratchpadMiddleware(
       const sp = Scratchpad.fromXML(state.scratchpad || undefined);
       const toc = buildTOC(sp);
 
-      const reflectionInput = new HumanMessage(
-        [
-          "Review the current conversation and the existing scratchpad sections.  Then determine if any updates need to be made",
-          
-          "## Current TOC",
-          toc.length > 0 ? toc : "(empty — no sections yet)",
-          "",
-        ].join("\n"),
-      );
+      // ── Classifier step ──────────────────────────────────────────────────
+      const signals = classifyIncrement(incrementalMessages);
+      const mustCaptureSignals = signals.filter((s) => s.requiresOperation);
 
-      try {
-        const result = await reflectionLlm
-          .withStructuredOutput(ReflectionOutputSchema)
-          .withRetry({ stopAfterAttempt: 3, onFailedAttempt: (err, input) => {
-            reflectionErrors++;
-            reflectionRetries++;
+      logger.info("scratchpad.classification_signals", {
+        total: signals.length,
+        mustCapture: mustCaptureSignals.length,
+        turn: state.turnCount,
+      });
 
-            logger.warn("Scratchpad reflection failed, retrying", {
-              error: (err as Error).message,
-              attempt: err.attemptNumber,
-              retriesLeft: err.retriesLeft,
-            });
-
-            logger.debug("Scratchpad reflection input at time of failure", { input });
-          }})
-          .invoke([
-              new SystemMessage(REFLECTION_PROMPT),
-              ...incrementalMessages,
-              reflectionInput
-            ], {
-            callbacks: [],
-          });
-
-        logger.info("Reflection LLM output", { ops: result.operations.length, result });
-
-        ops = result.operations;
-      } catch (err) {
-        reflectionErrors++;
-        logger.error("Scratchpad reflection failed after all retries, skipping update", {
-          error: (err as Error).message,
-        });
+      // Short-circuit: nothing to extract → skip the LLM call entirely
+      if (mustCaptureSignals.length === 0) {
+        logger.info("scratchpad.reflection_skipped", { turn: state.turnCount });
         ops = [];
+      } else {
+        // Build enriched reflection input with pre-labeled signals
+        const mustCaptureLines = mustCaptureSignals
+          .map((s) => `- [${s.type}] "${s.excerpt}"`)
+          .join("\n");
+        const noActionSignals = signals.filter((s) => !s.requiresOperation);
+        const noActionLines =
+          noActionSignals.length > 0
+            ? noActionSignals.map((s) => `- [${s.type}] ${s.source} message`).join("\n")
+            : "(none)";
+
+        const reflectionInput = new HumanMessage(
+          [
+            "The following signals were detected in this increment.",
+            "",
+            "MUST-CAPTURE (you MUST produce at least one operation for each):",
+            mustCaptureLines,
+            "",
+            "No-action signals:",
+            noActionLines,
+            "",
+            "## Current TOC",
+            toc.length > 0 ? toc : "(empty — no sections yet)",
+          ].join("\n"),
+        );
+
+        try {
+          const result = await reflectionLlm
+            .withStructuredOutput(ReflectionOutputSchema)
+            .withRetry({ stopAfterAttempt: 3, onFailedAttempt: (err, input) => {
+              reflectionErrors++;
+              reflectionRetries++;
+
+              logger.warn("Scratchpad reflection failed, retrying", {
+                error: (err as Error).message,
+                attempt: err.attemptNumber,
+                retriesLeft: err.retriesLeft,
+              });
+
+              logger.debug("Scratchpad reflection input at time of failure", { input });
+            }})
+            .invoke(
+              [
+                new SystemMessage(REFLECTION_PROMPT),
+                ...incrementalMessages,
+                reflectionInput,
+              ],
+              { callbacks: [] },
+            );
+
+          logger.info("Reflection LLM output", { ops: result.operations.length, result });
+
+          ops = result.operations;
+        } catch (err) {
+          reflectionErrors++;
+          logger.error("Scratchpad reflection failed after all retries, skipping update", {
+            error: (err as Error).message,
+          });
+          ops = [];
+        }
+
+        // Post-LLM miss detection — measure before adding auto-synthesis
+        if (ops.length === 0 && mustCaptureSignals.length > 0) {
+          logger.info("scratchpad.classification_miss", {
+            mustCapture: mustCaptureSignals.length,
+            signals: mustCaptureSignals.map((s) => s.type),
+            turn: state.turnCount,
+          });
+        }
       }
 
       const reflectionLatencyMs = Date.now() - startTime;

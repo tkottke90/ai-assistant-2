@@ -78,18 +78,26 @@ tests:
           return true;
 
   # ── 4. Scratchpad carries a fact across turns ─────────────────────────────
-  - description: "Scratchpad captures a user-stated fact and agent recalls it after a distractor turn"
+  - description: "Scratchpad captures a user-stated fact and agent recalls it after several distractor turns"
     vars:
-      # 3 turns: state fact → distractor → recall.
-      # The distractor forces the agent to rely on the scratchpad injection rather
-      # than the most-recent message still being in the context window.
-      # JSON string — prevents promptfoo from expanding the array into separate test cases.
-      messages: '["Just so you know, my main project is called Lighthouse and it''s built in TypeScript.", "What''s your favourite colour?", "What project am I working on?"]'
+      # 5 turns: state fact → REST frameworks → Express response shape → NestJS WebSockets → recall.
+      # With recentTurns=8, the trimmer removes turn 1 from the context window at turn 5,
+      # so the agent must rely on the scratchpad injection to recall "Lighthouse".
+      # Stored in a fixture file to keep this config readable.
+      messages: "file://fixtures/lighthouse-recall.json"
     assert:
       - type: javascript
         value: |
           const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
           if (meta.error) throw new Error(meta.error);
+          return true;
+      - type: javascript
+        value: |
+          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
+          const sp = meta.scratchpad ?? '';
+          if (!sp.toLowerCase().includes('lighthouse')) {
+            throw new Error(`Scratchpad does not contain 'Lighthouse'. Scratchpad: ${sp.slice(0, 300)}`);
+          }
           return true;
       - type: llm-rubric
         value: "Response correctly identifies 'Lighthouse' as the user's own project without hedging, uncertainty, or asking the user to confirm"

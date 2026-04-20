@@ -19,33 +19,8 @@ providers:
     label: "Hermes Agent (Knowledge Manager)"
     config:
       file: "Intake/SMB_MOUNT.test.md"
-      content: |
-        ---
-        source: https://youtube.com/watch?v=dQw4w9WgXcQ
-        ---
-
-        # Video - Mount SMB Drive in Linux
-
-        This video provides instructions on how to mount an SMB drive to a Linux system
-
-        ## Steps
-
-        1. Open a terminal on your Linux system.
-        2. Create a directory where you want to mount the SMB drive, for example:
-            
-            ```
-            mkdir ~/smb_mount
-            ```
-
-        3. Use the `mount` command to mount the SMB drive. The general syntax is:
-            
-            ```
-            sudo mount -t cifs //server_address/share_name /path/to/mount/point -o username=your_username,password=your_password
-            ```
-
-            Replace `server_address` with the IP address or hostname of the SMB server, `share_name` with the name of the shared folder, `/path/to/mount/point` with the directory you created in step 2, and `your_username` and `your_password` with your SMB credentials.
-
-        4. After running the command, the SMB drive should be mounted to the specified directory. You can access it using the file manager or terminal.
+      content: file://fixtures/smb_mount_test.md
+        
 
 defaultTest:
   options:

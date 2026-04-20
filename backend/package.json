@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "DATABASE_URL='file:../config/data/dev.db' CONFIG_DIR='../config' tsx watch src/index.ts",
+    "eval": "bin/prompt-eval.sh",
     "new:db": "rm -rf config/data && npx prisma migrate deploy",
     "test": "mocha",
     "test:watch": "mocha --watch"

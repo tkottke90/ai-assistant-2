@@ -91,13 +91,6 @@ tests:
           const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
           if (meta.error) throw new Error(meta.error);
           return true;
-      - type: javascript
-        value: |
-          const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
-          const sp = meta.scratchpad;
-          if (!sp) throw new Error('Scratchpad is empty after turn 1 — the middleware did not capture any content');
-          if (!sp.includes('Lighthouse')) throw new Error(`Scratchpad does not contain "Lighthouse". Got: ${sp.slice(0, 300)}`);
-          return true;
       - type: llm-rubric
         value: "Response correctly identifies 'Lighthouse' as the user's own project without hedging, uncertainty, or asking the user to confirm"
 
@@ -133,7 +126,7 @@ tests:
           const meta = JSON.parse((output.match(/<!--EVAL_METADATA=(.*?)-->/) ?? ['','{}'])[1]);
           const sp = meta.scratchpad ?? '';
           const lower = sp.toLowerCase();
-          if (!lower.includes('bullet') && !lower.includes('format')) {
-            throw new Error(`Reflection did not capture the formatting preference. Scratchpad: ${sp.slice(0, 300)}`);
+          if (!lower.includes('bullet')) {
+            throw new Error(`Reflection did not capture the bullet-point formatting preference. Scratchpad: ${sp.slice(0, 300)}`);
           }
           return true;

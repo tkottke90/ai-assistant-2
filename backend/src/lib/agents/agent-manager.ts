@@ -1,5 +1,9 @@
 import { EventEmitter } from "node:stream";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { AgentRuntime } from "./agent-runtime";
+import { ScratchpadConfig } from "../config/agents.schema";
+import { AgentModel } from "../prisma/models";
+import type { ToolManager } from "../tools/manager";
 import { NotFoundError } from "../errors/http.errors";
 import { Logger } from "winston";
 
@@ -10,13 +14,35 @@ export class AgentManager extends EventEmitter {
   private readonly shutdownSignal: AbortController = new AbortController();
 
   constructor(
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly toolManager?: ToolManager,
+    private readonly scratchpadConfig?: ScratchpadConfig,
+    private readonly scratchpadLlm?: BaseChatModel,
   ) { super(); }
+
+  /** Create a new AgentRuntime from a DB record using the stored scratchpad config. */
+  createRuntime(agentData: AgentModel, llm: BaseChatModel): AgentRuntime {
+    const runtimeLogger = this.logger.child({ location: `Agent.${agentData.name}` });
+    return AgentRuntime.fromDatabase(
+      agentData,
+      llm,
+      this.toolManager!,
+      runtimeLogger,
+      this.scratchpadConfig,
+      this.scratchpadLlm,
+    );
+  }
 
   registerAgent(agent: AgentRuntime) {
     this.logger.debug(`Registering agent: ${agent.name} (ID: ${agent.id})`);
 
     this.agents.set(agent.id, agent);
+  }
+
+  /** Replace an existing runtime with a freshly constructed one, preserving active status. */
+  replaceAgent(runtime: AgentRuntime) {
+    this.logger.debug(`Replacing runtime for agent: ${runtime.name} (ID: ${runtime.id})`);
+    this.agents.set(runtime.id, runtime);
   }
 
   isActive(agentId: number) {

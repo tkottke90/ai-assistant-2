@@ -84,6 +84,7 @@ export function AgentDrawer(props: iAgentDrawerProps) {
               <TabsTrigger value="tools">Tool Access</TabsTrigger>
               <TabsTrigger value="memories">Memories</TabsTrigger>
               <TabsTrigger value="options">Options</TabsTrigger>
+              <TabsTrigger value="full_prompt">Full Prompt</TabsTrigger>
             </TabsList>
             <hr className="mt-2 opacity-50" />
             <TabsContent value="system_prompt" className="h-full overflow-auto">
@@ -103,6 +104,9 @@ export function AgentDrawer(props: iAgentDrawerProps) {
             </TabsContent>
             <TabsContent value="options">
               <OptionsTab />
+            </TabsContent>
+            <TabsContent value="full_prompt" className="h-full overflow-auto">
+              <FullPromptTab />
             </TabsContent>
           </Tabs>
         </main>
@@ -318,8 +322,7 @@ function OptionsTab() {
   return (
     <div className="p-2 space-y-4 flex flex-col h-full">
       <div className="grow">
-        <div className="flex items-center justify-between rounded-md p-3 bg-neutral-100 dark:bg-neutral-700">
-          <div>
+        <div className="flex items-center justify-between rounded-md p-3 bg-neutral-100 dark:bg-neutral-700">          <div>
             <p className="font-medium text-sm">Auto Start</p>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
               Automatically start this agent when the application loads.
@@ -375,6 +378,42 @@ function OptionsTab() {
           Save
         </LoadingButton>
       </div>
+    </div>
+  );
+}
+
+function FullPromptTab() {
+  const { details, detailsLoading } = useAgentDrawer();
+
+  if (detailsLoading.value) {
+    return (
+      <div className="space-y-3 p-2">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (!details.value?.full_system_prompt) {
+    return (
+      <div className="flex items-center justify-center h-32 text-neutral-500 dark:text-neutral-400">
+        <p>Full prompt unavailable — agent is not currently registered in the runtime.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full p-2">
+      <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+        Read-only. This is the complete system prompt the agent receives, including injected tool and memory instructions.
+      </p>
+      <pre className="w-full h-full p-3 rounded-md text-sm whitespace-pre-wrap overflow-auto
+        bg-neutral-200 dark:bg-neutral-600 text-neutral-800 dark:text-neutral-100
+        font-mono leading-relaxed
+      ">
+        {details.value.full_system_prompt}
+      </pre>
     </div>
   );
 }

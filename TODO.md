@@ -14,6 +14,10 @@
   - [ ] Support single-file executable
   - [ ] Support Dockerfile deployment
 - [ ] Add Prompt Table and make it editable/viewable in the UI
+- [ ] [Bug] When an agent is versioned, it creates a new agent record which changes the ID and our current prompt automation does not account for that.
+- [X] [Bug] When a new Agent Version is created, the new agent record does not retain the tool access that the previous version had.
+- Agents - Tools
+  - [ ] [Bug] Agents with elevated (direct) tool access still route through `execute_tool` instead of calling tools directly. The `execute_tool` path is intended for tools that have gone through the discovery and permission flow, not for tools the agent already has permission to use. The name `execute_tool` may itself be misleading, and the permission system as a whole may not be making it clear to agents which tools they can call directly vs. which require the discovery/approval path. This causes intermittent failures where the agent behaves as if it has no direct tool access even when elevated permissions are assigned.
 
 ## UI
 

@@ -12,7 +12,7 @@ import { AgentModel } from "../prisma/models";
 import type { ToolManager } from "../tools/manager";
 import { Queue } from "../types/queue";
 import { createScratchpadMiddleware } from "./middleware/recursive";
-import { createToolSummaryMiddleware } from './middleware/tool-summary';
+import { createLoggingMiddleware } from './middleware/logging';
 import { createUsageMiddleware } from './middleware/usage';
 import { TOOLS_SYSTEM_PROMPT } from './prompts/tools-prompt';
 import { SCRATCHPAD_SYSTEM_PROMPT } from './prompts/memory-prompt';
@@ -52,13 +52,18 @@ export class AgentRuntime {
     });
   }
 
-  async getAgent() {
-    const systemPromptText = [
+  /** Returns the full compiled system prompt the agent sees, including all injected sections. */
+  getFullSystemPrompt(): string {
+    return [
       this.systemPrompt,
       `<identity>The user will refer to you as ${this.name}.</identity>`,
       TOOLS_SYSTEM_PROMPT,
       SCRATCHPAD_SYSTEM_PROMPT,
     ].join('\n\n');
+  }
+
+  async getAgent() {
+    const systemPromptText = this.getFullSystemPrompt();
 
     this.logger.debug('Creating Agent', { systemPromptWordCount: systemPromptText.split(' ').length });
 
@@ -87,7 +92,8 @@ export class AgentRuntime {
           this.scratchpadLlm,
         ),
         // createToolSummaryMiddleware(this.name, this.logger, this.llm),
-        createUsageMiddleware(this.llm, this.name, this.logger)
+        createUsageMiddleware(this.llm, this.name, this.logger),
+        createLoggingMiddleware(this.logger.child({ location: `AgentRuntime.${this.name}.LoggingMiddleware` })),
       ],
     });
   }

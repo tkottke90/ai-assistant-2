@@ -46,6 +46,9 @@ export const ScratchpadConfigSchema = z.object({
 export type ScratchpadConfig = z.infer<typeof ScratchpadConfigSchema>;
 
 export const AgentSchema = z.object({
+  maxRecursion: z.number()
+    .describe('Maximum recursion depth for agents. This limits how many times an agent can call itself (directly or indirectly) to prevent infinite loops. Once the max recursion depth is reached, the agent will stop executing further calls and return an error message.')
+    .default(500),
   scratchpad: ScratchpadConfigSchema.optional(),
 }).default({});
 

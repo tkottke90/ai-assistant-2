@@ -5,7 +5,6 @@ import { AgentProperties, CreateAgentDTO, CreateAgentSchema } from '../../lib/mo
 import { ZodBodyValidator, ZodIdValidator, ZodQueryValidator } from '../../middleware/zod.middleware.js';
 import { PaginationQuerySchemaBase, PaginationQuery } from '../../lib/types/pagination.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors/http.errors.js';
-import { AgentRuntime } from '../../lib/agents/agent-runtime.js';
 
 export const router = Router();
 
@@ -24,12 +23,12 @@ router.post('/',
 
     req.logger.debug('Agent created successfully', { ...agent });
     req.logger.info('Registering agent with Agent Manager');
-    
+
     const llmEngine = agentData.engine && agentData.model
       ? req.app.llm.getClientWithModel(agentData.engine, agentData.model)
       : req.app.llm.getClient(agentData.engine);
     agentManager.registerAgent(
-      AgentRuntime.fromDatabase(agent as any, llmEngine, req.app.tools, req.logger)
+      agentManager.createRuntime(agent as any, llmEngine)
     );
     
     req.logger.info('Agent registered successfully');
@@ -137,7 +136,8 @@ router.get('/:id/details',
       .reduce((acc, toolName) => {
         acc[toolName] = { allowEdit: false, value: true };
         return acc;
-      }, {} as Record<string, { allowEdit: boolean, value: boolean }>)
+      }, {} as Record<string, { allowEdit: boolean, value: boolean }>),
+      full_system_prompt: agentRuntime?.getFullSystemPrompt() ?? null,
     });
   }
 );
@@ -182,11 +182,20 @@ router.post('/:id/version',
   ZodIdValidator('id'),
   ZodBodyValidator(AgentProperties.partial()),
   async (req, res) => {
+    const agentManager = req.app.agents;
     const agent = await getAgentById(req);
 
     try {
       const overrides: Partial<CreateAgentDTO> = req.body;
       const newVersion = await AgentDao.createAgentVersion(agent.agent_id, overrides);
+
+      const llmEngine = newVersion.engine && newVersion.model
+        ? req.app.llm.getClientWithModel(newVersion.engine, newVersion.model)
+        : req.app.llm.getClient(newVersion.engine ?? undefined);
+      agentManager.replaceAgent(
+        agentManager.createRuntime(newVersion as any, llmEngine)
+      );
+
       res.status(201).json(newVersion);
     } catch (error) {
       req.logger.error('Error creating agent version:', error);
@@ -196,9 +205,10 @@ router.post('/:id/version',
 );
 
 // Update an agent
+// Note: `version` is excluded — it is managed exclusively by POST /version.
 router.put('/:id',
   ZodIdValidator('id'),
-  ZodBodyValidator(AgentProperties.partial()),
+  ZodBodyValidator(AgentProperties.omit({ version: true }).partial()),
   async (req, res) => {
   try {
     const agentId = Array.isArray(req.params.id) ?
@@ -210,8 +220,20 @@ router.put('/:id',
       return;
     }
 
-    const agentData: Partial<CreateAgentDTO> = req.body;
+    // Strip fields with Zod-injected default values that were not explicitly sent
+    const agentData: Partial<CreateAgentDTO> = Object.fromEntries(
+      Object.entries(req.body as Partial<CreateAgentDTO>).filter(([, v]) => v !== undefined)
+    );
     const updatedAgent = await AgentDao.updateAgent(agentId, agentData);
+
+    const agentManager = req.app.agents;
+    const llmEngine = updatedAgent.engine && updatedAgent.model
+      ? req.app.llm.getClientWithModel(updatedAgent.engine, updatedAgent.model)
+      : req.app.llm.getClient(updatedAgent.engine ?? undefined);
+    agentManager.replaceAgent(
+      agentManager.createRuntime(updatedAgent as any, llmEngine)
+    );
+
     res.json(updatedAgent);
   } catch (error) {
     req.logger.error('Error updating agent:', error);

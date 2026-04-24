@@ -11,6 +11,7 @@ import { ChatData } from "./chat-data";
 import crypto from 'node:crypto';
 import { createUsageMiddleware } from "@/lib/agents/middleware/usage";
 import { GraphRecursionError } from '@langchain/langgraph';
+import app from "@/app";
 
 
 type ChatHistoryEntry =
@@ -123,7 +124,7 @@ export async function chatHandler(
       { 
         streamMode: ["messages", "values"], 
         configurable: { thread_id: threadId, agent_id },
-        recursionLimit: 500,
+        recursionLimit: req.app.config.getNumber('agents.maxRecursion', 500),
         signal: abortController.signal
       }
     );
@@ -209,7 +210,7 @@ export async function chatHandler(
       res.write(`done: ${JSON.stringify({ kind: 'error', message: 'Client disconnected, agent execution aborted' })}\n\n`);
     } else {
 
-      debugger;
+      // debugger;
 
       const err = BaseError.fromCatch(error);
       req.logger.error(err.toString());

@@ -38,6 +38,7 @@ export const AgentDetailsSchema = AgentListResponseSchema.extend({
     allowEdit: z.boolean(),
     value: z.boolean()
   })),
+  full_system_prompt: z.string().nullable(),
 });
 
 export type AgentDetails = z.infer<typeof AgentDetailsSchema>;

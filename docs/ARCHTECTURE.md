@@ -29,14 +29,23 @@
     - [Storage and Schema](#storage-and-schema)
     - [On-Demand Retrieval](#on-demand-retrieval)
   - [Skills System](#skills-system)
+    - [Skill Package Structure](#skill-package-structure)
+    - [The SKILL.md Format](#the-skillmd-format)
+    - [Atomic Skills](#atomic-skills)
+    - [Compositional Skills](#compositional-skills)
     - [Static and Learned Skills](#static-and-learned-skills)
     - [Skill Matching](#skill-matching)
-    - [Skill Authoring and Promotion](#skill-authoring-and-promotion)
+    - [Skill Execution](#skill-execution)
+    - [Skill Authoring](#skill-authoring)
+      - [Track 1 — Emergent (Automatic)](#track-1--emergent-automatic)
+      - [Track 2 — Deliberate (Human Development Workflow)](#track-2--deliberate-human-development-workflow)
+    - [Skill Maturity Model](#skill-maturity-model)
   - [Recursive Language Models (RLM)](#recursive-language-models-rlm)
     - [Purpose and Activation](#purpose-and-activation)
     - [Decomposition Strategy](#decomposition-strategy)
     - [Context Isolation](#context-isolation)
   - [Tool System](#tool-system)
+    - [Platform Tools vs. Skill Scripts](#platform-tools-vs-skill-scripts)
     - [Tool Registry](#tool-registry)
     - [Dynamic Tool Selection](#dynamic-tool-selection)
     - [Tool Output Interception](#tool-output-interception)
@@ -85,6 +94,7 @@ The platform addresses both constraints without sacrificing capability by keepin
 | **Progressive complexity** | Simple requests are handled cheaply; complexity is added only when the task demands it |
 | **Implementation-agnostic** | Architectural commitments are to principles, not specific backends or storage technologies |
 | **Community extensibility** | Skills and tools are first-class contribution surfaces |
+| **Code over inference** | Mechanical, deterministic steps are expressed as tested scripts — not LLM reasoning |
 
 ---
 
@@ -130,24 +140,25 @@ The following diagram shows the full system — coordination graph, storage laye
                     │                         │             │                             │
                     │  Stage 1:               │             │  PROCEDURAL MEMORY          │
                     │    keyword pre-filter   │             │    │ importance rising       │
-                    │    (free, no LLM call)  │             │    │ accessCount rising      │
-                    │  Stage 2:               │             │    ▼ (>= 0.9, >= 5 uses)    │
-                    │    LLM confirmation     │             │  LEARNED SKILL              │
-                    │    confidence >= 0.7    │             │    │ in registry             │
-                    └──────┬──────────────────┘             │    │ useCount tracked        │
-                           │                                │    │ successRate tracked     │
-               ┌───────────┴───────────┐                   │    ▼ (review + stable)       │
-          matched                  no match                 │  STATIC SKILL               │
-               │                       │                   │    │                         │
-               ▼                       ▼                   │    ├── success → maintained  │
-        ┌─────────────┐         ┌─────────────┐            │    └── failure → DEPRECATED  │
-        │  applySkill  │         │   router    │            └─────────────────────────────┘
-        │              │         │             │
-        │ steps loaded │         │ simple /    │
-        │ as QUEUED    │         │ complex     │
-        │ tasks        │         └──────┬──────┘
-        └──────┬───────┘                │
-               │               ┌────────┴────────┐
+                    │    reads SKILL.md       │             │    │ accessCount rising      │
+                    │    frontmatter index    │             │    ▼ (>= 0.9, >= 5 uses)    │
+                    │  Stage 2:               │             │  LEARNED (soft SKILL.md)    │
+                    │    LLM confirmation     │             │    │ no scripts              │
+                    │    confidence >= 0.7    │             │    │ useCount tracked        │
+                    └──────┬──────────────────┘             │    │ successRate tracked     │
+                           │                                │    ▼ (human dev workflow)   │
+               ┌───────────┴───────────┐                   │  CODIFIED (skill package)   │
+          matched                  no match                 │    │ scripts + SKILL.md      │
+               │                       │                   │    │ unit tested             │
+               ▼                       ▼                   │    ▼ (review + stable)       │
+        ┌─────────────┐         ┌─────────────┐            │  STATIC (community)         │
+        │  applySkill  │         │   router    │            │    │                         │
+        │              │         │             │            │    ├── success → maintained  │
+        │  load full   │         │ simple /    │            │    └── failure → DEPRECATED  │
+        │  SKILL.md    │         │ complex     │            └─────────────────────────────┘
+        │  steps →     │         └──────┬──────┘
+        │  task queue  │                │
+        └──────┬───────┘       ┌────────┴────────┐
                │           simple             complex
                │               │                 │
                │               ▼                 ▼
@@ -157,28 +168,28 @@ The following diagram shows the full system — coordination graph, storage laye
                │      │ selectTools  │   │  QUEUED      │    │  QUEUED                      │
                │      │ createLeaf   │   │  task popped │    │    │ in taskQueue[]          │
                │      │ Agent(tools, │   │     │        │    │    ▼ decomposeNode pops      │
-               │      │  scratchpad) │   │  too complex?│    │  STAGED → EXECUTING          │
-               └──────►     │        │   │     │yes     │    │    │ selectTools runs        │
-                      │     │        │   │     ▼        │    │    │ leafAgent invoked       │
-                      │     │        │   │  split 2-3   │    │    │ tools called            │
-                      │     │        │   │  child tasks │    │    ▼                        │
-                      │     │        │   │  QUEUED ◄────┼─┐  │  COMPLETE                   │
-                      │     │        │   │     │        │ │  │    │ result → results[]     │
-                      │     │        │   │  simple?     │ │  │    ▼                        │
-                      │     │        │   │     │        │ │  │  AGGREGATED                 │
-                      │     │        │   │     ▼        │ │  │    │ all siblings complete  │
-                      │     │        │   │  STAGED      │ │  │    ▼                        │
-                      │     │        │   │  EXECUTING ──┼─┘  │  ⚠ ERROR PATH              │
-                      │     │        │   │  COMPLETE    │    │    retry / fail / report    │
-                      │     │        │   └──────┬───────┘    │    (policy: deferred)       │
-                      │     │        │          │            └──────────────────────────────┘
-                      └─────┼────────┘          │
-                            │                   │
-                            └────────┬──────────┘
-                                     │
-                                     ▼
-                          ┌─────────────────────┐
-                          │      aggregate       │
+               │      │  scratchpad) │   │  too complex?│    │  STAGED                     │
+               └──────►     │        │   │     │yes     │    │    │                        │
+                      │     │        │   │     ▼        │    │    ├── step ref skill:/xxx  │
+                      │     │        │   │  split 2-3   │    │    │   → load sub-skill     │
+                      │     │        │   │  child tasks │    │    │   → push steps to queue│
+                      │     │        │   │  QUEUED ◄────┼─┐  │    │                        │
+                      │     │        │   │     │        │ │  │    ├── step ref ./script.js │
+                      │     │        │   │  simple?     │ │  │    │   → execute in sandbox │
+                      │     │        │   │     │        │ │  │    │   → zero LLM tokens    │
+                      │     │        │   │     ▼        │ │  │    │                        │
+                      │     │        │   │  STAGED      │ │  │    └── natural language     │
+                      │     │        │   │  EXECUTING ──┼─┘  │       → leaf agent (LLM)   │
+                      │     │        │   │  COMPLETE    │    │           │                 │
+                      │     │        │   └──────┬───────┘    │    EXECUTING               │
+                      │     │        │          │            │    COMPLETE                 │
+                      └─────┼────────┘          │            │       │ result → results[] │
+                            │                   │            │    AGGREGATED              │
+                            └────────┬──────────┘            │                            │
+                                     │                       │  ⚠ ERROR PATH              │
+                                     ▼                       │    retry / fail / report    │
+                          ┌─────────────────────┐            │    (policy: deferred)       │
+                          │      aggregate       │            └──────────────────────────────┘
                           │                     │
                           │  results[] merged   │
                           │  → finalAnswer      │
@@ -191,12 +202,12 @@ The following diagram shows the full system — coordination graph, storage laye
                           │                     │             │  NEW  (authored here)        │
                           │  decomposedBySkill?  │             │    │ importance = initial    │
                           │    yes → reinforce   │             │    ▼ retrieved               │
-                          │    no  → maybe write │             │  ACTIVE                     │
-                          │         new skill    │             │    │ importance += 0.1       │
-                          └──────────┬──────────┘             │    │ accessCount++           │
-                                     │                        │    ▼ not retrieved           │
-                                    END                       │  DECAYING                   │
-                                                              │    │ importance *= 0.8       │
+                          │    no  → write soft  │             │  ACTIVE                     │
+                          │    SKILL.md to       │             │    │ importance += 0.1       │
+                          │    learned index     │             │    │ accessCount++           │
+                          └──────────┬──────────┘             │    ▼ not retrieved           │
+                                     │                        │  DECAYING                   │
+                                    END                       │    │ importance *= 0.8       │
                                                               │    ▼ below threshold         │
                                                               │  PRUNED                     │
                                                               │                              │
@@ -210,7 +221,6 @@ The following diagram shows the full system — coordination graph, storage laye
 ══════════════════════════════════════════════════════════════════════════════════════════════
 
   STORAGE LAYER
-  (all state transitions above ultimately read from or write to one of these three stores)
 
   ┌─────────────────────────────┐       ┌──────────────────────────────────────────────────┐
   │     Long-Term Memory        │       │  Scratchpad                                      │
@@ -219,30 +229,50 @@ The following diagram shows the full system — coordination graph, storage laye
   │  episodic  ─────────────────┼──┐    │  ┌────────────────────────────────────────────┐  │
   │  semantic  ─── retrieve ◄───┼──┼────┼──┤  SCRATCHPAD ENTRY LIFECYCLE                │  │
   │  procedural ── inject ─────►┼──┘    │  │                                            │  │
-  │                             │       │  │  tool call completes                       │  │
+  │                             │       │  │  tool/script call completes                │  │
   │  ◄── author (post-response) │       │  │       │                                    │  │
   │  ◄── promote (from scratch) │       │  │  size <= threshold?                        │  │
-  │                             │       │  │    yes → PASS THROUGH (no entry created)   │  │
+  │                             │       │  │    yes → PASS THROUGH                      │  │
   │  [decay job — periodic]     │       │  │    no  ▼                                   │  │
   │    importance *= 0.8        │       │  │       WRITTEN                              │  │
   │    below threshold → PRUNED │       │  │         │ full content → cold store        │  │
   │                             │       │  │         │ summary + ref → hot index        │  │
   └─────────────────────────────┘       │  │         ▼                                  │  │
                                         │  │       RETRIEVABLE                          │  │
-                                        │  │    (LLM calls scratchpad_read              │  │
-  ┌──────────────────────────────┐      │  │     keyword-scored chunks returned)        │  │
-  │     Checkpoint Store         │      │  │         │                                  │  │
-  │  namespace: [thread,threadId]│      │  │  session ends                              │  │
-  │                              │      │  │         ▼                                  │  │
-  │  conversation history        │      │  │     PRE-FLUSH                              │  │
-  │  graph state snapshots       │      │  │    index passed to memory author           │  │
-  │  hot memory between nodes    │      │  │         ▼                                  │  │
-  │                              │      │  │  promote to LTM? ── yes ───────────────────┼──┼──► Long-Term Memory
+                                        │  │    (LLM calls scratchpad_read)             │  │
+  ┌──────────────────────────────┐      │  │         │                                  │  │
+  │     Checkpoint Store         │      │  │  session ends                              │  │
+  │  namespace: [thread,threadId]│      │  │         ▼                                  │  │
+  │                              │      │  │     PRE-FLUSH                              │  │
+  │  conversation history        │      │  │    index → memory author                   │  │
+  │  graph state snapshots       │      │  │         ▼                                  │  │
+  │  hot memory between nodes    │      │  │  promote to LTM? ── yes ───────────────────┼──┼──► Long-Term Memory
   │  persists: across turns      │      │  │         │ no                              │  │
   │  preserves: HITL pause state │      │  │         ▼                                  │  │
-  │                              │      │  │      FLUSHED (deleted from store)          │  │
-  └──────────────────────────────┘      │  └────────────────────────────────────────────┘  │
+  └──────────────────────────────┘      │  │      FLUSHED                               │  │
+                                        │  └────────────────────────────────────────────┘  │
                                         └──────────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────────────────────────┐
+  │  Skill Package Store  (filesystem)                                                   │
+  │                                                                                      │
+  │  skills/                                                                             │
+  │    email-inbox/          ← atomic skill                                              │
+  │      SKILL.md            ← frontmatter index + LLM instructions                     │
+  │      getEmails.js        ← co-located script (part of the skill)                    │
+  │      getEmails.test.js   ← travels with the skill                                   │
+  │    email-label-ads/      ← atomic skill, inference-only (no scripts)                │
+  │      SKILL.md                                                                        │
+  │    email-label-apply/    ← atomic skill                                              │
+  │      SKILL.md                                                                        │
+  │      applyLabels.js                                                                  │
+  │      applyLabels.test.js                                                             │
+  │    email-workflow/       ← compositional skill (references other skills)            │
+  │      SKILL.md                                                                        │
+  │                                                                                      │
+  │  Skill Loader reads SKILL.md frontmatter to build the matcher index.                │
+  │  Full SKILL.md content is loaded only when a skill is matched.                      │
+  └──────────────────────────────────────────────────────────────────────────────────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -268,7 +298,7 @@ Each entity in the system has a defined lifecycle. The following sections docume
 
 ### Thread Lifecycle
 
-A thread represents a single conversation session between a user and the platform. Thread state is persisted by the checkpointer across turns and process restarts.
+A thread represents a single conversation session. Thread state is persisted by the checkpointer across turns and process restarts.
 
 ```
 INITIALISING  →  READY  →  HYDRATING  →  PROCESSING  →  RESPONDING  →  READY
@@ -284,23 +314,20 @@ INITIALISING  →  READY  →  HYDRATING  →  PROCESSING  →  RESPONDING  → 
 | `RESUMING` | Existing thread — hot memory restored from checkpoint | Prior state found for `threadId` |
 | `READY` | Hot memory established, waiting for a message | Session or request hydration complete |
 | `HYDRATING` | Request hydration running — query-matched cold memories being promoted | Message received |
-| `PROCESSING` | Graph executing — skill match, routing, RLM, tool calls | Hydration complete |
+| `PROCESSING` | Graph executing — skill match, routing, RLM, tool and script calls | Hydration complete |
 | `RESPONDING` | Final answer produced — memories being authored, scratchpad being flushed | `finalAnswer` populated |
 | `ENDED` | Session complete — scratchpad flushed, checkpoint preserved, LTM persists | Inactivity timeout or explicit close |
 
-**HITL note:** A HITL interrupt transitions the thread from `PROCESSING` to a paused state within the checkpointer. It remains paused until resumed by a human decision. The transition policy for HITL timeout is a deferred deployment decision.
+**HITL note:** A HITL interrupt transitions the thread from `PROCESSING` to a paused state within the checkpointer. It remains paused until resumed by a human decision.
 
 ---
 
 ### Memory Entry Lifecycle
 
-A memory entry is created by the `authorMemories` node and lives in the long-term cold store. Its importance score determines both retrieval priority and eventual pruning.
-
 ```
 NEW  →  ACTIVE  →  DECAYING  →  PRUNED
                       ▲
                       │ rescued by retrieval
-                      │ (importance reinforced)
 
 ACTIVE (procedural only)  →  SKILL CANDIDATE
   when: importance >= 0.9 AND accessCount >= 5
@@ -310,100 +337,109 @@ ACTIVE (procedural only)  →  SKILL CANDIDATE
 |---|---|---|
 | `NEW` | Entry created with initial importance score | `authorMemories` node writes to store |
 | `ACTIVE` | Entry is being retrieved and reinforced | Retrieved by request or session hydration |
-| `DECAYING` | Entry has not been retrieved within the decay window | Decay job runs periodically |
+| `DECAYING` | Entry not retrieved within decay window | Periodic decay job |
 | `PRUNED` | Entry deleted from store | Importance falls below minimum threshold |
 | `SKILL CANDIDATE` | Procedural entry flagged for skill promotion | Importance ≥ 0.9 + accessCount ≥ 5 |
 
 **Reinforcement:** Each retrieval increments `accessCount` and adds to `importance` (+0.1, capped at 1.0).
 
-**Decay:** Periodic job multiplies `importance` by the decay factor (default 0.8) for entries not accessed within the decay window (default 7 days). Entries below the prune threshold (default 0.05) are deleted.
+**Decay:** Periodic job multiplies `importance` by the decay factor (default 0.8) for entries not accessed within the decay window (default 7 days).
 
-**Promotion:** Procedural memory entries that reach the skill candidate threshold are evaluated by the `skillAuthoringAgent` for promotion into the skill registry. The memory entry remains in the store independently — the skill has its own lifecycle.
+**Promotion:** Procedural entries at the skill candidate threshold are evaluated by `skillAuthoringAgent` for promotion to a soft SKILL.md file. The memory entry remains in the store independently.
 
 ---
 
 ### Skill Lifecycle
 
-A skill begins as a pattern in procedural memory and may eventually be promoted to the community static registry. At every stage it can be deprecated if its success rate falls below a threshold.
+Skills follow a maturity path from emergent procedural memory to community-verified codified packages.
 
 ```
-PROCEDURAL MEMORY  →  LEARNED SKILL  →  STATIC SKILL
-        ▲                   │                 │
-        │                   └── DEPRECATED ◄──┘
-        │                   (successRate < threshold)
-        │
-  reinforced on reuse
+PROCEDURAL MEMORY
+      │
+      │ importance >= 0.9 + accessCount >= 5
+      ▼
+LEARNED  (soft SKILL.md, no scripts)
+      │
+      │ human development workflow
+      ▼
+CODIFIED  (skill package: SKILL.md + co-located scripts + tests)
+      │
+      │ community review
+      ▼
+STATIC  (community registry)
+      │
+      ├── success sustained  →  maintained
+      └── successRate < threshold  →  DEPRECATED
 ```
 
 | State | Description | Entry Trigger |
 |---|---|---|
-| `PROCEDURAL MEMORY` | Pattern exists in cold store as a procedural memory entry with numbered steps | `maybeAuthorSkill` after successful LLM decomposition |
-| `LEARNED SKILL` | Registered in `SkillRegistry` with `source: "learned"` | Procedural memory importance ≥ 0.9 + accessCount ≥ 5 |
-| `STATIC SKILL` | Community-visible, versioned, reviewed | Community review approval OR human-authored directly |
-| `DEPRECATED` | Removed from active registry; underlying procedural memory begins decaying | `successRate` falls below deprecation threshold |
+| `PROCEDURAL MEMORY` | Pattern stored in cold memory with numbered steps | `maybeAuthorSkill` after LLM decomposition |
+| `LEARNED` | Soft SKILL.md generated, no scripts, in learned index | Procedural memory crosses threshold |
+| `CODIFIED` | Full skill package: SKILL.md + scripts + tests committed to skills directory | Human development workflow |
+| `STATIC` | Community-visible, versioned, in community registry | Community review approval or direct human authoring |
+| `DEPRECATED` | Removed from active matching; underlying memory decays | `successRate` below threshold |
 
-**Matching participation:** Learned and static skills both participate in Stage 1 (keyword filter) and Stage 2 (LLM confirmation) matching. Procedural memory entries participate only in Stage 2 via the learned skill path.
+**Two promotion tracks exist — they are independent:**
 
-**Tracking:** Every skill invocation records success or failure, updating `successRate = successfulUses / totalUses`. This score directly controls deprecation and surfacing priority.
+- `PROCEDURAL MEMORY → LEARNED` — automatic, driven by `maybeAuthorSkill`
+- `LEARNED/PROCEDURAL → CODIFIED → STATIC` — deliberate human development workflow
 
-**Open:** The community review process for `LEARNED → STATIC` promotion is a product decision. Options include manual review queues, automated quality gates, and community voting.
+A CODIFIED skill is always more reliable than a LEARNED skill because mechanical steps are expressed as tested scripts rather than LLM reasoning.
 
 ---
 
 ### Task Lifecycle
 
-A task is the atomic unit of work in the RLM system. Tasks are created by either `applySkill` (from skill steps) or `decomposeNode` (from LLM decomposition), and executed by a leaf agent.
+A task is the atomic unit of work in the RLM system. Tasks originate from skill steps (`applySkill`), LLM decomposition (`decomposeNode`), or sub-skill resolution.
 
 ```
 QUEUED  →  STAGED  →  EXECUTING  →  COMPLETE  →  AGGREGATED
-                           │
-                    ⚠ ERROR PATH
-                    (retry / fail / report — policy deferred)
+                │
+                ├── step: skill:/xxx  →  RESOLVING  →  child tasks QUEUED
+                ├── step: ./script    →  SCRIPTING  →  COMPLETE (zero LLM tokens)
+                └── step: natural lang →  LLM EXECUTING  →  COMPLETE
 
-QUEUED  →  SPLIT INTO CHILD TASKS  (parent discarded, children re-enter QUEUED)
+QUEUED  →  SPLIT  (parent discarded, 2-3 children re-enter QUEUED)
+
+⚠ ERROR PATH  (retry / fail / report — policy deferred)
 ```
 
 | State | Description | Entry Trigger |
 |---|---|---|
-| `QUEUED` | Task exists in `taskQueue[]` awaiting evaluation | Created by `applySkill` or `decomposeNode` split |
-| `STAGED` | Task popped from queue, moved to `currentTask` | `decomposeNode` determines task is simple enough to execute |
-| `EXECUTING` | `selectTools` has run, `leafAgent` is invoked | `selectToolsNode` completes |
-| `COMPLETE` | Result stored in `results[]`, `currentTask` cleared | `leafAgent` returns final message |
-| `AGGREGATED` | All sibling tasks complete, `aggregateNode` synthesises results | `taskQueue` empty + all results present |
+| `QUEUED` | Task in `taskQueue[]` | Created by `applySkill`, `decomposeNode`, or sub-skill resolution |
+| `STAGED` | Popped to `currentTask`, execution path determined | `decomposeNode` — task is simple enough to execute |
+| `RESOLVING` | Step references `skill:/xxx` — sub-skill loaded, steps pushed to queue | Step contains `skill:` reference |
+| `SCRIPTING` | Step references `./script.js` — executed in sandbox, zero LLM tokens | Step contains script reference |
+| `LLM EXECUTING` | Natural language step — leaf agent invoked | Step requires model reasoning |
+| `COMPLETE` | Result in `results[]`, `currentTask` cleared | Any execution path returns |
+| `AGGREGATED` | All sibling tasks complete, aggregate node synthesises | `taskQueue` empty |
 
-**Split:** When `decomposeNode` determines a task is too complex, the task is discarded and replaced by 2–3 child tasks at `depth + 1`. Each child enters `QUEUED`. The parent is never marked `COMPLETE` — it is replaced rather than completed.
+**Depth limit:** At `maxDepth`, tasks are forced to `STAGED` regardless of complexity. Compositional skill resolution counts toward depth — preventing infinite nesting.
 
-**Depth limit:** At `maxDepth`, tasks are forced to `STAGED` regardless of complexity assessment. This prevents infinite recursion.
-
-**Error path:** The behaviour when a leaf agent returns an error or empty response is not yet defined. This includes retry limits, partial failure reporting to the aggregate node, and whether a failed task blocks siblings. This is a deferred decision.
+**Error path:** Behaviour when a script errors or a leaf agent returns empty is deferred. This includes retry limits, partial failure reporting, and whether a failed task blocks siblings.
 
 ---
 
 ### Scratchpad Entry Lifecycle
 
-A scratchpad entry is created when a tool returns output that exceeds the interception threshold. It lives in the cold store for the duration of the session and is flushed when the session ends.
-
 ```
-(tool output <= threshold)  →  PASS THROUGH  (no entry created)
+(output <= threshold)  →  PASS THROUGH  (no entry created)
 
-(tool output > threshold)   →  WRITTEN  →  RETRIEVABLE  →  PRE-FLUSH  →  FLUSHED
-                                                                │
-                                                     promote to LTM? → yes → Long-Term Memory
+(output > threshold)   →  WRITTEN  →  RETRIEVABLE  →  PRE-FLUSH  →  FLUSHED
+                                                            │
+                                               promote to LTM? → yes → Long-Term Memory
 ```
 
 | State | Description | Entry Trigger |
 |---|---|---|
-| `PASS THROUGH` | Output small enough to remain in ToolMessage directly | Output size ≤ `outputMaxChars` threshold |
-| `WRITTEN` | Full content stored in cold store (chunked); summary + ref in hot index | Output size > threshold — `interceptToolOutput` runs |
-| `RETRIEVABLE` | Available for on-demand retrieval via `scratchpad_read` tool | Entry exists in cold store |
-| `PRE-FLUSH` | Session ending — index passed to `authorMemories` for LTM promotion decision | Session `RESPONDING` state entered |
-| `FLUSHED` | Entry deleted from session store | `scratchpadFlush(sessionId)` called |
+| `PASS THROUGH` | Output stays in message directly | Size ≤ `outputMaxChars` |
+| `WRITTEN` | Chunked in cold store, summary + ref in hot index | Size > threshold |
+| `RETRIEVABLE` | Available via `scratchpad_read` | Entry exists in store |
+| `PRE-FLUSH` | Session ending — index passed to `authorMemories` | Session `RESPONDING` state |
+| `FLUSHED` | Deleted from session store | `scratchpadFlush(sessionId)` called |
 
-**Hot index:** The scratchpad index (ref + summary for all `WRITTEN` entries) is injected into every model call via `scratchpadContextMiddleware`. This is what keeps the scratchpad "hot" without putting full content in context.
-
-**LTM promotion:** The `authorMemories` node receives the index (summaries only — never raw content) before flush. It decides which entries are worth writing to long-term memory. Raw content is never passed to the authoring agent — only summaries.
-
-**Interrupted sessions:** The behaviour when a session is interrupted (process crash, HITL timeout) before `PRE-FLUSH` runs is a deferred deployment decision. Options include: flush on next session start, retain with TTL, or treat as lost.
+Script outputs follow the same lifecycle as tool outputs — large script results are intercepted and scratchpadded automatically.
 
 ---
 
@@ -413,7 +449,7 @@ Memory is divided into two layers based on **retrieval cost and intent**, not co
 
 ### Hot Memory
 
-Always present in the model's context window. Zero retrieval cost. The model sees this on every call without any explicit action.
+Always present in the model's context window. Zero retrieval cost.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -442,7 +478,7 @@ Not seen by the model unless explicitly retrieved.
 │    procedural  — patterns and approaches that worked     │
 │                                                          │
 │  Scratchpad full content                                 │
-│    — raw tool outputs, chunked and keyword-indexed       │
+│    — raw tool and script outputs, chunked                │
 │    — retrieved on demand via scratchpad_read             │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -451,7 +487,7 @@ Not seen by the model unless explicitly retrieved.
 
 ### The Hot/Cold Boundary
 
-The boundary is a **deployment policy**, not an architectural constant. It is tuned based on the context window size of the model in use, hardware constraints, and the nature of tasks being performed.
+The boundary is a **deployment policy**, not an architectural constant. It is tuned based on context window size, hardware constraints, and the nature of tasks being performed.
 
 ### Cold-to-Hot Promotion
 
@@ -474,108 +510,360 @@ The boundary is a **deployment policy**, not an architectural constant. It is tu
 
 ## Context Hydration
 
-Hydration is the process of populating hot memory before the model is invoked. It is a two-phase process with distinct timing and scope.
-
 ### Session Hydration
 
-Runs **once per thread**, at thread creation, before the first message is processed.
+Runs **once per thread**, at thread creation. Loads stable user context into hot memory for the thread lifetime.
 
-**Purpose:** Establish a stable baseline of user context that persists for the entire thread lifetime.
+**What it loads:** Semantic preferences, communication style, summary of most recent session, top procedural patterns.
 
-**What it loads:**
-- Semantic memories — user preferences, communication style, persistent context
-- A summary of the most recent prior session
-- Top procedural patterns for this user
-
-**What it does not load:**
-- Specific past facts (too broad — loaded per request)
-- Skills (handled by the skill matcher, not hydration)
+**What it does not load:** Specific past facts (loaded per request), skills (handled by the skill matcher).
 
 ### Request Hydration
 
 Runs **before every request**, augmenting but never replacing the session layer.
 
-**Process:**
-1. Use the user's message as a retrieval query against cold storage
-2. Score candidates: keyword relevance × importance weight
-3. Pass candidates through a lightweight LLM filter to remove false positives
-4. Inject surviving memories into graph state for middleware delivery
+**Process:** Query cold store with user message → score by keyword × importance → LLM filter for relevance → inject into graph state for middleware delivery.
 
 ---
 
 ## Scratchpad
 
-The scratchpad is a session-scoped working memory buffer. It solves the tool output problem: external tools often return far more content than a local model's context window can hold.
+The scratchpad is a session-scoped working memory buffer that prevents large tool and script outputs from polluting the LLM's context window.
 
 ### Role in the Hot/Cold Model
 
-The scratchpad spans both layers deliberately — it is a bridge mechanism, not a third memory category:
+The scratchpad is a bridge mechanism — it spans both layers deliberately:
 
 | Part | Layer | Content |
 |---|---|---|
 | **Index** | Hot — always injected | ref ID + one-line summary per entry |
-| **Full content** | Cold — retrieved on demand | Raw tool output, chunked |
+| **Full content** | Cold — retrieved on demand | Raw output, chunked ~800 chars |
 
 ### Storage and Schema
 
-Uses the same `InMemoryStore` primitive as long-term memory, namespaced by `threadId`.
+Uses the same `InMemoryStore` as long-term memory, namespaced by `threadId`. Graph state holds only `{ sessionId: string }` — a plain serializable reference, never a class instance.
 
 ```
 ScratchpadRecord {
   ref:       string          — unique key and store identifier
-  toolName:  string
+  toolName:  string          — tool or script that produced this
   taskId:    string
   summary:   string          — injected into hot index
   chunks: [{
     index:    number
-    content:  string         — ~800 chars per chunk
-    keywords: string[]       — for targeted retrieval scoring
+    content:  string         — ~800 chars
+    keywords: string[]
   }]
   createdAt: number
   sessionId: string
 }
 ```
 
-Graph state holds only `{ sessionId: string }` — a plain serializable reference, not the store instance. This is critical for checkpointer compatibility.
-
 ### On-Demand Retrieval
 
-`scratchpad_read(ref, query)` is always available to every leaf agent. It scores chunks by keyword relevance against the query and returns the top 1–2 chunks only — never the full content.
+`scratchpad_read(ref, query)` is available to every leaf agent. It scores chunks by keyword relevance and returns the top 1–2 chunks — never the full content.
 
 ---
 
 ## Skills System
 
-Skills are named, reusable decomposition patterns for recognised categories of task.
+Skills are **named, portable, self-contained packages** that encode reusable approaches to recognised task types. They are the primary mechanism by which the platform improves over time and reduces reliance on LLM reasoning for known patterns.
+
+### Skill Package Structure
+
+Every skill is a directory on the filesystem. Scripts and tests travel with the skill — they are part of it, not separate platform dependencies.
+
+```
+skills/
+  email-inbox/                ← atomic skill with scripts
+    SKILL.md
+    getEmails.js
+    getEmails.test.js
+  email-label-ads/            ← atomic skill, inference-only
+    SKILL.md
+  email-label-keyword/        ← atomic skill, inference-only
+    SKILL.md
+  email-label-apply/          ← atomic skill with scripts
+    SKILL.md
+    applyLabels.js
+    applyLabels.test.js
+  email-workflow/             ← compositional skill, no scripts
+    SKILL.md
+```
+
+**Co-location is intentional.** A skill can be shared, versioned, reviewed, and tested as a single unit. There are no external tool registration dependencies.
+
+**The Skill Loader** scans the skills directory on startup, reads `SKILL.md` frontmatter from each package to build the matcher index, and loads the full `SKILL.md` content only when a skill is matched. Scripts are loaded only when a step executes.
+
+### The SKILL.md Format
+
+Each `SKILL.md` file has two distinct sections serving two distinct purposes:
+
+**YAML frontmatter** — machine-readable metadata for the skill matcher:
+
+```yaml
+---
+name: Email Inbox Fetch
+version: 1.0.0
+description: Fetch emails from a user's inbox and return a structured list
+keywords: [email, fetch, inbox, retrieve, messages, gmail]
+type: atomic
+inputs:
+  user:
+    type: string
+    required: true
+  count:
+    type: number
+    default: 100
+---
+```
+
+**Markdown body** — human and LLM readable instructions for execution:
+
+```markdown
+# Email Inbox Fetch
+
+Fetches emails from the specified user's inbox using the Gmail API.
+
+## Steps
+
+1. Execute `./getEmails.js --user {user} --count {count}`
+2. The script returns a JSON array of email objects
+3. Confirm the count and return the structured list
+
+## Notes
+
+- Authentication and pagination are handled by the script
+- If the script fails, report the error — do not attempt to call the API directly
+- `{user}` and `{count}` are resolved from the current context before execution
+```
+
+**Step reference syntax:**
+
+| Syntax | Meaning | Execution path |
+|---|---|---|
+| `./script.js --arg {value}` | Execute co-located script | Direct execution — zero LLM tokens |
+| `skill:/skill-name` | Invoke another skill | Sub-skill resolution — steps pushed to task queue |
+| Natural language | LLM reasoning required | Leaf agent invocation |
+| `{placeholder}` | Runtime value from context | Resolved before execution |
+
+### Atomic Skills
+
+An atomic skill does one thing. It may contain scripts for mechanical steps and natural language for reasoning steps. The mix is the skill's design decision.
+
+```markdown
+---
+name: Email Label Apply
+type: atomic
+keywords: [email, label, apply, tag, gmail]
+inputs:
+  emails: { type: array, required: true }
+  labels: { type: object, required: true }
+---
+
+## Steps
+
+1. For each email in `{emails}`, determine which labels from `{labels}` apply
+2. Execute `./applyLabels.js --data {labels_json}`
+3. Confirm the labels were applied and return a summary
+```
+
+Step 1 uses LLM reasoning. Step 2 executes a script. Step 3 is a lightweight LLM confirmation. This is a **mixed skill** — reasoning where reasoning is needed, code where code is reliable.
+
+### Compositional Skills
+
+A compositional skill orchestrates other skills. It contains no scripts of its own — all complexity lives in the referenced atomic skills.
+
+```markdown
+---
+name: Email Processing Workflow
+version: 1.0.0
+description: Fetch and intelligently label all emails in a user's inbox
+keywords: [email, process, workflow, label, organise, inbox]
+type: compositional
+skills:
+  - /email-inbox
+  - /email-label-ads
+  - /email-label-keyword
+  - /email-label-apply
+---
+
+# Email Processing Workflow
+
+## Steps
+
+1. `skill:/email-inbox` — Fetch 100 emails from the user's inbox
+2. `skill:/email-label-ads` — Identify which emails are advertisements
+3. `skill:/email-label-keyword` — Extract keyword-based labels from remaining emails
+4. `skill:/email-label-apply` — Apply all identified labels back to the inbox
+
+## Context Passing
+
+- The output of each step is available to subsequent steps
+- Steps 2 and 3 receive the email list produced by step 1
+- Step 4 receives the label assignments produced by steps 2 and 3
+```
+
+**Compositional skills reuse the RLM task queue without special handling.** When the executor encounters `skill:/email-inbox`, it loads that skill's `SKILL.md`, pushes its steps onto the task queue at `depth + 1`, and those tasks execute through the normal path. The RLM `maxDepth` limit naturally prevents infinite nesting.
+
+This means the RLM system and the skill system are the same system. Skills are pre-authored decompositions. Compositional skills are pre-authored recursive decompositions. The execution machinery is identical.
 
 ### Static and Learned Skills
 
-| Type | Source | Stability |
-|---|---|---|
-| **Static** | Human/community authored | High — reviewed before registration |
-| **Learned** | Promoted from procedural memory | Growing — automatic at quality threshold |
+| Type | Source | Scripts | Reliability |
+|---|---|---|---|
+| **Learned (soft)** | Auto-generated from procedural memory | ❌ None | Variable — LLM executes all steps |
+| **Codified** | Human development workflow | ✅ Co-located, tested | High — mechanical steps are deterministic |
+| **Static (community)** | Community reviewed and registered | ✅ Reviewed and tested | Highest — community validated |
 
 ### Skill Matching
 
+Matching uses the frontmatter index — the full `SKILL.md` body is never loaded until a match is confirmed:
+
 ```
-Stage 1: Keyword pre-filter    (free — no LLM call)
-  → eliminates skills with no keyword overlap
-  → if no candidates: skip to router immediately
+Stage 1: Keyword pre-filter    (free — reads frontmatter index only)
+  → matches request keywords against skill `keywords` arrays
+  → if no candidates: proceed to router immediately
 
 Stage 2: LLM confirmation      (one small LLM call)
-  → confirms semantic match from candidate list
-  → requires confidence ≥ 0.7
+  → LLM receives skill name + description + step list (not full SKILL.md)
+  → requires confidence ≥ 0.7 to confirm match
 
-match found  →  applySkill (steps → task queue, decompose bypassed)
+match found  →  applySkill
+  → full SKILL.md loaded
+  → steps parsed
+  → execution path determined per step (script / sub-skill / LLM)
+  → steps added to task queue
+
 no match     →  router (LLM decompose as fallback)
 ```
 
-### Skill Authoring and Promotion
+### Skill Execution
 
-After every successful LLM-decomposed execution, `maybeAuthorSkill` evaluates whether the pattern is worth keeping:
+Each step in a matched skill is resolved to one of three execution paths before being added to the task queue:
 
-- **To procedural memory:** 2+ distinct steps, recognisable recurring task type, successful result
-- **To static registry:** procedural memory importance ≥ 0.9, accessCount ≥ 5, community review
+**Script execution (zero LLM tokens)**
+```
+step: "Execute ./getEmails.js --user {user} --count {count}"
+     │
+     ▼
+resolve {placeholders} from current context
+     │
+     ▼
+execute script in sandbox
+     │
+     ▼
+output → scratchpad (if large) or direct to results
+```
+
+**Sub-skill resolution**
+```
+step: "skill:/email-label-ads"
+     │
+     ▼
+load sub-skill SKILL.md
+     │
+     ▼
+push sub-skill steps to task queue (depth + 1)
+     │
+     ▼
+sub-skill executes through normal RLM path
+results flow back up through aggregate node
+```
+
+**LLM reasoning (leaf agent)**
+```
+step: "Identify which emails are advertisements"
+     │
+     ▼
+createLeafAgent(selectedTools, scratchpad)
+     │
+     ▼
+agent invoked with step description + context
+full middleware stack applied
+```
+
+### Skill Authoring
+
+Two distinct tracks produce skills. They are independent and serve different purposes.
+
+#### Track 1 — Emergent (Automatic)
+
+```
+LLM decomposes a request successfully
+     │
+     ▼
+maybeAuthorSkill evaluates:
+  - 2+ distinct steps?
+  - Recognisable, recurring task type?
+  - Successful result?
+     │
+     ▼ yes
+Soft SKILL.md generated (natural language only, no scripts)
+Written to learned index
+Participates in future skill matching
+```
+
+Emergent skills are soft skills. Every step is a natural language description executed by a leaf agent. They are a starting point, not a final state.
+
+#### Track 2 — Deliberate (Human Development Workflow)
+
+```
+1. IDENTIFY
+   For each step in an emergent or known skill pattern:
+
+   Mechanical (script candidate):          Reasoning (stays as LLM step):
+   - Calls external API                    - Interprets ambiguous intent
+   - Transforms data deterministically     - Makes judgement calls
+   - Reads / writes files or databases     - Synthesises conclusions
+   - Follows a fixed decision tree         - Handles unexpected inputs
+
+2. BUILD
+   For each mechanical step:
+   - Write the script (JS / Python / Bash)
+   - Handle all procedural nuance internally
+     (auth, retry, pagination, error handling, edge cases)
+   - Write unit tests — the reliability guarantee
+   - Co-locate with the skill package
+
+3. COMPOSE
+   Write the SKILL.md:
+   - Hard steps: reference script by path with {placeholder} args
+   - Soft steps: natural language description for LLM execution
+   - Compositional steps: reference sub-skills by skill:/name
+   - Document which inputs are required vs. optional
+
+4. VERIFY
+   - Hard steps: covered by co-located unit tests
+   - Soft steps: eval against representative inputs
+   - Full skill: integration test end-to-end
+   - Submit to community registry for review
+```
+
+### Skill Maturity Model
+
+```
+EMERGENT    — fully soft, LLM handles all steps
+                  variable reliability, model-dependent
+                  emerges automatically from maybeAuthorSkill
+                        │
+                        │ community identifies repeatable pattern
+                        ▼
+CODIFIED    — mix of tested scripts + LLM reasoning steps
+                  mechanical nuance lives in code
+                  scripts unit tested independently of LLM
+                  materially more reliable than emergent
+                        │
+                        │ community review + validation
+                        ▼
+VERIFIED    — community reviewed, integration tested
+                  successRate tracked across all users
+                  the platform's highest-reliability execution path
+```
+
+The fundamental principle of the maturity model:
+
+> **A skill gets more reliable as more of its mechanical steps become code. The LLM is reserved for what only a model can do — interpretation, judgement, and synthesis.**
 
 ---
 
@@ -583,7 +871,15 @@ After every successful LLM-decomposed execution, `maybeAuthorSkill` evaluates wh
 
 ### Purpose and Activation
 
-RLM is the fallback decomposition strategy when no skill matches and the router classifies the request as complex. It is not the default — the majority of requests are handled without it.
+RLM is the fallback decomposition strategy when no skill matches and the router classifies the request as complex. It is not the default — simple requests and skill-matched requests never involve it.
+
+```
+matchSkill → no match
+     │
+     ▼
+router → "simple"  →  single leaf agent call
+       → "complex" →  RLM decomposition
+```
 
 ### Decomposition Strategy
 
@@ -591,28 +887,42 @@ RLM is the fallback decomposition strategy when no skill matches and the router 
 Task arrives
      │
      ▼
-decomposeAgent: simple enough for one call?
+decomposeAgent: simple enough for one focused call?
      │
-     ├── yes → STAGED → execute directly
+     ├── yes → STAGED → resolve execution path → execute
      └── no  → split into 2–3 sub-tasks (depth + 1)
                each re-enters QUEUED
-               max depth enforced (default 3)
-               at max depth: force execute regardless
+               maxDepth enforced (default 3)
+               at maxDepth: force execute
 ```
 
 ### Context Isolation
 
 Each leaf agent receives only:
 - Its specific task description
-- Sibling task summaries (text only)
-- The scratchpad index
-- Injected long-term memories
+- Sibling task summaries (text only, not full outputs)
+- The scratchpad index (refs + summaries)
+- Injected long-term memories (via middleware)
 
-It does not receive full conversation history or unrelated task results.
+It does not receive full conversation history or unrelated task results. This isolation is what keeps each call within the local model's context budget.
 
 ---
 
 ## Tool System
+
+### Platform Tools vs. Skill Scripts
+
+The platform distinguishes between two kinds of executable capability:
+
+| | Platform Tools | Skill Scripts |
+|---|---|---|
+| **Registration** | Central tool registry | Co-located with skill package |
+| **Portability** | Platform-dependent | Self-contained — travels with skill |
+| **Scope** | Available to any agent | Available only within the skill |
+| **Selection** | `toolSelectorAgent` per task | Resolved from SKILL.md step reference |
+| **Examples** | `web_search`, `read_file`, `run_code` | `getEmails.js`, `applyLabels.py` |
+
+Skill scripts handle nuance that is specific to the skill (authentication, API specifics, retry logic). Platform tools handle general-purpose capabilities available to any agent or leaf task.
 
 ### Tool Registry
 
@@ -622,40 +932,42 @@ RegisteredTool {
   description:          string        — used by tool selector
   tags:                 string[]      — e.g. ["web", "file", "code"]
   requiresConfirmation: boolean       — triggers HITL if true
-  outputMaxChars:       number        — interception threshold
+  outputMaxChars:       number        — scratchpad interception threshold
 }
 ```
 
 ### Dynamic Tool Selection
 
-A `toolSelectorAgent` runs before every leaf execution and selects only the tools relevant to the current task. A local model given 2 tool schemas performs materially better than the same model given 10.
+A `toolSelectorAgent` runs before every leaf agent execution and selects only the tools relevant to the current natural-language task. Script steps bypass tool selection entirely — the script is already specified in the SKILL.md step.
 
 ### Tool Output Interception
 
+Both tool outputs and script outputs are subject to scratchpad interception:
+
 ```
-output <= threshold  →  ToolMessage unchanged
-output >  threshold  →  interceptToolOutput()
+output <= threshold  →  message unchanged, stays in context
+output >  threshold  →  intercepted
                           full content  → scratchpad cold store (WRITTEN)
-                          summary + ref → ToolMessage (stays in context)
+                          summary + ref → message (stays in context)
 ```
 
 ### Human-in-the-Loop (HITL)
 
-Tools with `requiresConfirmation: true` trigger an interrupt before execution. The graph is paused. The caller receives tool name, arguments, description, and allowed decisions (`approve`, `edit`, `reject`). On resume the middleware routes accordingly.
+Platform tools with `requiresConfirmation: true` trigger a HITL interrupt before execution. Skill scripts that perform sensitive operations (file writes, external API mutations) should also set this flag in their SKILL.md frontmatter. The graph pauses and resumes on human decision (`approve`, `edit`, `reject`).
 
 ---
 
 ## Middleware Layer
 
-Middleware handles constraints on individual model calls. It has no routing authority and no knowledge of graph structure.
+Middleware handles constraints on individual model calls. It has no routing authority and no knowledge of graph structure. Script execution steps bypass the middleware stack entirely — middleware only applies to LLM calls.
 
-> **Middleware handles constraints. The graph handles coordination.**
+> **Middleware handles constraints. The graph handles coordination. Scripts handle deterministic work.**
 
 ### Middleware Stack (Execution Order)
 
 ```
 Before each model call:
-  1. localLlmPromptMiddleware      — brevity/focus instruction
+  1. localLlmPromptMiddleware      — brevity/focus instruction for local models
   2. memoryInjectionMiddleware     — inject hot memories from graph state
   3. scratchpadContextMiddleware   — inject scratchpad index
   4. focusedContextMiddleware      — trim message history to fit window
@@ -676,22 +988,24 @@ After each model call:
 |---|---|---|---|
 | `routerAgent` | ❌ | Token budget only | Classify request: simple or complex |
 | `decomposeAgent` | ❌ | Full local stack | Decide: execute or split |
-| `leafAgent` *(factory)* | ✅ | Full stack + tool middlewares | Execute one focused task |
+| `leafAgent` *(factory)* | ✅ | Full stack + tool middlewares | Execute one focused natural-language task |
 | `aggregateAgent` | ❌ | Full local stack | Synthesise sub-task results |
 | `memoryAuthoringAgent` | ❌ | Token budget only | Extract memories from exchanges |
 | `memoryFilterAgent` | ❌ | Token budget only | Filter retrieved memories |
 | `skillConfirmationAgent` | ❌ | Token budget only | Stage 2 skill matching |
 | `skillAuthoringAgent` | ❌ | Token budget only | Evaluate decomposition for skill promotion |
-| `toolSelectorAgent` | ❌ | Token budget only | Select tools per task |
-| `summariserAgent` | ❌ | Token budget only | Summarise tool output for scratchpad |
+| `toolSelectorAgent` | ❌ | Token budget only | Select platform tools per natural-language task |
+| `summariserAgent` | ❌ | Token budget only | Summarise large tool/script outputs for scratchpad |
+
+**Script execution does not involve any agent.** Scripts run directly in a sandbox. Only natural-language steps require a leaf agent.
 
 ### Leaf Agent Factory
 
-A new leaf agent instance is created per task with only the tools and configuration relevant to that task:
+A new leaf agent instance is created per natural-language task step:
 
 ```typescript
 createLeafAgent(selectedTools, scratchpad):
-  tools:      selected tools + scratchpad_read (always)
+  tools:      selected platform tools + scratchpad_read (always)
   middleware: full local stack
               + scratchpadContextMiddleware(scratchpad)
               + toolCompatibilityMiddleware (if tools present)
@@ -724,6 +1038,16 @@ RLMState {
   decomposedBySkill boolean
   maxDepth          number
 }
+
+Task {
+  id:             string
+  description:    string
+  parentId:       string | null
+  depth:          number
+  stepRef?:       string    — "./script.js --args" | "skill:/name" | undefined
+  resolvedArgs?:  Record<string, string>  — placeholders resolved from context
+  requiresLLM:    boolean
+}
 ```
 
 ### Node Execution Order
@@ -731,22 +1055,29 @@ RLMState {
 ```
 START → sessionHydrate (new thread only) → extractMemories → matchSkill
   │
-  ├── skill matched → applySkill → selectTools → execute → aggregate → authorMemories → END
+  ├── skill matched → applySkill → resolveSteps → execute → aggregate → authorMemories → END
+  │                       │
+  │              per step: script / sub-skill / LLM
   │
   └── no skill → router
                    ├── simple → selectToolsSimple → simpleExecute → authorMemories → END
-                   └── complex → decompose ◄─────────────────────────────────┐
-                                     │                                        │
-                                 currentTask?  ── no ──────────────────────► │ (recurse)
+                   └── complex → decompose ◄─────────────────────────────────────┐
+                                     │                                            │
+                                 currentTask?  ── no ──────────────────────────► │
                                      │ yes
                                      ▼
-                                 selectTools → execute → aggregate
-                                                             │
-                                                         queue empty?
-                                                             │ yes
-                                                             ▼
-                                                       authorMemories
-                                                       + maybeAuthorSkill → END
+                                 resolveStep
+                                     ├── script  → sandbox execute → COMPLETE
+                                     ├── sub-skill → push steps to queue (depth+1)
+                                     └── LLM → selectTools → createLeafAgent → COMPLETE
+                                                   │
+                                               aggregate
+                                                   │
+                                               queue empty?
+                                                   │ yes
+                                                   ▼
+                                             authorMemories
+                                             + maybeAuthorSkill → END
 ```
 
 ### Session Persistence
@@ -764,23 +1095,30 @@ The checkpointer provides:
 ```
 Day 1 — new task type encountered:
   No skill match → LLM decomposes → executes
-  → maybeAuthorSkill writes procedural memory
+  → maybeAuthorSkill writes soft SKILL.md to learned index
 
 Day 3 — similar request arrives:
   Learned skill matches → steps loaded directly
-  → no LLM decomposition → faster and more reliable
-  → procedural memory reinforced
+  → some steps still LLM-executed (soft skill)
+  → faster than full decomposition, more consistent
 
-Day 14 — pattern used successfully many times:
-  importance ≥ 0.9, accessCount ≥ 5
-  → promoted to static skill registry
-  → available to all users
+Community identifies the pattern:
+  Developer runs deliberate authoring workflow:
+    - Mechanical steps become co-located scripts with unit tests
+    - SKILL.md updated to reference scripts
+    - Submitted to community registry
+
+Verified skill replaces learned skill:
+  Same trigger keywords → now matches at Stage 1
+  Script steps execute deterministically — zero LLM tokens
+  LLM only invoked for genuine reasoning steps
+  Reliability materially higher than learned version
 
 Over time:
-  More requests hit skills     → less LLM decomposition needed
-  Richer memory per user       → more personalised responses
-  Community skills grow        → platform capability grows
-                                 independent of model size
+  More requests hit verified skills   → less LLM inference
+  Skill library grows                 → platform capability grows
+  Scripts are testable                → reliability is measurable
+  Community contribution is concrete  → shared functions, not prompts
 ```
 
 ---
@@ -792,46 +1130,47 @@ Over time:
 | Decision | Options |
 |---|---|
 | Cold memory storage backend | SQLite, Redis, PostgreSQL, vector DB, flat files |
-| Hot memory token budget | Depends on model context window size |
-| Cold-to-hot promotion scoring | Keyword, semantic similarity, recency, importance weighting |
-| Session hydration policy | What to always load; how many items; recency window |
+| Hot memory token budget | Depends on model context window |
+| Cold-to-hot promotion scoring | Keyword, semantic similarity, recency, importance |
+| Session hydration policy | What to always load; item count; recency window |
 | Scratchpad eviction / TTL | Memory pressure vs. session length |
 | Skill review and approval workflow | Manual queue, automated gates, community voting |
+| Script sandbox runtime | Node.js subprocess, Deno, Python venv, WASM |
+| Script timeout and resource limits | Deployment dependent |
 | Multi-agent coordination topology | Supervisor pattern, peer-to-peer, shared state |
 
 ### Transition Policies
 
-These govern how entities move between states. They are configuration values, not architectural constants:
+Configuration values — not architectural constants:
 
 ```
 Memory:
-  initial_importance:     episodic=0.5, semantic=0.6, procedural=0.7  (suggested defaults)
+  initial_importance:     episodic=0.5, semantic=0.6, procedural=0.7
   decay_trigger:          time-based | session-based | access-count-based
   decay_window:           default 7 days
   decay_factor:           default 0.8 per cycle
   prune_threshold:        default 0.05
-  rescue_on_retrieval:    true — retrieval halts decay and reinforces importance
+  rescue_on_retrieval:    true
 
 Skills:
-  learned_importance:     0.9  (threshold for registry promotion)
+  learned_importance:     0.9
   learned_min_uses:       5
   deprecation_threshold:  successRate < 0.6
 
 Scratchpad:
   intercept_threshold:    default 300 chars
-  max_size:               unbounded within session (deployment decision)
   ltm_promotion:          decided by memory authoring agent per entry
   interrupted_session:    deferred — flush on next start | retain with TTL | treat as lost
 
 Tasks:
-  retry_limit:            deferred — default 1 suggested
-  parallel_execution:     false (default) — parallelism support deferred
-  error_reporting:        deferred — fail silently | report to aggregate | abort thread
+  retry_limit:            deferred — 1 suggested
+  parallel_execution:     false (default) — parallelism deferred
+  error_reporting:        deferred — silent | report to aggregate | abort
 
 Threads:
-  session_timeout:        deferred — suggested default 30 minutes inactivity
+  session_timeout:        deferred — 30 minutes inactivity suggested
   rehydration_gap:        deferred — re-run session hydration if gap > 1 hour
-  hitl_timeout:           deferred — suggested default none (waits indefinitely)
+  hitl_timeout:           deferred — none suggested (wait indefinitely)
   max_thread_lifetime:    deferred — deployment dependent
 ```
 
@@ -847,7 +1186,9 @@ Threads:
 | Session persistence | `MemorySaver` checkpointer | Any persistent checkpointer |
 | Local LLM runtime | `ChatOllama` | Any `BaseChatModel` |
 | Schema validation | `zod` | Any schema library |
-| Tool definition | `tool()` from `@langchain/core/tools` | Any tool interface |
+| Platform tool definition | `tool()` from `@langchain/core/tools` | Any tool interface |
+| Skill script runtime | Node.js subprocess (sandboxed) | Deno, Python, Bash, WASM |
+| Skill package discovery | Filesystem scan of `skills/` directory | Database, registry service |
 
 Both long-term memory and scratchpad use the same `InMemoryStore` instance, separated by namespace. Switching to a persistent backend requires changing only the store instantiation.
 
@@ -857,4 +1198,6 @@ Both long-term memory and scratchpad use the same `InMemoryStore` instance, sepa
 
 > **Everything shown to the model is intentional, minimal, and justified for the task at hand. Everything else is stored, indexed, and made accessible only when the model asks for it.**
 
-The platform is designed to improve over time — not because the underlying models improve, but because skills, memory, and community knowledge accumulate. A user's tenth session is materially better than their first. A community's hundredth skill is materially more capable than its tenth. This holds independent of any changes to the model.
+> **Mechanical work is code. Reasoning work is inference. Skills are the boundary between the two.**
+
+The platform improves over time not because models improve, but because skills, memory, and community knowledge accumulate. A verified skill is more reliable than a learned one. A learned skill is more efficient than LLM decomposition. A community's skill library is an asset that outlasts any individual model generation.

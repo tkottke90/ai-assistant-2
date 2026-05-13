@@ -76,6 +76,7 @@
     - [Activation](#activation)
     - [Performance Characteristics](#performance-characteristics)
     - [Limitations](#limitations)
+    - [How RLMs Fit into the Platform](#how-rlms-fit-into-the-platform)
   - [Tool System](#tool-system)
     - [Platform Tools vs. Skill Scripts](#platform-tools-vs-skill-scripts)
     - [Tool Registry](#tool-registry)
@@ -1567,6 +1568,24 @@ Based on the published research:
 - **Cost and latency are not bounded**: a partition+map strategy over a very large context can be expensive; the platform does not currently cap total RLM cost per request
 - Performance on counting and numerical aggregation tasks degrades at very large context sizes even with RLMs
 - The interaction strategies that emerge are **not reproducible** — the same query over the same context may produce different REPL trajectories across runs
+
+### How RLMs Fit into the Platform
+
+RLMs address the hardest constraint the platform is built around: **small context windows on local hardware**. Every other mechanism — memory tiers, the scratchpad, middleware, skill decomposition — manages what goes into the context window. RLMs change the question. Rather than asking "how do we fit the context in?", they ask "how do we make the model useful without ever loading the full context at all?"
+
+This is a direct expression of the platform's core design principles:
+
+| Principle | How RLMs express it |
+|---|---|
+| **Local-first** | No single model call ever sees the full context — the root LM operates on a tiny prompt regardless of how large the source material is |
+| **Intentional context** | The root LM decides what to read and when; nothing enters the context window by accident — every peek, grep, and slice is a deliberate act |
+| **Separation of concerns** | The REPL environment handles context access; the root LM handles reasoning; the platform handles resource bounds and error containment — each layer does one thing |
+| **Progressive complexity** | Simple requests never enter the RLM loop; complexity is added only when the router determines the context is too large for a single call |
+| **Code over inference** | The REPL allows the root LM to express deterministic steps as code — counting, diffing, filtering — bypassing LLM inference entirely for work that doesn't need it |
+
+The practical result: a small local model that would degrade badly on a 50k-token document can reason accurately over it by reading only the relevant slices. The model's effective capability scales with the context, not against it.
+
+**Where RLMs sit in the execution path.** They are not the primary path — they are the last resort before the user sees a degraded answer. Skills handle known task types cheaply and reliably. The router handles simple unrecognized requests with a single leaf agent. RLMs activate only when neither of those options is sufficient: the request is novel, complex, and involves large context. This ordering is intentional — the cheapest capable path always wins.
 
 ---
 

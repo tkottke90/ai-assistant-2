@@ -64,6 +64,12 @@
     - [What RLMs Are](#what-rlms-are)
     - [The Problem: Context Rot](#the-problem-context-rot)
     - [Mechanism: REPL Environment](#mechanism-repl-environment)
+    - [REPL Primitive API](#repl-primitive-api)
+    - [REPL Execution Environment](#repl-execution-environment)
+    - [REPL ↔ Scratchpad, Tools, and Skills](#repl--scratchpad-tools-and-skills)
+    - [REPL Session Lifecycle](#repl-session-lifecycle)
+    - [REPL Limits and Cleanup](#repl-limits-and-cleanup)
+    - [REPL Cell Errors](#repl-cell-errors)
     - [Recursive Depth](#recursive-depth)
     - [Emergent Interaction Strategies](#emergent-interaction-strategies)
     - [RLMs vs. Agents](#rlms-vs-agents)
@@ -1311,14 +1317,16 @@ RLMs address context rot without solving it at the architecture level. No single
 
 ### Mechanism: REPL Environment
 
-The platform provides the root LM with a **REPL environment** (analogous to a Python notebook) in which the full context is pre-loaded as a variable. The root LM writes code cells to interact with this context:
+A **REPL** (Read-Eval-Print Loop) is an interactive code execution environment — the model writes a snippet of code, the platform runs it and returns the result, and the model writes the next snippet based on what it saw. Think of it as a Python notebook: each cell executes immediately and its output is available to subsequent cells.
+
+The platform provides the root LM with such an environment in which the full context is pre-loaded as a single string variable. The context is always a flat string — one large document, a file, or concatenated text — never a structured object or collection. Rather than receiving the entire context in its prompt, the root LM writes code cells to query it selectively:
 
 ```
 User query
     │
     ▼
 Root LM (depth=0)
-  sees: query only + context metadata (size, type)
+  sees: query only + context metadata (size, mime_type)
   interacts via: REPL cells (peek, grep, slice, call sub-LM)
     │
     ├── REPL cell: peek at first N chars to observe structure
@@ -1333,6 +1341,162 @@ Root LM (depth=0)
 ```
 
 When the root LM is confident in its answer it emits `FINAL(answer)` (inline) or `FINAL_VAR(var)` (from a REPL variable holding a built-up result).
+
+### REPL Primitive API
+
+The platform exposes a fixed set of primitives the root LM may call within REPL cells. These are an architectural commitment — the platform guarantees their availability; the root LM is free to compose them as it sees fit.
+
+| Primitive | Signature | Description |
+|---|---|---|
+| `peek` | `peek(context, n)` | Read the first `n` characters of a context object without loading the remainder |
+| `grep` | `grep(context, pattern)` | Return all lines matching a string or regex pattern |
+| `slice` | `slice(context, start, end)` | Extract a byte-range or line-range window from the context |
+| `call_lm` | `call_lm(chunk, query)` | Invoke a reasoning-only recursive LM call on a context chunk; no tools available at depth=1; returns the sub-result as a REPL variable |
+| `scratchpad_read` | `scratchpad_read(ref, query)` | Retrieve top chunks from a scratchpad entry by keyword relevance |
+| `scratchpad_write` | `scratchpad_write(label, value)` | Write a value to the scratchpad; returns a ref for later retrieval |
+| `FINAL` | `FINAL(answer)` | Emit the final answer inline and terminate the REPL session |
+| `FINAL_VAR` | `FINAL_VAR(variable_name)` | Emit the final answer from a REPL variable and terminate the session |
+
+The platform does not expose file system access, network calls, or platform internals through the REPL primitive API. The root LM cannot escape the context object it was given.
+
+### REPL Execution Environment
+
+The platform must provide an execution environment in which REPL cells run. The specific runtime is an implementation decision; the environment must satisfy the following properties:
+
+- **Statefulness** — variables assigned in one cell are visible in all subsequent cells within the same session
+- **Synchronous execution** — each cell completes fully before the next cell is written; the root LM always sees a complete result before proceeding
+- **Output capture** — stdout and return values from each cell are captured and returned to the root LM as the cell's result
+- **Isolation** — the REPL session is scoped to a single RLM request; it cannot read or write state from other sessions or other platform subsystems
+- **Bounded resources** — the environment enforces a per-cell timeout and a per-session memory ceiling; runaway cells fail fast rather than stalling the request (see [REPL Limits and Cleanup](#repl-limits-and-cleanup))
+- **Primitive availability** — all primitives defined in [REPL Primitive API](#repl-primitive-api) are pre-loaded and available without import
+- **Error containment** — cell-level errors are caught and returned as the cell's result; the session is not terminated by a recoverable error (see [REPL Cell Errors](#repl-cell-errors))
+
+### REPL ↔ Scratchpad, Tools, and Skills
+
+The REPL environment does not operate in isolation — it is a first-class participant in the platform's shared infrastructure.
+
+**Scratchpad**
+
+The REPL can read from and write to the scratchpad using `scratchpad_read` and `scratchpad_write`. This serves two purposes:
+
+1. **Passing results forward** — if an intermediate REPL computation produces a large result, the root LM writes it to the scratchpad rather than accumulating it in a REPL variable. Subsequent cells retrieve only the chunks they need.
+2. **Receiving prior context** — skill steps executed before the RLM loop may have already written outputs to the scratchpad. The root LM can read those entries as part of its exploration strategy, treating prior skill output as part of the context it is reasoning over.
+
+REPL cells that produce large outputs follow the same scratchpad interception threshold as tool and script outputs. The platform intercepts the write, stores the full content cold, and returns a ref + summary to the REPL cell as its result.
+
+**Platform Tools**
+
+The REPL does not have direct access to the platform tool registry, and neither do recursive LMs spawned via `call_lm`. Leaf LMs at depth=1 are reasoning-only — they receive a chunk and a query and return a result. No tool calls, no scratchpad writes, no further side-effects. If a task requires tool use, that work happens in a standard leaf agent on the simple path — not inside the RLM loop.
+
+**Skills**
+
+Skills may activate before the RLM loop (via `matchSkill`) but not from within it. The REPL is the fallback path for requests where no skill matched. A REPL session cannot itself trigger a skill match — it reasons over context using primitives and recursive sub-calls only. Results produced by a prior skill step that ran before the RLM loop are accessible via the scratchpad.
+
+### REPL Session Lifecycle
+
+A REPL session is created per RLM request and destroyed when that request completes.
+
+```
+RLM request received
+    │
+    ▼
+SESSION CREATED
+  context object pre-loaded
+  all primitives available
+  cell counter = 0
+    │
+    ▼
+CELL EXECUTION  (repeated)
+  root LM writes cell
+  platform executes cell → returns result
+  cell counter++
+  cell limit reached? → LIMIT EXCEEDED
+    │
+    ▼
+SESSION TERMINATING
+  root LM emits FINAL(answer) or FINAL_VAR(var)
+    │
+    ├── scratchpad_write calls already committed
+    │
+    ▼
+SESSION DESTROYED
+  all REPL variables discarded
+  scratchpad entries written during the session are retained (session-scoped)
+  context object reference released
+```
+
+| State | Description |
+|---|---|
+| `CREATED` | Environment initialised, context pre-loaded, primitives available |
+| `CELL EXECUTION` | Root LM iteratively writes and executes cells; outputs returned after each |
+| `LIMIT EXCEEDED` | Cell limit reached without `FINAL` — platform forces termination (see [REPL Limits and Cleanup](#repl-limits-and-cleanup)) |
+| `TERMINATING` | `FINAL` or `FINAL_VAR` emitted; session winding down |
+| `DESTROYED` | All REPL state discarded; scratchpad entries from the session retained |
+
+REPL sessions are always single-request. There is no mechanism to resume a REPL session from a prior request, and no REPL state persists to the checkpoint store.
+
+### REPL Limits and Cleanup
+
+Without explicit limits, a root LM can explore indefinitely — accumulating cost, latency, and REPL variable state without converging on an answer.
+
+**Recommended cell limit: 20 cells per session.**
+
+This is sufficient for all documented interaction strategies (peeking, grepping, partition+map, summarisation) applied to contexts up to ~10M tokens. A well-functioning root LM converges well within this limit; a session approaching the limit signals either an unusually complex context or a runaway exploration pattern.
+
+**When the cell limit is reached:**
+
+```
+cell counter >= cell_limit
+    │
+    ▼
+Platform forces FINAL_VAR(<best_so_far>)
+  if a REPL variable named best_so_far exists → use it as the answer
+  otherwise → emit a partial answer with an explicit incompleteness note
+    │
+    ▼
+SESSION DESTROYED (same as normal termination)
+```
+
+The platform does not retry the request automatically when the limit is reached — that policy is deferred.
+
+**Between-cell cleanup (during a session):**
+
+After each cell execution, the platform evaluates accumulated REPL variable state:
+
+- Variables whose values exceed the scratchpad interception threshold are offloaded to the scratchpad automatically; the variable is replaced with the returned ref
+- Variables that have not been read since they were written and are not named `best_so_far` are eligible for eviction once total variable state exceeds a session memory ceiling
+- Cell output (the printed result of each cell) is not retained after the next cell begins; the root LM must assign results to variables if it needs them later
+
+**Between-request cleanup:**
+
+REPL sessions are destroyed on request completion — there is no between-request state to clean up. Scratchpad entries written during the session follow standard scratchpad lifetime (retained for the thread session, subject to the normal PRE-FLUSH → FLUSHED transition at session end).
+
+### REPL Cell Errors
+
+Cell-level errors fall into two categories:
+
+**Recoverable errors** — returned as the cell's result; the session continues.
+
+Examples: invalid regex pattern passed to `grep`, a `slice` with out-of-bounds indices, a `call_lm` that returns an empty result.
+
+The error message is returned to the root LM as the cell output. The root LM is expected to observe the error and adapt its next cell — retrying with a corrected pattern, choosing a different strategy, or moving toward a `FINAL` with a partial answer.
+
+**Unrecoverable errors** — terminate the session immediately, equivalent to hitting the cell limit.
+
+Examples: a cell that exceeds the per-cell timeout, a cell that causes the environment to run out of memory.
+
+On an unrecoverable error, the platform forces `FINAL_VAR(best_so_far)` using the same procedure as the cell limit (see [REPL Limits and Cleanup](#repl-limits-and-cleanup)). The forced answer includes a note indicating the session was terminated by an environment error.
+
+```
+Recoverable error
+  → error message returned as cell result
+  → cell counter++
+  → root LM resumes
+
+Unrecoverable error (timeout, OOM)
+  → platform forces FINAL_VAR(best_so_far)
+  → SESSION DESTROYED
+```
 
 ### Recursive Depth
 
@@ -1379,6 +1543,16 @@ matchSkill
                "complex" → RLM root LM + REPL environment
 ```
 
+**Router classification criteria.** The router classifies a request as complex when one or more of the following signals are present:
+
+| Signal | Description |
+|---|---|
+| **Large context** | The context to be reasoned over exceeds a threshold that makes single-call reasoning unreliable |
+| **Aggregation task** | The request requires scanning all of a large body of text (count, find all, summarise everything) |
+| **Multi-pass structure** | Answering the question requires first understanding the structure of the context, then querying it — two or more logical passes |
+
+The router is an LLM agent — these signals are inputs to its classification, not hard rules. A request exhibiting none of these signals is classified simple regardless of query complexity.
+
 ### Performance Characteristics
 
 Based on the published research:
@@ -1389,7 +1563,7 @@ Based on the published research:
 
 ### Limitations
 
-- Recursive sub-calls are **blocking by default** — no prefix caching or parallelism across chunks
+- Recursive sub-calls are **blocking by default** — no prefix caching or parallelism across chunks. Parallel `call_lm` execution (particularly for partition+map strategies) is a known future direction that would reduce latency significantly; it is not architecturally blocked, only deferred.
 - **Cost and latency are not bounded**: a partition+map strategy over a very large context can be expensive; the platform does not currently cap total RLM cost per request
 - Performance on counting and numerical aggregation tasks degrades at very large context sizes even with RLMs
 - The interaction strategies that emerge are **not reproducible** — the same query over the same context may produce different REPL trajectories across runs

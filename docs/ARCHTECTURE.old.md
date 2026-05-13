@@ -20,7 +20,7 @@
     - [Cold Memory](#cold-memory)
     - [The Hot/Cold Boundary](#the-hotcold-boundary)
     - [Cold-to-Hot Promotion](#cold-to-hot-promotion)
-    - [Memory Injection](#memory-injection)
+    - [Memory Injection Scope](#memory-injection-scope)
     - [Long-Term Memory Tiers](#long-term-memory-tiers)
   - [Context Hydration](#context-hydration)
     - [Session Hydration](#session-hydration)
@@ -41,17 +41,22 @@
     - [Static and Learned Skills](#static-and-learned-skills)
     - [Skill Matching](#skill-matching)
     - [Skill Execution](#skill-execution)
-    - [Skill Runtime Environment](#skill-runtime-environment)
-      - [JavaScript — Node.js (Isolated)](#javascript--nodejs-isolated)
-      - [Runtime Version](#runtime-version)
+    - [Skill Runtime Environments](#skill-runtime-environments)
+      - [Per-Skill Isolation (JavaScript and Python)](#per-skill-isolation-javascript-and-python)
+      - [Bash — No Isolation](#bash--no-isolation)
+      - [Runtime Version (JavaScript and Python)](#runtime-version-javascript-and-python)
+      - [Lockfiles (JavaScript and Python)](#lockfiles-javascript-and-python)
       - [Skill Prep](#skill-prep)
+      - [Bash as a Last Resort Runtime](#bash-as-a-last-resort-runtime)
     - [Skill Configuration and Secrets](#skill-configuration-and-secrets)
       - [The Contract](#the-contract)
       - [Config vs. Secrets](#config-vs-secrets)
       - [Type Vocabulary](#type-vocabulary)
     - [Skill Health](#skill-health)
     - [Skill Authoring](#skill-authoring)
-    - [Skill Maturity](#skill-maturity)
+      - [Track 1 — Emergent (Automatic)](#track-1--emergent-automatic)
+      - [Track 2 — Deliberate (Human)](#track-2--deliberate-human)
+    - [Skill Maturity Model](#skill-maturity-model)
   - [Security Surface](#security-surface)
     - [Script Sandbox Constraints](#script-sandbox-constraints)
     - [Supply Chain](#supply-chain)
@@ -70,14 +75,13 @@
     - [Emergent Interaction Strategies](#emergent-interaction-strategies)
     - [RLMs vs. Agents](#rlms-vs-agents)
     - [Activation](#activation)
-    - [v1 Validation Gate](#v1-validation-gate)
     - [Performance Characteristics](#performance-characteristics)
     - [Limitations](#limitations)
     - [How RLMs Fit into the Platform](#how-rlms-fit-into-the-platform)
   - [Tool System](#tool-system)
     - [Platform Tools vs. Skill Scripts](#platform-tools-vs-skill-scripts)
     - [Tool Registry](#tool-registry)
-    - [Tag-Based Tool Selection](#tag-based-tool-selection)
+    - [Dynamic Tool Selection](#dynamic-tool-selection)
     - [Tool Output Interception](#tool-output-interception)
     - [Human-in-the-Loop (HITL)](#human-in-the-loop-hitl)
   - [Middleware Layer](#middleware-layer)
@@ -89,6 +93,7 @@
     - [State Schema](#state-schema)
     - [Node Execution Order](#node-execution-order)
     - [Session Persistence](#session-persistence)
+  - [The Self-Improving Loop](#the-self-improving-loop)
   - [Deferred Decisions](#deferred-decisions)
     - [Structural Decisions](#structural-decisions)
     - [Transition Policies](#transition-policies)
@@ -99,9 +104,7 @@
 
 ## Overview
 
-This document describes the architecture of a **Local-First, Autonomous LLM Agent Platform** — a system that supports AI agents working independently and collaboratively on tasks, operating primarily on local, resource-constrained language models in the 8B parameter class (Llama 3.2 / Ollama).
-
-The platform is designed to make 8B models maximally useful through infrastructure rather than model scale. The key differentiator is the **Recursive Language Model (RLM)** system — a REPL-based mechanism that lets small models reason accurately over large contexts by querying them selectively, never loading the full context into a single prompt.
+This document describes the architecture of a **Local-First, Autonomous LLM Agent Platform** — a system that supports AI agents working independently and collaboratively on tasks, operating primarily on local, resource-constrained language models such as Llama 3.2 running via Ollama.
 
 Local models present two hard constraints that every architectural decision is designed around:
 
@@ -118,9 +121,10 @@ The platform addresses both constraints without sacrificing capability by keepin
 
 | Principle | Description |
 |---|---|
-| **Local-first** | Every design decision prioritizes small, focused context windows suitable for constrained hardware |
+| **Local-first** | Every design decision prioritises small, focused context windows suitable for constrained hardware |
 | **Intentional context** | Nothing enters the model's context window by accident — every item is justified for the current task |
 | **Separation of concerns** | Middleware handles constraints; the graph handles coordination; agents handle execution |
+| **Self-improving** | The system learns reusable patterns over time through procedural memory and skill promotion |
 | **Progressive complexity** | Simple requests are handled cheaply; complexity is added only when the task demands it |
 | **Implementation-agnostic** | Architectural commitments are to principles, not specific backends or storage technologies |
 | **Community extensibility** | Skills and tools are first-class contribution surfaces |
@@ -162,9 +166,9 @@ The following diagram shows the full system — coordination graph, storage laye
                     │  cold store queried      │             │    │ scratchpad flushed      │
                     │  candidates scored:      │             │    ▼                         │
                     │  keyword × importance    │             │  ENDED / READY (next turn)  │
-                    │  relevance threshold cut │             └─────────────────────────────┘
+                    │  LLM filters to relevant │             └─────────────────────────────┘
                     │  → injectedMemories      │
-                    │  all types injectable    │
+                    │  scope=general only      │
                     └─────────────┬───────────┘
                                   │
                                   ▼
@@ -180,12 +184,15 @@ The following diagram shows the full system — coordination graph, storage laye
                     │    confidence >= 0.7    │             │    ▼ (human dev workflow)   │
                     │                         │             │  CODIFIED (skill package)   │
                     │  skill status block     │             │    │ scripts + lockfile      │
-                    │  injected from live     │             │    ├── success → ready       │
-                    │  index (not memory)     │             │    └── prep fails → UNAVAILABLE
-                    └──────┬──────────────────┘             └─────────────────────────────┘
-               │                       │
-               ▼                       ▼
-        ┌─────────────┐         ┌─────────────┐
+                    │  injected from live     │             │    ▼ (review + stable)       │
+                    │  index (not memory)     │             │  STATIC (community)         │
+                    └──────┬──────────────────┘             │    │                         │
+                           │                                │    ├── success → maintained  │
+               ┌───────────┴───────────┐                   │    ├── prep fails → UNAVAILABLE
+          matched                  no match                 │    ├── exec fails → DEGRADED  │
+               │                       │                   │    └── rate < threshold →     │
+               ▼                       ▼                   │        DEPRECATED            │
+        ┌─────────────┐         ┌─────────────┐            └─────────────────────────────┘
         │  applySkill  │         │   router    │
         │  load full   │         │ simple /    │
         │  SKILL.md    │         │ complex     │
@@ -198,7 +205,7 @@ The following diagram shows the full system — coordination graph, storage laye
                │      ┌──────────────┐   ┌──────────────┐    ┌──────────────────────────────┐
                │      │ simpleExec   │   │  decompose   │    │  TASK LIFECYCLE              │
                │      │              │   │              │    │                              │
-               │      │ tagFilter-   │   │  QUEUED      │    │  QUEUED                      │
+               │      │ selectTools  │   │  QUEUED      │    │  QUEUED                      │
                │      │ createLeaf   │   │  task popped │    │    │ in taskQueue[]          │
                │      │ Agent(tools, │   │     │        │    │    ▼ decomposeNode pops      │
                │      │  scratchpad) │   │  too complex?│    │  STAGED                     │
@@ -231,19 +238,28 @@ The following diagram shows the full system — coordination graph, storage laye
                                      ▼                       │    (retry/report deferred) │
                           ┌─────────────────────┐            └──────────────────────────────┘
                           │   authorMemories     │             ┌──────────────────────────────┐
-                          │                     │             │  MEMORY ENTRY LIFECYCLE      │
+                          │  + maybeAuthorSkill  │             │  MEMORY ENTRY LIFECYCLE      │
                           │                     │             │                              │
-                          │  write episodic      │             │  NEW  (authored here)        │
-                          │  memories at         │             │    │ importance = initial    │
-                          │  session end         │             │    ▼ retrieved               │
-                          │                     │             │  ACTIVE                     │
-                          │  shared experience →│             │    │ importance += 0.1       │
-                          │  episodic memory    │             │    │ accessCount++           │
-                          └──────────┬──────────┘             │    ▼ not retrieved           │
-                                     │                        │  DECAYING                   │
-                                    END                       │    │ importance *= 0.8       │
-                                                              │    ▼ below threshold         │
-                                                              │  PRUNED                     │
+                          │  decomposedBySkill?  │             │  NEW  (authored here)        │
+                          │    yes → reinforce   │             │    │ importance = initial    │
+                          │    no  → write soft  │             │    │ scope assigned          │
+                          │    SKILL.md to       │             │    ▼ retrieved (scope=gen)  │
+                          │    learned index     │             │  ACTIVE                     │
+                          │                     │             │    │ importance += 0.1       │
+                          │  skill failures →   │             │    │ accessCount++           │
+                          │  episodic memory    │             │    ▼ not retrieved           │
+                          │  scope=authoring    │             │  DECAYING                   │
+                          │  shared experience →│             │    │ importance *= 0.8       │
+                          │  episodic memory    │             │    ▼ below threshold         │
+                          │  scope=general      │             │  PRUNED                     │
+                          └──────────┬──────────┘             │                              │
+                                     │                        │  procedural only:            │
+                                    END                       │  importance >= 0.9           │
+                                                              │  + accessCount >= 5          │
+                                                              │    ▼                         │
+                                                              │  → SKILL CANDIDATE           │
+                                                              │    source entry retained     │
+                                                              │    linked to learned skill   │
                                                               └──────────────────────────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -255,30 +271,35 @@ The following diagram shows the full system — coordination graph, storage laye
   │  namespace: [memory,userId] │       │  namespace: [scratchpad, threadId]               │
   │                             │       │                                                  │
   │  episodic  (general)────────┼──┐    │  ┌────────────────────────────────────────────┐  │
-  │  semantic  ─── retrieve ◄───┼──┤    │  │  SCRATCHPAD ENTRY LIFECYCLE                │  │
-  │  procedural ── inject ─────►┼──┘    │  │                                            │  │
-  │                             │       │  │  tool/script/skill call completes          │  │
-  │  ◄── author (post-response) │       │  │       │                                    │  │
+  │  episodic  (authoring)──────┼──┤    │  │  SCRATCHPAD ENTRY LIFECYCLE                │  │
+  │  semantic  ─── retrieve ◄───┼──┼────┼──┤                                            │  │
+  │  procedural ── inject ─────►┼──┘    │  │  tool/script/skill call completes          │  │
+  │                             │       │  │       │                                    │  │
+  │  ◄── author (post-response) │       │  │  size <= threshold?                        │  │
   │  ◄── promote (from scratch) │       │  │    yes → PASS THROUGH                      │  │
   │                             │       │  │    no  ▼                                   │  │
-  │  all types injectable       │       │  │       WRITTEN                              │  │
-  │                             │       │  │         │ full content → cold store        │  │
-  │  [decay job — periodic]     │       │  │         │ summary + ref → hot index        │  │
-  │    importance *= 0.8        │       │  │         ▼  (summary shaped by output.schema)  │
-  │    below threshold → PRUNED │       │  │       RETRIEVABLE                          │  │
-  └─────────────────────────────┘       │  │    (skill steps + LLM call scratchpad_read) │  │
-                                        │  │         │                                  │  │
-  ┌──────────────────────────────┐      │  │  session ends                              │  │
-  │     Checkpoint Store         │      │  │         ▼                                  │  │
-  │  namespace: [thread,threadId]│      │  │     PRE-FLUSH                              │  │
-  │                              │      │  │    index → memory author                   │  │
-  │  conversation history        │      │  │         ▼                                  │  │
-  │  graph state snapshots       │      │  │  promote to LTM? ── yes ───────────────────┼──┼──► Long-Term Memory
-  │  hot memory between nodes    │      │  │         │ no                              │  │
-  │  persists: across turns      │      │  │         ▼                                  │  │
-  │  preserves: HITL pause state │      │  │      FLUSHED                               │  │
-  └──────────────────────────────┘      │  └────────────────────────────────────────────┘  │
-                                        └──────────────────────────────────────────────────┘
+  │  scope=general  → injected  │       │  │       WRITTEN                              │  │
+  │  scope=authoring → internal │       │  │         │ full content → cold store        │  │
+  │  scope=none → audit only    │       │  │         │ summary + ref → hot index        │  │
+  │                             │       │  │         ▼  (summary shaped by output.schema)  │
+  │  [decay job — periodic]     │       │  │       RETRIEVABLE                          │  │
+  │    importance *= 0.8        │       │  │    (skill steps + LLM call scratchpad_read) │  │
+  │    below threshold → PRUNED │       │  │         │                                  │  │
+  │                             │       │  │  session ends                              │  │
+  │  learned skill matched      │       │  │         ▼                                  │  │
+  │  → reinforces source entry  │       │  │     PRE-FLUSH                              │  │
+  └─────────────────────────────┘       │  │    index → memory author                   │  │
+                                        │  │         ▼                                  │  │
+  ┌──────────────────────────────┐      │  │  promote to LTM? ── yes ───────────────────┼──┼──► Long-Term Memory
+  │     Checkpoint Store         │      │  │         │ no                              │  │
+  │  namespace: [thread,threadId]│      │  │         ▼                                  │  │
+  │                              │      │  │      FLUSHED                               │  │
+  │  conversation history        │      │  └────────────────────────────────────────────┘  │
+  │  graph state snapshots       │      └──────────────────────────────────────────────────┘
+  │  hot memory between nodes    │
+  │  persists: across turns      │
+  │  preserves: HITL pause state │
+  └──────────────────────────────┘
 
   ┌──────────────────────────────────────────────────────────────────────────────────────┐
   │  Skill Package Store  (filesystem)                                                   │
@@ -293,14 +314,29 @@ The following diagram shows the full system — coordination graph, storage laye
   │      node_modules/            ← per-skill isolated env (.gitignore)                 │
   │    email-label-ads/           ← inference-only, runtime: none                       │
   │      SKILL.md                                                                        │
+  │    email-label-apply/         ← codified, Python 3.12                               │
+  │      SKILL.md                                                                        │
+  │      applyLabels.py                                                                  │
+  │      applyLabels.test.py                                                             │
+  │      pyproject.toml                                                                  │
+  │      uv.lock                  ← lockfile ✅ required                                │
+  │      .venv/                   ← per-skill isolated env (.gitignore)                 │
+  │    archive-old-emails/        ← codified, Bash                                      │
+  │      SKILL.md                 ← systemDependencies declared, no lockfile            │
+  │      archive.sh               ← simple stateless command invocation only            │
   │    email-workflow/            ← compositional, runtime: none                        │
   │      SKILL.md                                                                        │
+  │    _learned/                  ← auto-generated soft skills                          │
+  │      summarise-and-report-a1b2c3/                                                    │
+  │        SKILL.md               ← natural language steps only                         │
   │                                                                                      │
   │  Skill Index (in-memory, rebuilt on startup)                                        │
-  │    per skill: id, name, keywords, description, type,                                │
-  │               status (ready | unavailable),                                         │
-  │               preparedAt, lastError,                                                │
-  │               missingConfig[], missingSecrets[]                                     │
+  │    per skill: id, keywords, status, preparedAt, lastFailure,                        │
+  │               consecutiveFailures, successRate, runtimeRequired,                    │
+  │               missingConfig[], missingSecrets[], missingSysDeps[]                   │
+  │    learned skills additionally: sourceMemoryId, accessCount,                        │
+  │               lastMatchedAt, promotionFlagged                                       │
+  │    status: ready | unavailable | degraded | deprecated                              │
   │    ← authoritative source of truth for skill health                                 │
   │    ← never duplicated into the memory system                                        │
   │                                                                                      │
@@ -318,11 +354,10 @@ The following diagram shows the full system — coordination graph, storage laye
   ┌────────────────────────────────────────────────────────────────────────────────────────┐
   │                                                                                        │
   │  localLlmPromptMiddleware → memoryInjectionMiddleware → skillStatusMiddleware          │
-  │    → scratchpadContextMiddleware → contextBudgetMiddleware → toolCompatibilityMiddleware│
+  │    → scratchpadContextMiddleware → focusedContextMiddleware → tokenBudgetMiddleware    │
+  │    → toolCompatibilityMiddleware                                                       │
   │                                                                                        │
-  │  contextBudgetMiddleware — trims history oldest-first, then hard-caps total length     │
-  │                                                                                        │
-  │  memoryInjectionMiddleware  — injects memories into context                        │
+  │  memoryInjectionMiddleware  — injects scope=general memories only                     │
   │  skillStatusMiddleware      — injects live skill index status block (not from memory) │
   │                                                                                        │
   │  Nothing enters the model's context window without passing through this stack.         │
@@ -361,51 +396,74 @@ INITIALISING  →  READY  →  HYDRATING  →  PROCESSING  →  RESPONDING  → 
 ```
 NEW  →  ACTIVE  →  DECAYING  →  PRUNED
                       ▲
-                      │ rescued by retrieval
+                      │ rescued by retrieval (scope=general only)
+                      │ OR by learned skill match event
+
+ACTIVE (procedural only)  →  SKILL CANDIDATE
+  when: importance >= 0.9 AND accessCount >= 5
+  source entry retained and linked to learned skill — not pruned
 ```
 
 | State | Description | Entry Trigger |
 |---|---|---|
-| `NEW` | Created with initial importance and type assigned | `authorMemories` node |
-| `ACTIVE` | Being retrieved and reinforced | Retrieved during hydration |
-| `DECAYING` | Not retrieved within decay window | Periodic decay job |
-| `PRUNED` | Deleted | Importance below threshold |
+| `NEW` | Created with initial importance and scope assigned | `authorMemories` node |
+| `ACTIVE` | Being retrieved and reinforced | Retrieved during hydration or skill match |
+| `DECAYING` | Not retrieved or matched within decay window | Periodic decay job |
+| `PRUNED` | Deleted — learned skill SKILL.md also removed if linked | Importance below threshold |
+| `SKILL CANDIDATE` | Procedural entry flagged for promotion | Importance ≥ 0.9 + accessCount ≥ 5 |
+
+**Injection scope** controls where a memory entry is visible. See [Memory Injection Scope](#memory-injection-scope).
 
 ---
 
 ### Skill Lifecycle
 
 ```
-LEARNED  (soft SKILL.md — inference-only, no scripts)
-      |
-      | developer formalises (human workflow)
-      |
-CODIFIED  ---- prep fails -------------------> UNAVAILABLE
-  (SKILL.md + scripts + lockfile + tests)          |
-             (missing runtime, lockfile,            |
-              config, or secrets)                   |
-                  ^                                 |
-                  +----------- re-prep ------------+
+PROCEDURAL MEMORY
+      │
+      │ importance >= 0.9 + accessCount >= 5
+      │ source entry retained, linked to skill
+      ▼
+LEARNED  (soft SKILL.md in _learned/, no scripts)
+      │  decay: governed by source memory entry
+      │  match event reinforces source entry importance
+      │  accessCount >= promotion_review_threshold → flagged for review
+      │
+      │ human development workflow
+      ▼
+CODIFIED  (SKILL.md + scripts + lockfile/sysdeps + tests)
+      │
+      │ community review
+      ▼
+STATIC  ──── prep fails ──────────────────► UNAVAILABLE
+  │          (missing runtime, lockfile,         │
+  │           system dependency, config,         │
+  │           secrets, or bad output contract)   │
+  │               ▲                              │
+  │               └────────── re-prep ───────────┘
+  │
+  ├── exec fails repeatedly ──► DEGRADED
+  │    sub-skill fail halts        │
+  │    parent → DEGRADED too       │
+  │         ▲                      │
+  │         └── failures resolve ──┘
+  │
+  └── successRate < threshold ──► DEPRECATED
 ```
 
 | State | Description | Lockfile |
 |---|---|---|
-| `LEARNED` | Procedural memory pattern above promotion threshold — inference-only, no scripts | ❌ None |
-| `CODIFIED` | Full skill package in `skills/` — locally authored or copied in | ✅ Required |
+| `PROCEDURAL MEMORY` | Pattern in cold store | N/A |
+| `LEARNED` | Soft SKILL.md in `_learned/`, decays with source memory entry | N/A |
+| `CODIFIED` | Full skill package in `skills/` | ✅ JS/Python — not applicable for Bash |
+| `STATIC` | Community-visible, versioned | ✅ JS/Python — not applicable for Bash |
 | `UNAVAILABLE` | Prep failed — not matchable | N/A |
+| `DEGRADED` | Matchable with warning — consecutive execution failures | N/A |
+| `DEPRECATED` | Removed from active matching | N/A |
 
-**`UNAVAILABLE`** is triggered by any prep failure: runtime version mismatch, missing lockfile, unresolvable required config, unresolvable required secret, or invalid output contract declaration. Re-prep succeeds → status returns to `CODIFIED`.
+**`UNAVAILABLE`** is triggered by any prep failure: runtime version mismatch, missing lockfile (JS/Python), missing system dependency (Bash), unresolvable required config, unresolvable required secret, or invalid output contract declaration.
 
-**Promotion thresholds (`LEARNED` → `CODIFIED`) are speculative in v1.** The current values (`importance >= 0.9`, `accessCount >= 5`) are starting assumptions. To set evidence-based thresholds, collect the following data before tuning them:
-
-| Data point | Description | Why it matters |
-|---|---|---|
-| `procedural.memory.importance` at time of manual codification | Importance score when a developer decided to formalise a pattern | Sets the upper bound — what score reliably identifies a promotable pattern |
-| `procedural.memory.access_count` at time of codification | Access count at the same decision point | Calibrates the use-count threshold to actual developer behaviour |
-| `procedural.memory.success_rate` | Fraction of retrievals that led to a successful task outcome | Filters noisy patterns — a high-importance, low-success pattern is not a good candidate |
-| `procedural.memory.task_diversity` | Number of distinct task types that triggered this pattern | Patterns that generalise across diverse tasks are stronger candidates than narrow ones |
-
-Until these data points are collected from real usage, the thresholds should not trigger automatic promotion. Promotion remains a human decision in v1.
+**Learned skill decay** is governed entirely by the source procedural memory entry. When a learned skill is matched, a reinforcement event (`importance += 0.1`) is fired against the source entry — the same signal as a memory retrieval. If the skill stops being matched, the source entry decays normally. When the source entry is pruned, the linked SKILL.md is removed from `_learned/`.
 
 ---
 
@@ -463,7 +521,7 @@ Summary quality is shaped by `output.schema` — the `summariserAgent` uses the 
 │                                                          │
 │  Conversation history     — managed by checkpointer      │
 │  Session-hydrated facts   — loaded once at thread start  │
-│  Request-hydrated facts   — injected at relevance threshold      │
+│  Request-hydrated facts   — scope=general only           │
 │  Scratchpad index         — ref + summary per entry      │
 │  Skill status block       — live from index, not memory  │
 └──────────────────────────────────────────────────────────┘
@@ -478,9 +536,10 @@ Summary quality is shaped by `output.schema` — the `summariserAgent` uses the 
 │                      COLD MEMORY                         │
 │                                                          │
 │  Long-term store                                         │
-│    episodic   — shared experiences, session narratives   │
-│    semantic   — stable user facts, preferences           │
-│    procedural — patterns that worked                     │
+│    episodic (general)   — shared experiences, sessions   │
+│    episodic (authoring) — operational failures, internal │
+│    semantic             — stable user facts              │
+│    procedural           — patterns that worked           │
 │                                                          │
 │  Scratchpad full content                                 │
 └──────────────────────────────────────────────────────────┘
@@ -498,51 +557,47 @@ A deployment policy, not an architectural constant. Tuned to context window size
 |---|---|---|
 | Session hydration | Graph — automatic | Once per thread |
 | Request hydration | Graph — automatic | Every request |
-| Memory injection middleware | Middleware | Every model call |
+| Memory injection middleware | Middleware | Every model call — `scope=general` only |
 | Skill status middleware | Middleware | Every model call — live from index |
 | `scratchpad_read` | LLM or skill step — on demand | During reasoning or skill execution |
 
-### Memory Injection
+### Memory Injection Scope
 
-All memories written to long-term storage are available for injection in future sessions. Memories carry a `type` field (`episodic`, `semantic`, `procedural`) used to shape the hydration query — not to restrict visibility. The platform hydrates semantic and procedural patterns at session start; episodic memories are retrieved per-request based on keyword × importance scoring.
+Every memory entry carries an `injectionScope` controlling where it is visible. This prevents operational failures from poisoning routing decisions while preserving shared experience.
 
-**v1 simplification:** All memories are injectable. There is no `scope` field gating injection. This is sufficient for v1, where the memory store is small. Scoping can be added later when authoring-time vs. retrieval-time distinctions are needed.
+| Scope | Injected into | Written by | Examples |
+|---|---|---|---|
+| `general` | All requests via middleware | `authorMemories` | User preferences, session summaries, shared experiences |
+| `authoring` | Internal agents only | `authorMemories` | Skill execution failures, operational detail |
+| `none` | Never injected | `authorMemories` | Audit trail entries |
 
-**The critical rule:** System state is never written to the memory system. Skill availability, runtime health, config resolution status, and prep outcomes live exclusively in the Skill Index and are injected live by `skillStatusMiddleware`.
+**The critical rule:** System state is never written to the memory system at any scope. Skill availability, runtime health, config resolution status, and prep outcomes live exclusively in the Skill Index and are injected live by `skillStatusMiddleware`.
 
-**Memory vs. system state:**
+**Shared experience vs. system state:**
 
 ```
 System state (index only, never memory):
   "email-inbox is unavailable — GMAIL_CLIENT_ID not configured"
   ← binary, authoritative, current, changes when resolved
 
-Episodic memory (written at session end):
+Operational fact (scope=authoring, memory):
+  "email-inbox script exited code 1 during task X"
+  ← historical detail for skill authoring agents
+
+Shared experience (scope=general, memory):
   "During the email session on 2026-05-06, the inbox skill was
    unavailable. The task was completed using an alternative approach."
-  ← narrative, past tense, no current-state claim
+  ← narrative, past tense, no current-state claim, authored at session end
 ```
-
-**Open design question — skill/tool availability vs. historical failure:**
-
-The boundary between system state and episodic memory creates an important distinction:
-
-| Signal | Type | Source | Example |
-|---|---|---|---|
-| Skill is currently unavailable | System state | Skill Index | `email-inbox: unavailable — missing GMAIL_CLIENT_ID` |
-| Skill failed during a past task | Episodic memory | `memoryAuthoringAgent` | `email-inbox failed to fetch inbox on 2026-05-06 — rate limit exceeded` |
-
-The first is authoritative and injected live; the model can act on it immediately (e.g. decline to use the skill, suggest configuration steps). The second is historical context; the model can use it to set expectations or suggest precautions, but must not treat it as current state.
-
-The risk is that the model conflates the two: a historical failure episodic memory might be read as evidence the skill is currently broken. To mitigate this, `memoryAuthoringAgent` should write failure memories in strictly past-tense narrative form with an explicit date, and the `skillStatusMiddleware` live block always supersedes any memory that appears to contradict it. This is sufficient for v1. If conflation is observed at runtime, explicit memory scoping (`scope=historical`) can be introduced to prevent historical failure memories from being injected alongside the skill status block.
 
 ### Long-Term Memory Tiers
 
-| Tier | Contains | Retention |
-|---|---|---|
-| **Episodic** | Shared experiences, session narratives, notable failures | Medium — decays |
-| **Semantic** | Stable user facts, preferences | Long — reinforced |
-| **Procedural** | Patterns that worked | Long — rarely pruned |
+| Tier | Scope | Contains | Retention |
+|---|---|---|---|
+| **Episodic** | `general` | Shared experiences, session narratives | Medium — decays |
+| **Episodic** | `authoring` | Operational failures, execution detail | Medium — decays |
+| **Semantic** | `general` | Stable user facts, preferences | Long — reinforced |
+| **Procedural** | `general` | Patterns that worked — source entries for learned skills | Long — promotes to skills |
 
 ---
 
@@ -559,21 +614,7 @@ Runs **once per thread**. Loads stable user context for the thread lifetime.
 
 Runs **before every request**, augmenting the session layer.
 
-**Process:** Query cold store → score by keyword × importance → apply relevance threshold → inject memories.
-
-**v1 simplification:** The LLM filter step is removed. A relevance threshold cut on the keyword × importance score is sufficient when the memory store is small.
-
-**Measurement — tracking when keyword scoring becomes insufficient:**
-
-| Metric | Description | Collection point |
-|---|---|---|
-| `memory.hydration.injected_count` | Number of memories injected per request | After threshold cut |
-| `memory.hydration.context_utilisation` | Fraction of injected memories referenced in the final response | `memoryAuthoringAgent` observation |
-| `memory.hydration.user_correction_rate` | Times a user corrects or contradicts an injected memory assumption | Post-response feedback |
-
-When `context_utilisation` is consistently low (injected memories are unused) or `user_correction_rate` rises (injected memories are wrong), this signals keyword scoring is producing poor candidates and an LLM filter pass should be reconsidered.
-
-**Comparison metric (if LLM filter is reintroduced):** Run parallel shadow evaluation — score the same candidates through the threshold cut and through an LLM filter. Compare `injected_count` and `context_utilisation` across both paths on the same requests. A filter that reduces `injected_count` while improving `context_utilisation` is removing true noise.
+**Process:** Query cold store → score by keyword × importance → LLM filter → inject `scope=general` memories only.
 
 ---
 
@@ -604,29 +645,15 @@ Graph state holds only `{ sessionId: string }` — never a class instance.
 
 ### On-Demand Retrieval
 
-`scratchpad_read(ref, query)` returns the first N chunks up to a character budget. Available to both LLM steps and skill scripts via the platform's environment interface.
+`scratchpad_read(ref, query)` returns top 1–2 keyword-scored chunks only. Available to both LLM steps and skill scripts via the platform's environment interface.
 
-**v1 simplification:** Keyword-scored chunk selection is removed. Sequential chunk access (return chunks in order, stop at the character budget) is sufficient when scratchpad entries are small-to-medium.
-
-**`scratchpad_read` is a context rot mitigation, not just a retrieval convenience.** By keeping full content cold and surfacing only a budget-bounded slice on demand, it prevents large intermediate results from accumulating in the model's context window. This applies equally to skill steps reading prior outputs, leaf agents reading task results, and the `aggregateAgent` synthesising final answers — none of them receive the full content unless they explicitly ask for it.
-
-**Measurement — tracking chunk quality for future improvement:**
-
-| Metric | Description | Collection point |
-|---|---|---|
-| `scratchpad.read.chunks_returned` | Number of chunks returned per `scratchpad_read` call | Scratchpad read path |
-| `scratchpad.read.consumer_referenced_fraction` | Fraction of returned chunks referenced in the consumer’s subsequent output | `memoryAuthoringAgent` / response analysis |
-| `scratchpad.read.consumer_retry_count` | Times a consumer called `scratchpad_read` on the same ref more than once | Scratchpad read path |
-
-When `consumer_referenced_fraction` is low (returned chunks are unused) or `consumer_retry_count` is high (sequential access is not surfacing the right chunks), this signals that keyword-scored selection should be added.
+**`scratchpad_read` is a context rot mitigation, not just a retrieval convenience.** By keeping full content cold and surfacing only the relevant chunks on demand, it prevents large intermediate results from accumulating in the model's context window. This applies equally to skill steps reading prior outputs, leaf agents reading task results, and the `aggregateAgent` synthesising final answers — none of them receive the full content unless they explicitly ask for it.
 
 ### Scratchpad Budget Policy
 
 The scratchpad index lives in hot memory. Without a cap, long or complex sessions accumulate enough index entries to crowd out other hot memory — defeating the purpose of the scratchpad.
 
-**Index cap:** A hard maximum of 10 live index entries per session. When the cap is reached, the oldest entries by `createdAt` are evicted — their index slot (ref + summary) is removed from hot memory and the full content is also discarded. Consumers that hold a ref to an evicted entry will receive a `MISS` from `scratchpad_read`.
-
-**Cache-miss metric:** Track `scratchpad.index.eviction_miss_count` — the number of times `scratchpad_read` is called with a ref that no longer exists in the index (due to eviction). A rising miss rate indicates that sessions are working across more entries than the hard cap allows, and a demotion system (retain cold content, evict only the hot index slot) should be considered.
+**Index cap:** A soft maximum on the number of live index entries per session (exact value: deferred — see [Deferred Decisions](#deferred-decisions)). When the cap is reached, the oldest entries by `lastAccessedAt` are demoted: their index slot (ref + summary) is removed from hot memory but the full content remains in cold storage. Demoted entries are still retrievable via `scratchpad_read(ref, query)` — they are never deleted during the session.
 
 **Task results routing:** When a task completes, its result is written to the scratchpad if its output exceeds the interception threshold (same rule as tool output interception). `results[]` in graph state holds a `TaskResult` for each completed task. For large results, `TaskResult` carries a scratchpad ref + summary rather than inline content. The `aggregateAgent` receives the `results[]` array and uses `scratchpad_read` to pull the chunks it needs from any ref-backed entry — it never receives all large results inline.
 
@@ -636,7 +663,7 @@ The scratchpad index lives in hot memory. Without a cap, long or complex session
 
 ## Skills System
 
-Skills are **named, portable, self-contained packages** encoding reusable approaches to recognised task types. In v1, scripts are JavaScript only. Python support is deferred to v2.
+Skills are **named, portable, self-contained packages** encoding reusable approaches to recognised task types.
 
 ### Skill Package Structure
 
@@ -653,15 +680,32 @@ skills/
 ├── email-label-ads/                      ← inference-only (runtime: none)
 │   └── SKILL.md
 │
-└── email-workflow/                       ← compositional (runtime: none)
-    └── SKILL.md
+├── email-label-apply/                    ← codified (Python 3.12)
+│   ├── SKILL.md
+│   ├── applyLabels.py                    ← validates inputs, reads values from os.environ
+│   ├── applyLabels.test.py
+│   ├── pyproject.toml
+│   └── uv.lock                           ← lockfile ✅ required
+│
+├── archive-old-emails/                   ← codified (Bash)
+│   ├── SKILL.md                          ← systemDependencies declared
+│   └── archive.sh                        ← validates inputs, simple stateless commands
+│
+├── email-workflow/                       ← compositional (runtime: none)
+│   └── SKILL.md
+│
+└── _learned/                             ← auto-generated soft skills
+    └── summarise-and-report-a1b2c3/
+        └── SKILL.md                      ← linked to source procedural memory entry
 ```
 
-`node_modules/` is a build artefact — generated by prep, excluded from version control.
+`node_modules/` and `.venv/` are build artefacts — generated by prep, excluded from version control. Bash skills have neither — the filesystem is their environment.
 
 ### The SKILL.md Format
 
 **YAML frontmatter** — machine-readable metadata for the Skill Loader, matcher, and prep system.
+
+**JavaScript / Python skill:**
 
 ```yaml
 ---
@@ -671,7 +715,7 @@ description: Fetch emails from a user's inbox
 keywords: [email, fetch, inbox, retrieve, gmail]
 type: atomic
 runtime:
-  language: javascript    # javascript | none
+  language: javascript    # javascript | python | bash | none
   version: "20"           # major.minor — patch managed by lockfile
 config:
   - name: GMAIL_MAX_RESULTS
@@ -697,6 +741,27 @@ inputs:
   count:  { type: number, default: 100 }
 ---
 ```
+
+**Bash skill:**
+
+```yaml
+---
+name: Archive Old Emails
+version: 1.0.0
+description: Move emails older than 90 days to the archive mailbox
+keywords: [email, archive, cleanup, mailbox]
+type: atomic
+runtime:
+  language: bash
+  systemDependencies:
+    - curl
+    - jq
+inputs:
+  mailbox: { type: string, required: true }
+---
+```
+
+**`runtime.version` is omitted for Bash** — no version management is applied. Bash skills must avoid version-specific features. If a script requires bash 4+ features (e.g. associative arrays), it must be rewritten in Python or JavaScript.
 
 **Step-level output contract** — declared per script step in the markdown body:
 
@@ -727,6 +792,7 @@ inputs:
 | Syntax | Execution path |
 |---|---|
 | `./script.js --arg {value}` | Direct execution — zero LLM tokens |
+| `./script.sh --arg {value}` | Direct execution — zero LLM tokens |
 | `skill:/skill-name` | Sub-skill resolution — steps pushed to task queue |
 | Natural language | Leaf agent (LLM) — decides what to do with prior step output |
 | `{placeholder}` | Resolved from context before execution |
@@ -768,12 +834,13 @@ output:
 
 For plain text output: `schema: { type: string }`.
 
-**The schema has two consumers — the LLM is not one of them:**
+**The schema has three consumers — the LLM is not one of them:**
 
 | Consumer | What they use | Why |
 |---|---|---|
 | `summariserAgent` | `type` + `items` shape | Produces a summary appropriate to the data type |
 | Skill Index / `lastFailure` | `codes` map | Translates exit codes to human-readable reasons |
+| Community skill browser | Full `output` block | Documents what the skill produces |
 
 Inter-step data flow is the responsibility of the compositional skill's prescribed steps, not the output contract. The SKILL.md steps guide the LLM in reasoning over prior step output — that is inference work, not a platform concern. Large intermediate results are passed between steps via the scratchpad.
 
@@ -787,14 +854,16 @@ Orchestrates other skills via `skill:` references. No scripts, no runtime, no lo
 
 **Failure propagation:** if any sub-skill fails, the compositional skill halts immediately. The failure propagates up and is recorded against the compositional skill in the Skill Index — the same as an atomic skill execution failure. Partial results from completed sub-skills are not used.
 
-**The RLM system and the skill system are the same system.** Depth-limited REPL execution prevents infinite nesting.
+**The RLM system and the skill system are the same system.** `maxDepth` naturally prevents infinite nesting.
 
 ### Static and Learned Skills
 
 | Type | Scripts | Lockfile | Config/Secrets | Output Contract | Input Validation | Reliability |
 |---|---|---|---|---|---|---|
-| **Learned** | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None | Inference-only |
-| **Codified (JS)** | ✅ Tested | ✅ Committed | Declared | ✅ Per step | ✅ Explicit exit codes | High |
+| **Learned** | ❌ | N/A | ❌ | ❌ | LLM best-effort | Variable |
+| **Codified (JS/Python)** | ✅ Tested | ✅ Committed | Declared | ✅ Per step | ✅ Explicit exit codes | High |
+| **Codified (Bash)** | ✅ Simple only | N/A | Declared | ✅ Per step | ✅ Explicit exit codes | Moderate |
+| **Static** | ✅ Reviewed | ✅ Reviewed | Reviewed | ✅ Reviewed | ✅ Reviewed | Highest |
 
 ### Skill Matching
 
@@ -807,13 +876,17 @@ Stage 1: Keyword pre-filter
 
 Stage 2: Deterministic ranking + LLM confirmation
   → rank candidates by:
-      1. Specificity: fewer keywords = more specific = preferred
-      2. Recency:     most recently matched wins
+      1. Maturity:    STATIC > CODIFIED > LEARNED
+      2. Reliability: higher successRate wins
+      3. Specificity: fewer keywords = more specific = preferred
+      4. Recency:     most recently matched wins
   → LLM confirms top-ranked candidate only
   → confidence >= 0.7 required
   → LLM not presented with full candidate list
 
 match  →  applySkill (full SKILL.md loaded, steps typed and queued)
+          match event fires reinforcement against source memory entry
+          (learned skills only)
 no match  →  router
 ```
 
@@ -821,12 +894,12 @@ no match  →  router
 
 ### Skill Execution
 
-**Script — JavaScript (zero LLM tokens)**
+**Script — JavaScript / Python (zero LLM tokens)**
 ```
 resolve {placeholders} from context
   │
   ▼
-activate per-skill isolated environment (node_modules/)
+activate per-skill isolated environment
   │
   ▼
 inject config + secrets as environment variables
@@ -846,6 +919,29 @@ exit != 0: look up code in output.codes
            task → ERROR PATH
 ```
 
+**Script — Bash (zero LLM tokens)**
+```
+resolve {placeholders} from context
+  │
+  ▼
+inject config + secrets as environment variables
+  (no isolated environment — system bash, declared deps already verified)
+  │
+  ▼
+execute in network-restricted sandbox
+  script validates own inputs → exit non-zero with documented code if invalid
+  stdout → result (interpreted using output.schema)
+  stderr → diagnostics
+  │
+  ▼
+exit 0:   output → scratchpad if large, else direct
+exit != 0: look up code in output.codes
+           record in lastFailure.mappedReason
+           task → ERROR PATH
+```
+
+Scripts access values via standard environment variable APIs. Values are never passed as command-line arguments or written to disk.
+
 **Sub-skill (within compositional skill)**
 ```
 load SKILL.md → push steps to queue (depth+1)
@@ -864,23 +960,30 @@ createLeafAgent(selectedTools, scratchpad)
   → full middleware stack applied
 ```
 
-### Skill Runtime Environment
+### Skill Runtime Environments
 
-All script-based skills execute in **Node.js** with a per-skill isolated `node_modules/` directory.
+#### Per-Skill Isolation (JavaScript and Python)
 
-#### JavaScript — Node.js (Isolated)
+Each JS/Python codified skill gets its own isolated environment:
+- **JavaScript** — `node_modules/` local to skill directory
+- **Python** — `.venv/` local to skill directory
 
-Each JS skill runs against its own `node_modules/` resolved from the committed `package-lock.json`. The platform calls `npm ci` during prep. No two skills share packages.
+| What isolation costs | What isolation buys |
+|---|---|
+| Duplicate on-disk installs | No version conflicts between skills |
+| More disk space per skill | Independent upgradeability |
+| — | Safe deletion |
+| — | Full reproducibility from lockfile |
 
-**Lockfiles**
+Download duplication is mitigated by package manager caches (`~/.npm`, `~/.cache/pip`).
 
-| Language | File | Tool |
-|---|---|---|
-| JavaScript | `package-lock.json` | `npm ci` |
+#### Bash — No Isolation
 
-#### Runtime Version
+Bash skills run directly against the system environment. There is no isolated environment to create or activate. The declared `systemDependencies` are verified at prep time — the system must already have them installed. The platform does not install system dependencies on behalf of the skill.
 
-`runtime.version` specifies required major:
+#### Runtime Version (JavaScript and Python)
+
+`runtime.version` specifies required major/minor:
 
 ```yaml
 runtime:
@@ -888,10 +991,23 @@ runtime:
   version: "20"         # >= 20.0.0 < 21.0.0
 ```
 
-Mismatch is a hard fail at prep time with a clear remediation message.
+Mismatch is a hard fail at prep time with a clear remediation message. Version managers (`nvm`, `pyenv`) are the supported mechanism for multi-version environments.
+
+**Bash has no runtime version field.** Bash skills must be written to be version-agnostic. Any script requiring version-specific features should be implemented in Python or JavaScript instead.
+
+#### Lockfiles (JavaScript and Python)
+
+| Language | Accepted lockfiles |
+|---|---|
+| JavaScript | `package-lock.json` or `yarn.lock` — one per skill |
+| Python | `uv.lock` or `poetry.lock` |
+| Bash | None — system dependency checking only |
+
+Platform installation always uses the lockfile. Re-resolution from manifest is never performed.
 
 #### Skill Prep
 
+**JavaScript / Python:**
 ```
 platform skill prepare <name>
   → checks runtime version         — hard fail on mismatch
@@ -899,14 +1015,53 @@ platform skill prepare <name>
   → resolves all required config   — hard fail if any missing
   → resolves all required secrets  — hard fail if any missing
   → validates output contract      — hard fail if malformed
-  → npm ci --prefix skills/<name>/ — isolated node_modules
+  → installs from lockfile into per-skill isolated environment
   → marks skill status = "ready"
+```
 
+**Bash:**
+```
+platform skill prepare <name>
+  → for each entry in systemDependencies:
+      command -v <dep>             — hard fail if not found
+  → resolves all required config   — hard fail if any missing
+  → resolves all required secrets  — hard fail if any missing
+  → validates output contract      — hard fail if malformed
+  → marks skill status = "ready"
+  (no environment to install — verification only)
+```
+
+**All runtimes:**
+```
 platform skill prepare --all
   → preps all unprepared skills
   → skips runtime: none skills (no-op)
   → reports each failure with specific reason and remediation
 ```
+
+Prep failure messages for missing system dependencies include the dependency name and a platform-appropriate install hint:
+
+```
+ERROR: missing system dependency: jq
+  install on macOS:  brew install jq
+  install on Ubuntu: apt install jq
+```
+
+#### Bash as a Last Resort Runtime
+
+> **Bash skills should be reserved for simple, stateless invocations of system commands. Any task requiring conditional logic, data transformation, error handling, retries, or external API calls should be implemented in JavaScript or Python where it can be unit tested.**
+
+The absence of a testing framework for Bash is not just an inconvenience — it means there is no way to verify a Bash skill's behaviour against its output contract before it runs in production. This directly limits how far a Bash skill can progress in the maturity model.
+
+The practical line:
+
+| Appropriate for Bash | Should be JavaScript or Python |
+|---|---|
+| Calling a single CLI tool, capturing output | Parsing or transforming that output |
+| Moving, renaming, or archiving files | Any logic conditional on file contents |
+| Checking if a file or directory exists | Calling an API or handling auth |
+| Piping two commands together | Anything with retry or pagination |
+| — | Anything you would want to write a test for |
 
 ### Skill Configuration and Secrets
 
@@ -961,70 +1116,142 @@ Skill health is tracked in the **Skill Index** — authoritative, never duplicat
 
 ```typescript
 SkillIndexEntry {
-  id:             string;
-  name:           string;
-  keywords:       string[];
-  description:    string;
-  type:           SkillType;      // atomic | compositional | inference-only
-  status:         'ready' | 'unavailable';
-  preparedAt:     Date | null;
-  lastError:      string | null;
-  missingConfig:  string[];
-  missingSecrets: string[];
+  id, name, keywords, description, type,
+  status:              "ready" | "unavailable" | "degraded" | "deprecated"
+  preparedAt?:         number
+  runtimeRequired?:    string          // "node 20.x" — JS/Python only
+  missingConfig:       string[]        // names of unresolved required config
+  missingSecrets:      string[]        // names of unresolved required secrets
+  missingSysDeps:      string[]        // Bash only — unmet system dependencies
+
+  // Learned skills only
+  sourceMemoryId?:     string          // linked procedural memory entry
+  lastMatchedAt?:      number          // timestamp of most recent match
+  promotionFlagged?:   boolean         // true when accessCount >= promotion_review_threshold
+
+  lastFailure?: {
+    type:              "prep" | "execution"
+    reason:            string          // human-readable, no secret values
+    occurredAt:        number
+    runtimeFound?:     string          // "node 22.4.0" — JS/Python only
+    exitCode?:         number          // execution failures
+    mappedReason?:     string          // from output.codes map
+    fromSubSkill?:     string          // sub-skill id if failure propagated from child
+  }
+  consecutiveFailures: number
+  successRate:         number
 }
 ```
 
 **State transitions:**
 
 ```
-prep fails (any reason)  →  status = "unavailable", lastError recorded
-re-prep succeeds         →  status = "ready", lastError cleared
+prep fails (any reason)  →  status = "unavailable", lastFailure recorded
+re-prep succeeds         →  status = "ready", all failure fields cleared
 
-execution fails          →  exit code looked up in output.codes
-                            lastError updated
+execution fails (script) →  exit code looked up in output.codes
+                            lastFailure recorded, consecutiveFailures++
+                            episodic memory written (scope=authoring)
+                            consecutiveFailures >= threshold → "degraded"
 
-execution succeeds       →  lastError cleared
+sub-skill fails          →  parent halts immediately
+                            lastFailure.fromSubSkill = failing skill id
+                            parent consecutiveFailures++
+                            parent → "degraded" if threshold reached
+
+execution succeeds       →  consecutiveFailures = 0
+                            successRate recovers → "ready"
+
+successRate < threshold  →  "deprecated"
+
+learned skill matched    →  lastMatchedAt updated
+                            reinforcement event fired on sourceMemoryId
+                            (importance += 0.1 on source procedural entry)
+                            accessCount >= promotion_review_threshold
+                            → promotionFlagged = true
+
+source memory pruned     →  linked SKILL.md removed from _learned/
+                            Skill Index entry removed
 ```
 
-**Never written to memory:** availability status, config/secret failures, prep outcomes.
+**Memory written on failure:**
+
+```
+scope=authoring:
+  "email-workflow failed: sub-skill email-inbox exited code 1
+   (Missing credentials) during task X"
+
+scope=general (authored at session end):
+  "During the email session on 2026-05-12, the email workflow skill
+   failed partway through. The task was completed using an alternative approach."
+```
+
+**Never written to memory:** availability status, config/secret/dependency failures, prep outcomes, sub-skill failure chains.
 
 ### Skill Authoring
 
-Skills are written by developers. The platform does not automatically generate them.
+#### Track 1 — Emergent (Automatic)
+
+Soft SKILL.md written to `_learned/`. Runtime `none`, no config, secrets, system dependencies, or output contract. Source procedural memory entry is retained and linked. Decay is governed by the source entry — matching the skill reinforces it.
+
+#### Track 2 — Deliberate (Human)
 
 ```
-1. IDENTIFY — observe a repeated task the agent handles manually
+1. IDENTIFY — mechanical vs. reasoning steps
+             choose runtime: bash only for simple stateless commands,
+             javascript or python for anything requiring logic or tests
 
 2. BUILD
-   write scripts,
-   validate inputs at script start — exit non-zero with
-   documented code if required inputs missing or invalid,
-   read all config/secrets from env,
-   write unit tests (mock env vars, test invalid input paths),
-   generate lockfile (npm)
+   JS/Python: write scripts,
+              validate inputs at script start — exit non-zero with
+              documented code if required inputs missing or invalid,
+              read all config/secrets from env,
+              write unit tests (mock env vars, test invalid input paths),
+              generate lockfile
+   Bash:      write script, validate inputs, keep simple and stateless,
+              declare all system dependencies,
+              no lockfile — verification only
 
 3. COMPOSE  — write SKILL.md:
-                runtime.language + runtime.version
+                runtime.language + runtime.version (JS/Python)
+                runtime.systemDependencies (Bash)
                 config + secrets entries
                 output.codes including input validation codes
                 output.schema per script step
+                scratchpad usage noted in step descriptions if applicable
 
 4. VERIFY
-   unit tests pass (success + all non-zero paths),
-   integration test end-to-end,
-   platform skill prepare succeeds
+   JS/Python: unit tests pass (success + all non-zero paths
+              including invalid input paths),
+              integration test end-to-end,
+              platform skill prepare succeeds
+   Bash:      manual test on clean environment,
+              verify all systemDependencies declared,
+              platform skill prepare succeeds,
+              document known limitations
 ```
 
-### Skill Maturity
+### Skill Maturity Model
 
-All skills are `CODIFIED` — locally present packages that have passed prep. There is no tiered trust distinction between skills based on origin. A skill copied from an external source enters the same `CODIFIED` state as a locally authored one; it is the operator's responsibility to review it before running `platform skill prepare`.
+```
+EMERGENT  → inference-only, auto-generated
+            no config/secrets/sysdeps, no output contract
+            decays with source procedural memory entry
+                │ human development workflow
+CODIFIED  → scripts + LLM, output contract per step,
+            config + secrets declared,
+            input validation with explicit exit codes,
+            JS/Python: lockfile + runtime version + unit tests
+            Bash: systemDependencies + manual verification only
+                │ community review
+VERIFIED  → community reviewed, all contracts documented,
+            input validation reviewed,
+            successRate tracked
+            JS/Python: full test coverage, highest reliability
+            Bash: limited to simple commands, no test coverage
+```
 
-| Tier | Description | Source | Trust |
-|---|---|---|---|
-| **LEARNED** | Procedural memory pattern above promotion threshold | Cold memory store | Operator-monitored — inference only |
-| **CODIFIED** | Full skill package — SKILL.md, scripts, lockfile, tests | Local `skills/` | Operator-reviewed |
-
-> **A skill gets more reliable as more of its mechanical steps become code. The LLM is reserved for what only a model can do.**
+> **A skill gets more reliable as more of its mechanical steps become code. The LLM is reserved for what only a model can do. Bash is a convenience for simple system calls — not a substitute for testable code.**
 
 ---
 
@@ -1032,7 +1259,7 @@ All skills are `CODIFIED` — locally present packages that have passed prep. Th
 
 ### Script Sandbox Constraints
 
-All JavaScript scripts execute in a **network-restricted sandbox**. This is the single non-negotiable constraint applied to every skill script execution.
+All scripts — JavaScript, Python, and Bash — execute in a **network-restricted sandbox**. This is the single non-negotiable constraint applied to every skill script execution regardless of runtime or deployment environment.
 
 **Network restriction is on by default.** Scripts cannot make outbound network calls unless the platform operator explicitly lifts the restriction for a specific deployment. Skills that require network access must make that access through platform tools, not directly from within the script.
 
@@ -1066,9 +1293,10 @@ A skill script that attempts to exfiltrate injected secrets or scraped filesyste
 
 ### Supply Chain
 
-The platform relies on npm's built-in integrity verification:
+The platform relies on the package manager's built-in integrity verification:
 
 - **npm** verifies package integrity against `package-lock.json` hashes at install time
+- **uv / pip** verifies against `uv.lock` / `poetry.lock` hashes at install time
 
 This is the supply chain guarantee: two installs from the same lockfile on the same platform will produce byte-identical environments, and any tampered package will fail hash verification before it is installed.
 
@@ -1078,7 +1306,7 @@ This is the supply chain guarantee: two installs from the same lockfile on the s
 
 | Concern | Deferred rationale | Preferred approach when addressed |
 |---|---|---|
-| **Input sanitisation** (placeholder injection) | Low immediate risk for trusted skill authors | Escape all `{placeholder}` values before interpolation; use argument arrays for JS subprocesses |
+| **Input sanitisation** (placeholder injection) | Low immediate risk for trusted skill authors; affects Bash most acutely | Escape all `{placeholder}` values before shell interpolation; use argument arrays for JS/Python subprocesses |
 | **Secret exfiltration via stdout** | Requires a redaction pass on all script output | Exact-match scan of stdout against known secret values before scratchpad write; replace matches with `[REDACTED]` |
 | **Community skill trust levels** | No skill store planned at this time | Define trust tiers (verified, community, unreviewed) with `requiresConfirmation` defaults per tier |
 | **Resource limits** (CPU, memory, time) | Highly deployment-dependent | Timeout and memory cap configurable per skill; enforced at sandbox level |
@@ -1091,11 +1319,9 @@ This is the supply chain guarantee: two installs from the same lockfile on the s
 
 ### What RLMs Are
 
-An RLM is a **thin wrapper around a language model** that can query large contexts via a REPL environment rather than receiving the full context in a single prompt. From the caller's perspective it is identical to a standard model call — `rlm.completion(messages)` is a drop-in replacement for `lm.completion(messages)`.
+An RLM is a **thin wrapper around a language model** that can spawn recursive LM calls for intermediate computation. From the caller's perspective it is identical to a standard model call — `rlm.completion(messages)` is a drop-in replacement for `lm.completion(messages)`. The difference is what happens under the hood.
 
-The key insight is a **context-centric view** of decomposition. The context is an object to be understood — the model queries it selectively using REPL primitives rather than seeing it all at once.
-
-> **v1 scope note**: v1 implements single-depth context querying only. The root LM interacts with context via REPL primitives; leaf LMs are reasoning-only and do not spawn further sub-calls. `call_lm` (recursive sub-calls) is deferred to v2.
+The key insight is a **context-centric view** of decomposition rather than a problem-centric one. Prior agentic systems decompose tasks; RLMs decompose the *context itself*. The context is an object to be understood by the model — code execution and recursive sub-calls are the means of understanding it efficiently.
 
 ### The Problem: Context Rot
 
@@ -1106,7 +1332,7 @@ Context rot manifests at three distinct scopes, each requiring a different mitig
 | Scope | Description | Primary mitigation |
 |---|---|---|
 | **Cross-session** | Memories and conversation history accumulate across multiple threads over time | Memory decay, hot/cold boundary, session hydration policy |
-| **Cross-request** | A single long thread accumulates context across many turns | Request hydration (relevance threshold), middleware token budget |
+| **Cross-request** | A single long thread accumulates context across many turns | Request hydration (scope=general only), middleware token budget |
 | **Intra-request** | A single request accumulates intermediate results — task outputs, tool results, `results[]` entries — before `aggregateAgent` synthesises them | Scratchpad interception, `results[]` ref routing (see [Scratchpad Budget Policy](#scratchpad-budget-policy)) |
 
 RLMs address context rot without solving it at the architecture level. No single model call ever sees the entire context. The root LM sees only the query; the context lives in an environment the root LM can query selectively.
@@ -1127,7 +1353,13 @@ Root LM (depth=0)
     │
     ├── REPL cell: peek at first N chars to observe structure
     ├── REPL cell: grep/regex to narrow lines of interest
+    ├── REPL cell: partition context + map recursive LM calls over chunks
     └── REPL cell: FINAL(answer) or FINAL_VAR(variable_name)
+         │
+         ▼
+    Recursive LM (depth=1)
+      sees: one chunk of context + sub-query
+      returns: partial result to root LM's REPL environment
 ```
 
 When the root LM is confident in its answer it emits `FINAL(answer)` (inline) or `FINAL_VAR(var)` (from a REPL variable holding a built-up result).
@@ -1141,12 +1373,13 @@ The platform exposes a fixed set of primitives the root LM may call within REPL 
 | `peek` | `peek(context, n)` | Read the first `n` characters of a context object without loading the remainder |
 | `grep` | `grep(context, pattern)` | Return all lines matching a string or regex pattern |
 | `slice` | `slice(context, start, end)` | Extract a byte-range or line-range window from the context |
+| `call_lm` | `call_lm(chunk, query)` | Invoke a reasoning-only recursive LM call on a context chunk; no tools available at depth=1; returns the sub-result as a REPL variable |
 | `scratchpad_read` | `scratchpad_read(ref, query)` | Retrieve top chunks from a scratchpad entry by keyword relevance |
 | `scratchpad_write` | `scratchpad_write(label, value)` | Write a value to the scratchpad; returns a ref for later retrieval |
 | `FINAL` | `FINAL(answer)` | Emit the final answer inline and terminate the REPL session |
 | `FINAL_VAR` | `FINAL_VAR(variable_name)` | Emit the final answer from a REPL variable and terminate the session |
 
-The platform does not expose file system access, network calls, or platform internals through the REPL primitive API.
+The platform does not expose file system access, network calls, or platform internals through the REPL primitive API. The root LM cannot escape the context object it was given.
 
 ### REPL Execution Environment
 
@@ -1175,7 +1408,7 @@ REPL cells that produce large outputs follow the same scratchpad interception th
 
 **Platform Tools**
 
-The REPL does not have direct access to the platform tool registry. If a task requires tool use, that work happens in a standard leaf agent on the simple path — not inside the RLM loop.
+The REPL does not have direct access to the platform tool registry, and neither do recursive LMs spawned via `call_lm`. Leaf LMs at depth=1 are reasoning-only — they receive a chunk and a query and return a result. No tool calls, no scratchpad writes, no further side-effects. If a task requires tool use, that work happens in a standard leaf agent on the simple path — not inside the RLM loop.
 
 **Skills**
 
@@ -1248,9 +1481,13 @@ SESSION DESTROYED (same as normal termination)
 
 The platform does not retry the request automatically when the limit is reached — that policy is deferred.
 
-**Cell-limit tracking:**
+**Between-cell cleanup (during a session):**
 
-Track `repl.session.cell_limit_hit_rate` — the fraction of RLM sessions that reach the cell limit before emitting `FINAL`. A rising rate signals that either context sizes are growing beyond the 20-cell design assumption, or that the model is producing runaway exploration patterns. If OOM-before-limit is suspected, also track `repl.session.unrecoverable_error_rate` (sessions terminated by timeout or OOM before hitting the cell limit).
+After each cell execution, the platform evaluates accumulated REPL variable state:
+
+- Variables whose values exceed the scratchpad interception threshold are offloaded to the scratchpad automatically; the variable is replaced with the returned ref
+- Variables that have not been read since they were written and are not named `best_so_far` are eligible for eviction once total variable state exceeds a session memory ceiling
+- Cell output (the printed result of each cell) is not retained after the next cell begins; the root LM must assign results to variables if it needs them later
 
 **Between-request cleanup:**
 
@@ -1262,7 +1499,7 @@ Cell-level errors fall into two categories:
 
 **Recoverable errors** — returned as the cell's result; the session continues.
 
-Examples: invalid regex pattern passed to `grep`, a `slice` with out-of-bounds indices.
+Examples: invalid regex pattern passed to `grep`, a `slice` with out-of-bounds indices, a `call_lm` that returns an empty result.
 
 The error message is returned to the root LM as the cell output. The root LM is expected to observe the error and adapt its next cell — retrying with a corrected pattern, choosing a different strategy, or moving toward a `FINAL` with a partial answer.
 
@@ -1285,11 +1522,11 @@ Unrecoverable error (timeout, OOM)
 
 ### Recursive Depth
 
-**v1 implements single-depth context querying only.** The root LM interacts with context via REPL primitives (`peek`, `grep`, `slice`, `scratchpad_read`, `scratchpad_write`). There are no leaf LM sub-calls in v1. Recursive sub-calls (`call_lm`) are deferred to v2.
+The platform implements **depth=1** by default — the root LM can call leaf LMs, but those leaf LMs cannot themselves spawn further recursive calls. This is sufficient for most long-context tasks. Deeper recursion (`maxDepth > 1`) is supported but reserved for tasks that genuinely require it, as cost and latency grow with each level.
 
 ```
 matchSkill → no match → router → "simple"  → single leaf agent
-                               → "complex" → RLM (root LM + REPL)
+                               → "complex" → RLM (root LM + REPL + recursive sub-calls)
 ```
 
 ### Emergent Interaction Strategies
@@ -1300,6 +1537,7 @@ The root LM autonomously selects how it interacts with the context. The followin
 |---|---|
 | **Peeking** | Read the first N characters to observe structure before committing to a retrieval plan |
 | **Grepping** | Use keyword or regex patterns to narrow the search space without semantic retrieval |
+| **Partition + Map** | Chunk the context into equal slices and run a recursive LM call over each to extract partial results |
 | **Summarisation** | Summarise subsets of context into the root LM's REPL environment for final synthesis |
 | **Programmatic processing** | For deterministic tasks (diff tracking, BibTeX generation, counting), write REPL code that processes the context directly, bypassing LM inference entirely |
 
@@ -1337,40 +1575,19 @@ matchSkill
 
 The router is an LLM agent — these signals are inputs to its classification, not hard rules. A request exhibiting none of these signals is classified simple regardless of query complexity.
 
-### v1 Validation Gate
-
-Before building the REPL infrastructure, v1 requires a 2–4 hour experiment to validate that 8B parameter local models can use the primitives correctly.
-
-**Experiment design:**
-
-1. Give the model a 6-primitive REPL prompt and a ~20k-token document
-2. Ask 5 representative questions (structural, grep-able, aggregation, summarisation, programmatic)
-3. Assess: does the model call primitives with correct syntax? Does it use results to refine subsequent cells? Does it emit `FINAL` correctly?
-
-**Pass criteria:**
-- 4 of 5 questions answered correctly
-- No hallucinated primitives or parameters
-- `FINAL` emitted without prompting on all 5
-
-**If the model fails:** the RLM loop is deferred; complex requests fall back to the summariser agent with a token-budget guard. This is recorded as a deferred decision with a clear re-entry trigger (model capability improvement).
-
-**If the model passes:** proceed with REPL infrastructure implementation.
-
 ### Performance Characteristics
 
-Based on the published research (GPT-class models):
+Based on the published research:
 
 - **OOLONG (132k tokens)**: RLM(GPT-5-mini) outperforms GPT-5 by >33% raw score at roughly equal API cost
-- **BrowseComp-Plus (1000 documents / ~10M tokens)**: RLM is the only approach to maintain performance at this scale
+- **BrowseComp-Plus (1000 documents / ~10M tokens)**: RLM is the only approach to maintain performance at this scale; base model approaches degrade sharply past 40 documents
 - **Scaling**: RLM performance degrades gracefully as context grows; base model performance collapses
-
-> **These benchmarks apply to GPT-class models. v1 validates single-depth context querying on 8B local models via the [v1 Validation Gate](#v1-validation-gate) before building infrastructure.**
 
 ### Limitations
 
-- **v1 does not implement recursive sub-calls (`call_lm`)**. Partition + map strategies are not available. Deferred to v2.
-- **Cost and latency are not bounded**: REPL exploration over large contexts can be expensive; the platform does not currently cap total RLM cost per request
-- Performance on counting and numerical aggregation tasks degrades at very large context sizes
+- Recursive sub-calls are **blocking by default** — no prefix caching or parallelism across chunks. Parallel `call_lm` execution (particularly for partition+map strategies) is a known future direction that would reduce latency significantly; it is not architecturally blocked, only deferred.
+- **Cost and latency are not bounded**: a partition+map strategy over a very large context can be expensive; the platform does not currently cap total RLM cost per request
+- Performance on counting and numerical aggregation tasks degrades at very large context sizes even with RLMs
 - The interaction strategies that emerge are **not reproducible** — the same query over the same context may produce different REPL trajectories across runs
 
 ### How RLMs Fit into the Platform
@@ -1401,14 +1618,14 @@ The practical result: a small local model that would degrade badly on a 50k-toke
 |---|---|---|
 | **Registration** | Central registry | Co-located with skill |
 | **Scope** | Any agent | Owning skill only |
-| **Selection** | Tag-based static filter | Resolved from SKILL.md |
-| **Dependencies** | Platform-managed | Per-skill isolated env (JS) |
+| **Selection** | `toolSelectorAgent` | Resolved from SKILL.md |
+| **Dependencies** | Platform-managed | Per-skill isolated env (JS/Python) or system (Bash) |
 | **Config/secrets** | Platform-managed | Declared in SKILL.md, injected as env vars |
 | **Output contract** | `outputMaxChars` threshold only | `output.codes` + `output.schema` per step |
 | **Input validation** | Platform responsibility | Script responsibility — explicit exit codes |
 | **Network access** | Unrestricted | Restricted by default |
 | **Scratchpad access** | Via tool output interception | Read and write during execution |
-| **Examples** | `web_search`, `read_file` | `getEmails.js` |
+| **Examples** | `web_search`, `read_file` | `getEmails.js`, `applyLabels.py`, `archive.sh` |
 
 ### Tool Registry
 
@@ -1420,9 +1637,9 @@ RegisteredTool {
 }
 ```
 
-### Tag-Based Tool Selection
+### Dynamic Tool Selection
 
-Leaf agents are tagged with the tool categories they need. Platform tools carry matching tags. At task execution, the platform filters tools to only those whose tags intersect with the leaf agent's tags. No LLM is involved in tool selection.
+`toolSelectorAgent` selects only relevant platform tools per leaf task. Script steps bypass tool selection entirely.
 
 ### Tool Output Interception
 
@@ -1438,8 +1655,6 @@ For skill scripts, `summariserAgent` uses `output.schema` to shape the summary. 
 
 `requiresConfirmation: true` triggers an interrupt. Graph pauses, resumes on `approve` / `edit` / `reject`.
 
-**Timeout:** HITL interrupts have a configurable timeout (default: 24 hours). When the timeout expires, the platform automatically takes the `reject` path and records the reason as `hitl_timeout`. A session that hits HITL and is never responded to does not block indefinitely.
-
 ---
 
 ## Middleware Layer
@@ -1453,24 +1668,27 @@ Script execution bypasses middleware — it only applies to LLM calls.
 ```
 Before each model call:
   1. localLlmPromptMiddleware      — brevity/focus instruction
-  2. memoryInjectionMiddleware     — injects memories into context
+  2. memoryInjectionMiddleware     — scope=general memories only
   3. skillStatusMiddleware         — live skill index status block
   4. scratchpadContextMiddleware   — scratchpad index
-  5. contextBudgetMiddleware       — trim conversation history oldest-first, then hard-cap total message length
-  6. toolCompatibilityMiddleware   — tool format reminder
+  5. focusedContextMiddleware      — trim history to fit window
+  6. tokenBudgetMiddleware         — hard cap on message length
+  7. toolCompatibilityMiddleware   — tool format reminder
 
 After each model call:
-  7. toolCompatibilityMiddleware   — recover malformed tool calls
+  8. toolCompatibilityMiddleware   — recover malformed tool calls
 ```
-
-**`contextBudgetMiddleware`** merges the former `focusedContextMiddleware` (history trimming) and `tokenBudgetMiddleware` (hard cap) into a single two-phase pass: trim the oldest conversation turns until the message fits the window budget, then hard-cap the total message length as a final guard. One policy, one implementation.
 
 **`skillStatusMiddleware`** injects a live block from the Skill Index — never from memory:
 
 ```
 [system — skill status]
-Available:   email-inbox, email-label-ads, email-workflow
+Available:   email-inbox, email-label-ads, email-label-apply,
+             archive-old-emails, email-workflow
 Unavailable: email-label-keyword (missing secret: GOOGLE_API_KEY)
+             archive-reports (missing system dependency: pandoc)
+Degraded:    email-label-apply (3 consecutive failures — check logs)
+Flagged:     summarise-and-report (learned skill — review for promotion)
 ```
 
 ---
@@ -1479,16 +1697,18 @@ Unavailable: email-label-keyword (missing secret: GOOGLE_API_KEY)
 
 ### Agent Roles
 
-| Agent | Tools | When | Purpose |
-|---|---|---|---|
-| `routerAgent` | ❌ | Every request | Classify: simple or complex; decompose if complex |
-| `leafAgent` *(factory)* | ✅ | Simple path or each sub-task | Execute one focused natural-language task |
-| `aggregateAgent` | ❌ | After parallel sub-tasks | Synthesise results — receives `results[]` with inline content or scratchpad refs |
-| `memoryAuthoringAgent` | ❌ | Session end | Extract memories, author shared experiences |
-| `skillConfirmationAgent` | ❌ | After skill candidate shortlisting | Stage 2 — confirm top-ranked candidate |
-| `summariserAgent` | ❌ | After large output | Summarise large outputs — uses `output.schema` for script outputs |
-
-**Happy path**: `routerAgent` → `leafAgent` → done. Decomposition, aggregation, memory authoring, and summarisation are invoked only when needed.
+| Agent | Tools | Purpose |
+|---|---|---|
+| `routerAgent` | ❌ | Classify: simple or complex |
+| `decomposeAgent` | ❌ | Decide: execute or split |
+| `leafAgent` *(factory)* | ✅ | Execute one focused natural-language task |
+| `aggregateAgent` | ❌ | Synthesise results — receives `results[]` with inline content or scratchpad refs; queries large results via `scratchpad_read` |
+| `memoryAuthoringAgent` | ❌ | Extract memories, assign scope, author shared experiences |
+| `memoryFilterAgent` | ❌ | Filter retrieved memories |
+| `skillConfirmationAgent` | ❌ | Stage 2 — confirm top-ranked candidate |
+| `skillAuthoringAgent` | ❌ | Evaluate for skill promotion |
+| `toolSelectorAgent` | ❌ | Select platform tools per task |
+| `summariserAgent` | ❌ | Summarise large outputs — uses `output.schema` for script outputs |
 
 **Script execution involves no agent.** Scripts run directly in a network-restricted sandboxed environment. The `summariserAgent` runs after execution if output exceeds the scratchpad threshold.
 
@@ -1509,7 +1729,7 @@ createLeafAgent(selectedTools, scratchpad):
 ### State Schema
 
 ```
-GraphState {
+RLMState {
   goal, userRequest, userId,
   scratchpadRef:     { sessionId: string }
   branch:            "simple" | "complex" | null
@@ -1517,13 +1737,16 @@ GraphState {
   currentTask:       Task | null
   results:           TaskResult[]   — inline content or { ref, summary } for large outputs
   finalAnswer:       string
-  injectedMemories:  string | null
+  injectedMemories:  string | null     — scope=general only
   availableTools:    RegisteredTool[]
+  selectedTools:     RegisteredTool[]
   matchedSkill:      Skill | null
+  decomposedBySkill: boolean
+  maxDepth:          number
 }
 
 Task {
-  id, description, parentId,
+  id, description, parentId, depth,
   stepRef?:       string        — "./script" | "skill:/name" | undefined
   resolvedArgs?:  Record<string, string>
   outputSchema?:  OutputSchema  — from step output.schema, passed to summariserAgent
@@ -1539,35 +1762,101 @@ START → sessionHydrate (new thread) → extractMemories → matchSkill
   │       (rank candidates, LLM confirms top only)
   │
   ├── matched → applySkill → resolveSteps → execute → aggregate → authorMemories → END
+  │             (fire reinforcement on source memory if learned skill)
   │
   └── no match → router
-                   ├── simple → tagFilterTools → simpleExecute → authorMemories → END
+                   ├── simple → selectTools → simpleExecute → authorMemories → END
                    └── complex → decompose ◄──────────────────────────────────┐
                                      │                                         │
                                  currentTask? ── no ──────────────────────── ►│
                                      │ yes
                                      ▼
                                  resolveStep
-                                   ├── script (JavaScript)
+                                   ├── script (JS/Python)
                                    │     activate env → inject config + secrets
                                    │     network-restricted sandbox execute
                                    │     (script validates own inputs)
                                    │     interpret output → COMPLETE
                                    │     exit != 0 → ERROR PATH
-                                   ├── sub-skill → push steps → QUEUED
+                                   ├── script (Bash)
+                                   │     inject config + secrets (system env)
+                                   │     network-restricted sandbox execute
+                                   │     (script validates own inputs)
+                                   │     interpret output → COMPLETE
+                                   │     exit != 0 → ERROR PATH
+                                   ├── sub-skill → push steps (depth+1) → QUEUED
                                    │     sub-skill fails → halt parent → ERROR PATH
                                    │     record parentSkillId in lastFailure
-                                   └── LLM → tagFilterTools → leafAgent → COMPLETE
+                                   └── LLM → selectTools → leafAgent → COMPLETE
                                                   (may read/write scratchpad)
                                                         │
                                                     aggregate → queue empty?
                                                         │ yes
-                                                    authorMemories → END
+                                                    authorMemories + maybeAuthorSkill → END
 ```
 
 ### Session Persistence
 
 Checkpointer provides: conversation history across turns, process restart resumability, HITL pause/resume, per-`thread_id` isolation.
+
+---
+
+## The Self-Improving Loop
+
+```
+Day 1 — new task type:
+  No skill match → LLM decomposes → executes
+  → maybeAuthorSkill writes soft SKILL.md to _learned/
+  → source procedural memory entry retained and linked
+
+Next similar request:
+  Learned skill matches → deterministic ranking puts it at Stage 2
+  → LLM confirms → match event reinforces source memory entry
+  → consistent decomposition, no re-decomposition needed
+
+Learned skill used frequently but never promoted:
+  accessCount reaches promotion_review_threshold
+  → promotionFlagged = true in Skill Index
+  → skillStatusMiddleware surfaces flag to operator
+  → human reviews: promote to codified or leave as learned
+
+Learned skill stops being used:
+  match events stop → source memory entry no longer reinforced
+  → importance decays over decay_window
+  → importance < prune_threshold → source entry pruned
+  → linked SKILL.md removed from _learned/ automatically
+
+Community identifies pattern:
+  Author chooses runtime:
+    Simple system command?  → Bash, declare systemDependencies
+    Needs logic or tests?   → JavaScript or Python
+
+  Deliberate authoring:
+    JS/Python: scripts with input validation + explicit exit codes,
+               unit tests covering invalid input paths,
+               lockfile, runtime version, config + secrets,
+               output contract
+    Bash:      simple script with input validation,
+               systemDependencies, output contract,
+               manual verification on clean environment
+
+Skill deployed:
+  platform skill prepare → all checks pass → status = ready
+  Script steps: network-restricted, inputs validated at script start
+  Compositional skills: sub-skill failure halts parent immediately
+
+Conflict between two matched skills:
+  Deterministic ranking selects higher-maturity / higher-reliability skill
+  LLM confirms top candidate only — no selection from full list
+  Routing is consistent and testable
+
+Over time:
+  JS/Python skills  → fully testable, input validation reviewed
+  Bash skills       → simple, fast, explicitly limited scope
+  Learned skills    → decay or get promoted — no indefinite accumulation
+  Conflict routing  → deterministic, reliability-biased
+  System state      → always in index, never in memory
+```
 
 ---
 
@@ -1584,21 +1873,18 @@ Checkpointer provides: conversation history across turns, process restart resuma
 | Cold-to-hot promotion scoring | Keyword, semantic similarity, recency, importance |
 | Session hydration policy | What to load; item count; recency window |
 | Scratchpad eviction / TTL | Memory pressure vs. session length |
+| Scratchpad index cap | Exact soft cap value — depends on context window and session length |
 | Skill versioning and upgrades | Deferred to skill management system |
-| Script sandbox runtime | Node.js subprocess, Deno, WASM |
+| Skill review and approval workflow | Manual queue, automated gates, community voting |
+| Script sandbox runtime | Node.js subprocess, Deno, Python venv, WASM |
+| Bash sandbox constraints | Docker network layer (recommended) or OS-level restriction |
 | Script timeout and resource limits | Deployment dependent — configurable per skill |
+| Shared skill environments | Per-skill isolation (default) → shared per-language → content-addressable store |
 | Multi-agent topology | Supervisor, peer-to-peer, shared state |
 | Supply chain hardening | Package signing, provenance attestation — for elevated security deployments |
-| Input sanitisation | Escape `{placeholder}` values before interpolation; argument arrays for JS subprocess |
+| Input sanitisation | Escape `{placeholder}` values before shell interpolation; argument arrays for JS/Python |
 | Secret exfiltration via stdout | Exact-match redaction pass on script stdout before scratchpad write |
-| **Python skill runtime** | uv + `.venv` — deferred to v2; validate v1 JS-only path first |
-| **RLM recursive sub-calls** | `call_lm` primitive — deferred to v2; validate 8B model single-depth via [v1 Validation Gate](#v1-validation-gate) first |
-| **Skill health metrics** | `consecutiveFailures`, `successRate` — deferred; not needed until skill library grows |
-| **Memory scoping for historical failures** | `scope=historical` tag to prevent episodic skill-failure memories conflating with live skill status — deferred; add only if model conflation is observed at runtime |
-| **Request hydration LLM filter** | Re-add LLM filter pass over keyword-scored candidates — deferred; re-evaluate when `memory.hydration.context_utilisation` or `user_correction_rate` degrades |
-| **Scratchpad chunk keyword scoring** | Keyword-scored chunk selection in `scratchpad_read` — deferred; re-evaluate when `scratchpad.read.consumer_referenced_fraction` falls or `consumer_retry_count` rises |
-| **Scratchpad index demotion** | Soft cap with cold demotion (retain cold content, evict only hot index slot) — deferred; re-evaluate when `scratchpad.index.eviction_miss_count` rises |
-| **Learned skill promotion thresholds** | `importance >= 0.9`, `accessCount >= 5` starting assumptions — calibrate against `procedural.memory.importance`, `access_count`, `success_rate`, `task_diversity` at time of manual codification |
+| Community skill trust levels | Trust tiers with `requiresConfirmation` defaults — pending skill store decision |
 
 ### Transition Policies
 
@@ -1608,7 +1894,15 @@ Memory:
   decay_window:            default 7 days
   decay_factor:            default 0.8 per cycle
   prune_threshold:         default 0.05
-  rescue_on_retrieval:     true
+  rescue_on_retrieval:     true (scope=general only)
+  skill_match_reinforcement: importance += 0.1 on source procedural entry
+
+Skills:
+  learned_importance:           0.9
+  learned_min_uses:             5
+  promotion_review_threshold:   accessCount >= 20 without promotion (suggested)
+  deprecation_threshold:        successRate < 0.6
+  degraded_threshold:           consecutiveFailures >= 3 (suggested)
 
 Scratchpad:
   intercept_threshold:     default 300 chars
@@ -1624,7 +1918,7 @@ Tasks:
 Threads:
   session_timeout:         deferred — 30 minutes suggested
   rehydration_gap:         deferred — 1 hour suggested
-  hitl_timeout:            configurable — default 24 hours; auto-reject on expiry
+  hitl_timeout:            deferred — none (wait indefinitely)
   max_thread_lifetime:     deferred
 ```
 
@@ -1642,7 +1936,8 @@ Threads:
 | Schema validation | `zod` | Any schema library |
 | Platform tool definition | `tool()` (`@langchain/core/tools`) | Any tool interface |
 | JS skill runtime | Node.js subprocess (sandboxed) | Deno |
-| Python skill runtime | — deferred to v2 | uv + `.venv` |
+| Python skill runtime | uv + `.venv` | Poetry, pip-tools |
+| Bash skill runtime | System shell (network-restricted) | Restricted subprocess |
 | Script network restriction | Docker network layer (recommended) | OS-level firewall rules |
 | Skill discovery | Filesystem scan of `skills/` | Database, registry service |
 | Skill index | In-memory (rebuilt on startup) | Persistent store |
@@ -1660,5 +1955,7 @@ Threads:
 > **System state is never stored in memory. Shared experience always is. The agent recalls history honestly — it never confuses what happened with what is currently true.**
 
 > **Skills trust the platform. Skills declare what they need; the platform satisfies it. A skill that can be shared without bundling credentials is a skill the community can trust.**
+
+> **Bash is a last resort. If a script needs logic, tests, or error handling, it belongs in JavaScript or Python. Simple commands deserve simple scripts — complex work deserves testable code.**
 
 > **Network access is a privilege, not a default. Scripts are isolated from the network unless the operator explicitly decides otherwise. Filesystem access is bounded by the deployment environment — Docker is the recommended boundary.**

@@ -70,7 +70,7 @@
     - [Emergent Interaction Strategies](#emergent-interaction-strategies)
     - [RLMs vs. Agents](#rlms-vs-agents)
     - [Activation](#activation)
-    - [v1 Validation Gate](#v1-validation-gate)
+    - [Validation Gate](#validation-gate)
     - [Performance Characteristics](#performance-characteristics)
     - [Limitations](#limitations)
     - [How RLMs Fit into the Platform](#how-rlms-fit-into-the-platform)
@@ -396,7 +396,7 @@ CODIFIED  ---- prep fails -------------------> UNAVAILABLE
 
 **`UNAVAILABLE`** is triggered by any prep failure: runtime version mismatch, missing lockfile, unresolvable required config, unresolvable required secret, or invalid output contract declaration. Re-prep succeeds → status returns to `CODIFIED`.
 
-**Promotion thresholds (`LEARNED` → `CODIFIED`) are speculative in v1.** The current values (`importance >= 0.9`, `accessCount >= 5`) are starting assumptions. To set evidence-based thresholds, collect the following data before tuning them:
+**Promotion thresholds (`LEARNED` → `CODIFIED`) are starting assumptions without empirical basis.** The current values (`importance >= 0.9`, `accessCount >= 5`) should be calibrated against real usage before automation is considered. Collect the following data before tuning them:
 
 | Data point | Description | Why it matters |
 |---|---|---|
@@ -405,7 +405,7 @@ CODIFIED  ---- prep fails -------------------> UNAVAILABLE
 | `procedural.memory.success_rate` | Fraction of retrievals that led to a successful task outcome | Filters noisy patterns — a high-importance, low-success pattern is not a good candidate |
 | `procedural.memory.task_diversity` | Number of distinct task types that triggered this pattern | Patterns that generalise across diverse tasks are stronger candidates than narrow ones |
 
-Until these data points are collected from real usage, the thresholds should not trigger automatic promotion. Promotion remains a human decision in v1.
+Until these data points are collected from real usage, the thresholds should not trigger automatic promotion. Promotion is a human decision.
 
 ---
 
@@ -506,7 +506,7 @@ A deployment policy, not an architectural constant. Tuned to context window size
 
 All memories written to long-term storage are available for injection in future sessions. Memories carry a `type` field (`episodic`, `semantic`, `procedural`) used to shape the hydration query — not to restrict visibility. The platform hydrates semantic and procedural patterns at session start; episodic memories are retrieved per-request based on keyword × importance scoring.
 
-**v1 simplification:** All memories are injectable. There is no `scope` field gating injection. This is sufficient for v1, where the memory store is small. Scoping can be added later when authoring-time vs. retrieval-time distinctions are needed.
+All memories are injectable. There is no `scope` field gating injection.
 
 **The critical rule:** System state is never written to the memory system. Skill availability, runtime health, config resolution status, and prep outcomes live exclusively in the Skill Index and are injected live by `skillStatusMiddleware`.
 
@@ -534,7 +534,7 @@ The boundary between system state and episodic memory creates an important disti
 
 The first is authoritative and injected live; the model can act on it immediately (e.g. decline to use the skill, suggest configuration steps). The second is historical context; the model can use it to set expectations or suggest precautions, but must not treat it as current state.
 
-The risk is that the model conflates the two: a historical failure episodic memory might be read as evidence the skill is currently broken. To mitigate this, `memoryAuthoringAgent` should write failure memories in strictly past-tense narrative form with an explicit date, and the `skillStatusMiddleware` live block always supersedes any memory that appears to contradict it. This is sufficient for v1. If conflation is observed at runtime, explicit memory scoping (`scope=historical`) can be introduced to prevent historical failure memories from being injected alongside the skill status block.
+The risk is that the model conflates the two: a historical failure episodic memory might be read as evidence the skill is currently broken. To mitigate this, `memoryAuthoringAgent` should write failure memories in strictly past-tense narrative form with an explicit date, and the `skillStatusMiddleware` live block always supersedes any memory that appears to contradict it. If conflation is observed at runtime, explicit memory scoping (`scope=historical`) can be introduced to prevent historical failure memories from being injected alongside the skill status block.
 
 ### Long-Term Memory Tiers
 
@@ -561,7 +561,7 @@ Runs **before every request**, augmenting the session layer.
 
 **Process:** Query cold store → score by keyword × importance → apply relevance threshold → inject memories.
 
-**v1 simplification:** The LLM filter step is removed. A relevance threshold cut on the keyword × importance score is sufficient when the memory store is small.
+The LLM filter step is not used. A relevance threshold cut on the keyword × importance score is sufficient when the memory store is small.
 
 **Measurement — tracking when keyword scoring becomes insufficient:**
 
@@ -595,7 +595,7 @@ Skill steps — both script and LLM — may read from and write to the scratchpa
 ```
 ScratchpadRecord {
   ref, toolName, taskId, summary,
-  chunks: [{ index, content, keywords }],
+  chunks: [{ index, content }],
   createdAt, sessionId
 }
 ```
@@ -606,7 +606,7 @@ Graph state holds only `{ sessionId: string }` — never a class instance.
 
 `scratchpad_read(ref, query)` returns the first N chunks up to a character budget. Available to both LLM steps and skill scripts via the platform's environment interface.
 
-**v1 simplification:** Keyword-scored chunk selection is removed. Sequential chunk access (return chunks in order, stop at the character budget) is sufficient when scratchpad entries are small-to-medium.
+Sequential chunk access (return chunks in order, stop at the character budget) is used rather than keyword-scored selection.
 
 **`scratchpad_read` is a context rot mitigation, not just a retrieval convenience.** By keeping full content cold and surfacing only a budget-bounded slice on demand, it prevents large intermediate results from accumulating in the model's context window. This applies equally to skill steps reading prior outputs, leaf agents reading task results, and the `aggregateAgent` synthesising final answers — none of them receive the full content unless they explicitly ask for it.
 
@@ -636,7 +636,7 @@ The scratchpad index lives in hot memory. Without a cap, long or complex session
 
 ## Skills System
 
-Skills are **named, portable, self-contained packages** encoding reusable approaches to recognised task types. In v1, scripts are JavaScript only. Python support is deferred to v2.
+Skills are **named, portable, self-contained packages** encoding reusable approaches to recognised task types. Scripts are JavaScript only.
 
 ### Skill Package Structure
 
@@ -1062,7 +1062,7 @@ A skill script that attempts to exfiltrate injected secrets or scraped filesyste
 
 - A malicious script writing sensitive data to a file the operator can access (filesystem risk — mitigated by Docker)
 - A script that encodes secrets in its stdout output (see [Deferred Security Concerns](#deferred-security-concerns))
-- A script that consumes excessive CPU or memory (resource limits are a deferred decision)
+- A script that consumes excessive CPU or memory (resource limits are configurable per skill but not enforced by default)
 
 ### Supply Chain
 
@@ -1080,7 +1080,6 @@ This is the supply chain guarantee: two installs from the same lockfile on the s
 |---|---|---|
 | **Input sanitisation** (placeholder injection) | Low immediate risk for trusted skill authors | Escape all `{placeholder}` values before interpolation; use argument arrays for JS subprocesses |
 | **Secret exfiltration via stdout** | Requires a redaction pass on all script output | Exact-match scan of stdout against known secret values before scratchpad write; replace matches with `[REDACTED]` |
-| **Community skill trust levels** | No skill store planned at this time | Define trust tiers (verified, community, unreviewed) with `requiresConfirmation` defaults per tier |
 | **Resource limits** (CPU, memory, time) | Highly deployment-dependent | Timeout and memory cap configurable per skill; enforced at sandbox level |
 
 ---
@@ -1095,7 +1094,7 @@ An RLM is a **thin wrapper around a language model** that can query large contex
 
 The key insight is a **context-centric view** of decomposition. The context is an object to be understood — the model queries it selectively using REPL primitives rather than seeing it all at once.
 
-> **v1 scope note**: v1 implements single-depth context querying only. The root LM interacts with context via REPL primitives; leaf LMs are reasoning-only and do not spawn further sub-calls. `call_lm` (recursive sub-calls) is deferred to v2.
+The platform implements single-depth context querying. The root LM interacts with context via REPL primitives; it does not spawn recursive sub-calls.
 
 ### The Problem: Context Rot
 
@@ -1285,7 +1284,7 @@ Unrecoverable error (timeout, OOM)
 
 ### Recursive Depth
 
-**v1 implements single-depth context querying only.** The root LM interacts with context via REPL primitives (`peek`, `grep`, `slice`, `scratchpad_read`, `scratchpad_write`). There are no leaf LM sub-calls in v1. Recursive sub-calls (`call_lm`) are deferred to v2.
+The platform implements single-depth context querying. The root LM interacts with context via REPL primitives (`peek`, `grep`, `slice`, `scratchpad_read`, `scratchpad_write`). There are no recursive sub-calls (`call_lm`). Partition + map strategies that require sub-LM calls are not supported.
 
 ```
 matchSkill → no match → router → "simple"  → single leaf agent
@@ -1337,9 +1336,9 @@ matchSkill
 
 The router is an LLM agent — these signals are inputs to its classification, not hard rules. A request exhibiting none of these signals is classified simple regardless of query complexity.
 
-### v1 Validation Gate
+### Validation Gate
 
-Before building the REPL infrastructure, v1 requires a 2–4 hour experiment to validate that 8B parameter local models can use the primitives correctly.
+Before building the REPL infrastructure, a 2–4 hour experiment is required to validate that 8B parameter local models can use the primitives correctly.
 
 **Experiment design:**
 
@@ -1352,7 +1351,7 @@ Before building the REPL infrastructure, v1 requires a 2–4 hour experiment to 
 - No hallucinated primitives or parameters
 - `FINAL` emitted without prompting on all 5
 
-**If the model fails:** the RLM loop is deferred; complex requests fall back to the summariser agent with a token-budget guard. This is recorded as a deferred decision with a clear re-entry trigger (model capability improvement).
+**If the model fails:** the RLM loop is not built; complex requests fall back to the summariser agent with a token-budget guard. This is recorded as a deferred decision with a clear re-entry trigger (model capability improvement).
 
 **If the model passes:** proceed with REPL infrastructure implementation.
 
@@ -1364,11 +1363,9 @@ Based on the published research (GPT-class models):
 - **BrowseComp-Plus (1000 documents / ~10M tokens)**: RLM is the only approach to maintain performance at this scale
 - **Scaling**: RLM performance degrades gracefully as context grows; base model performance collapses
 
-> **These benchmarks apply to GPT-class models. v1 validates single-depth context querying on 8B local models via the [v1 Validation Gate](#v1-validation-gate) before building infrastructure.**
-
 ### Limitations
 
-- **v1 does not implement recursive sub-calls (`call_lm`)**. Partition + map strategies are not available. Deferred to v2.
+- **Recursive sub-calls (`call_lm`) are not implemented.** Partition + map strategies are not available.
 - **Cost and latency are not bounded**: REPL exploration over large contexts can be expensive; the platform does not currently cap total RLM cost per request
 - Performance on counting and numerical aggregation tasks degrades at very large context sizes
 - The interaction strategies that emerge are **not reproducible** — the same query over the same context may produce different REPL trajectories across runs
@@ -1591,8 +1588,7 @@ Checkpointer provides: conversation history across turns, process restart resuma
 | Supply chain hardening | Package signing, provenance attestation — for elevated security deployments |
 | Input sanitisation | Escape `{placeholder}` values before interpolation; argument arrays for JS subprocess |
 | Secret exfiltration via stdout | Exact-match redaction pass on script stdout before scratchpad write |
-| **Python skill runtime** | uv + `.venv` — deferred to v2; validate v1 JS-only path first |
-| **RLM recursive sub-calls** | `call_lm` primitive — deferred to v2; validate 8B model single-depth via [v1 Validation Gate](#v1-validation-gate) first |
+| **RLM recursive sub-calls** | `call_lm` primitive — validate 8B model single-depth via [Validation Gate](#validation-gate) first |
 | **Skill health metrics** | `consecutiveFailures`, `successRate` — deferred; not needed until skill library grows |
 | **Memory scoping for historical failures** | `scope=historical` tag to prevent episodic skill-failure memories conflating with live skill status — deferred; add only if model conflation is observed at runtime |
 | **Request hydration LLM filter** | Re-add LLM filter pass over keyword-scored candidates — deferred; re-evaluate when `memory.hydration.context_utilisation` or `user_correction_rate` degrades |
@@ -1612,7 +1608,7 @@ Memory:
 
 Scratchpad:
   intercept_threshold:     default 300 chars
-  index_cap:               deferred — soft cap; oldest by lastAccessedAt demoted to cold-only
+  index_cap:               10 entries (hard cap — oldest by createdAt evicted)
   ltm_promotion:           memory authoring agent per entry
   interrupted_session:     deferred
 
@@ -1642,7 +1638,6 @@ Threads:
 | Schema validation | `zod` | Any schema library |
 | Platform tool definition | `tool()` (`@langchain/core/tools`) | Any tool interface |
 | JS skill runtime | Node.js subprocess (sandboxed) | Deno |
-| Python skill runtime | — deferred to v2 | uv + `.venv` |
 | Script network restriction | Docker network layer (recommended) | OS-level firewall rules |
 | Skill discovery | Filesystem scan of `skills/` | Database, registry service |
 | Skill index | In-memory (rebuilt on startup) | Persistent store |
@@ -1659,6 +1654,6 @@ Threads:
 
 > **System state is never stored in memory. Shared experience always is. The agent recalls history honestly — it never confuses what happened with what is currently true.**
 
-> **Skills trust the platform. Skills declare what they need; the platform satisfies it. A skill that can be shared without bundling credentials is a skill the community can trust.**
+> **Skills trust the platform. Skills declare what they need; the platform satisfies it. A skill that does not bundle credentials is a skill that can be safely shared.**
 
 > **Network access is a privilege, not a default. Scripts are isolated from the network unless the operator explicitly decides otherwise. Filesystem access is bounded by the deployment environment — Docker is the recommended boundary.**
